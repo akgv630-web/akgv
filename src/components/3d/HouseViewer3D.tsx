@@ -307,6 +307,21 @@ export function HouseViewer3D({
         </div>
       </div>
 
+      {/* Model Type Distinction Banner */}
+      <div className="rounded-xl border border-[#C7A35A]/30 bg-[#0B1734] px-4 py-2.5 text-xs text-gray-300 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382] uppercase tracking-wider">
+            Procedural Demonstration Model
+          </span>
+          <span className="text-gray-400">
+            Interactive real-time 3D simulation for plot boundary and scale inspection. Does not replace architect-approved municipal CAD drawings.
+          </span>
+        </div>
+        <span className="text-[11px] text-[#DFC382] font-semibold hidden md:inline">
+          Upload custom GLB in Admin
+        </span>
+      </div>
+
       {/* Main 3D Canvas Container */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="relative h-[550px] w-full overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-gradient-to-b from-[#0B1734] to-[#040711] shadow-2xl lg:col-span-8">

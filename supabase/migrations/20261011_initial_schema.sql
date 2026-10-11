@@ -418,3 +418,71 @@ CREATE POLICY "Members view own kit issue" ON kit_issues
 
 CREATE POLICY "Admins manage kit issues" ON kit_issues
     FOR ALL USING (is_admin());
+
+-- Receipts: Buyers view own receipts; Admins manage all
+CREATE POLICY "Payers can view own receipts" ON receipts
+    FOR SELECT USING (
+        booking_id IN (SELECT id FROM bookings WHERE buyer_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()))
+        OR is_admin()
+    );
+
+CREATE POLICY "Admins can issue receipts" ON receipts
+    FOR ALL USING (is_admin());
+
+-- Support Tickets: Users view/create own; Admins manage all
+CREATE POLICY "Users can view own tickets" ON support_tickets
+    FOR SELECT USING (user_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()) OR is_admin());
+
+CREATE POLICY "Users can create tickets" ON support_tickets
+    FOR INSERT WITH CHECK (user_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()));
+
+CREATE POLICY "Admins can manage tickets" ON support_tickets
+    FOR ALL USING (is_admin());
+
+-- Ticket Messages: Buyers NEVER see is_internal_note = TRUE
+CREATE POLICY "Users can view customer-visible messages" ON ticket_messages
+    FOR SELECT USING (
+        (ticket_id IN (SELECT id FROM support_tickets WHERE user_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()))
+         AND is_internal_note = FALSE)
+        OR is_admin()
+    );
+
+CREATE POLICY "Users can reply to own tickets" ON ticket_messages
+    FOR INSERT WITH CHECK (
+        ticket_id IN (SELECT id FROM support_tickets WHERE user_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()))
+        AND is_internal_note = FALSE
+    );
+
+CREATE POLICY "Admins manage all ticket messages" ON ticket_messages
+    FOR ALL USING (is_admin());
+
+-- Reward Claims: Members view own; Admins manage all
+CREATE POLICY "Members view own reward claims" ON reward_claims
+    FOR SELECT USING (member_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()) OR is_admin());
+
+CREATE POLICY "Members submit reward claims" ON reward_claims
+    FOR INSERT WITH CHECK (member_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()));
+
+CREATE POLICY "Admins manage reward claims" ON reward_claims
+    FOR ALL USING (is_admin());
+
+-- Site Visits: Anyone can submit booking; Staff/Admin can review
+CREATE POLICY "Public can book site visits" ON site_visits
+    FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Staff can view site visits" ON site_visits
+    FOR SELECT USING (is_admin() OR assigned_staff_id IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()));
+
+CREATE POLICY "Staff can update site visits" ON site_visits
+    FOR UPDATE USING (is_admin());
+
+-- Field GPS Evidence: Members view own uploads; Admins review all
+CREATE POLICY "Members view own gps evidence" ON field_gps_evidence
+    FOR SELECT USING (captured_by IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()) OR is_admin());
+
+CREATE POLICY "Members upload gps evidence" ON field_gps_evidence
+    FOR INSERT WITH CHECK (captured_by IN (SELECT id FROM profiles WHERE auth_user_id = auth.uid()));
+
+CREATE POLICY "Admins manage gps evidence" ON field_gps_evidence
+    FOR ALL USING (is_admin());
+
