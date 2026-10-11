@@ -1,0 +1,15 @@
+# Cloudflare Pages / Workers Configuration for AKGV Infra City
+name = "akgv-infra-city"
+compatibility_date = "2026-10-11"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".next"
+
+[vars]
+NEXT_PUBLIC_COMPANY_NAME = "AKGV Infra City Private Limited"
+NEXT_PUBLIC_COMPANY_PHONE = "6306917991"
+NEXT_PUBLIC_DEFAULT_LOCATION = "Rampur, Varanasi, Uttar Pradesh"
+
+# Cloudflare R2 Bucket Binding for Architectural 3D Assets & Documents
+# [[r2_buckets]]
+# binding = "ASSETS_BUCKET"
+# bucket_name = "akgv-infra-assets"
