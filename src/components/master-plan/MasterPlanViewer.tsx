@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Building2,
   Calendar,
@@ -9,38 +10,82 @@ import {
   Compass,
   Eye,
   FileText,
+  Filter,
+  Flame,
+  Home,
   Info,
   Layers,
   MapPin,
   Maximize2,
+  Minimize2,
+  Navigation,
   Phone,
+  RotateCcw,
+  Search,
   ShieldCheck,
   Sparkles,
-  X
+  TreePine,
+  X,
+  ZoomIn,
+  ZoomOut,
+  Car
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { AREA_SCHEDULE, HOUSE_MODELS } from '@/data/groundTruth';
 import { Plot, PlotStatus } from '@/types';
-import Link from 'next/link';
+import { MiniVillaSvg } from './MiniVillaSvg';
 
 export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (plot: Plot) => void }) {
   const { plots, createBookingRequest, setSelectedPlotForViewer } = useApp();
-  const [selectedPlot, setSelectedPlot] = useState<Plot | null>(plots[3]); // default A-04
-  const [showBrochureModal, setShowBrochureModal] = useState(false);
+
+  // Selected plot state (default A-04)
+  const [selectedPlot, setSelectedPlot] = useState<Plot | null>(plots.find(p => p.plotNumber === 'A-04') || plots[0]);
+  const [hoveredPlot, setHoveredPlot] = useState<Plot | null>(null);
+
+  // View modes: 'villas' (mini houses), 'cad' (technical engineering), 'landscape' (green satellite)
+  const [viewMode, setViewMode] = useState<'villas' | 'cad' | 'landscape'>('villas');
+  const [showDimensions, setShowDimensions] = useState(true);
+  const [showVehicles, setShowVehicles] = useState(true);
+  const [showLandscaping, setShowLandscaping] = useState(true);
+
+  // Zoom & Pan Engine
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Filters
   const [filterBlock, setFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | PlotStatus>('ALL');
+  const [filterSize, setFilterSize] = useState<'ALL' | 'compact' | 'mid' | 'luxury'>('ALL');
+
+  // Modals
+  const [showBrochureModal, setShowBrochureModal] = useState(false);
+  const [activeBrochureTab, setActiveBrochureTab] = useState<'layout' | 'photo' | 'rewards'>('layout');
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [selectedHouseModelId, setSelectedHouseModelId] = useState<string>('model-royal-villa');
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState<string | null>(null);
 
-  const filteredPlots = plots.filter((plot) => {
-    if (filterBlock !== 'ALL' && plot.block !== filterBlock) return false;
-    if (filterStatus !== 'ALL' && plot.status !== filterStatus) return false;
-    return true;
-  });
+  // Filtered plots computation
+  const filteredPlots = useMemo(() => {
+    return plots.filter((plot) => {
+      if (filterBlock !== 'ALL' && plot.block !== filterBlock) return false;
+      if (filterStatus !== 'ALL' && plot.status !== filterStatus) return false;
+      if (filterSize !== 'ALL') {
+        if (filterSize === 'compact' && plot.areaSqft >= 1000) return false;
+        if (filterSize === 'mid' && (plot.areaSqft < 1000 || plot.areaSqft >= 1500)) return false;
+        if (filterSize === 'luxury' && plot.areaSqft < 1500) return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        if (!plot.plotNumber.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [plots, filterBlock, filterStatus, filterSize, searchQuery]);
 
+  // Status Meta
   const getStatusColor = (status: PlotStatus) => {
     switch (status) {
       case 'available_green':
@@ -74,6 +119,16 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const handlePlotClick = (plot: Plot) => {
     setSelectedPlot(plot);
     setSelectedPlotForViewer(plot);
+    if (onSelectPlotFor3D) onSelectPlotFor3D(plot);
+  };
+
+  const handleZoom = (delta: number) => {
+    setZoomLevel((prev) => Math.min(Math.max(0.75, Number((prev + delta).toFixed(2))), 2.2));
+  };
+
+  const handleResetZoom = () => {
+    setZoomLevel(1.0);
+    setSearchQuery('');
   };
 
   const handleBookingSubmit = (e: React.FormEvent) => {
@@ -92,7 +147,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         selectedHouseModelId
       );
       setBookingSuccessMsg(
-        `Booking request #${booking.bookingNumber} generated successfully! A hold has been placed. Complete your payment verification in the Buyer Portal.`
+        `Booking request #${booking.bookingNumber} generated successfully! A hold has been placed for Plot ${selectedPlot.plotNumber}. Complete payment in the Buyer Portal.`
       );
       setTimeout(() => {
         setBookingModalOpen(false);
@@ -109,388 +164,656 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
     ? HOUSE_MODELS.filter((hm) => selectedPlot.suitableHouseModelIds.includes(hm.id))
     : [];
 
+  // Vastu compliance logic
+  const getVastuInfo = (facing: string) => {
+    switch (facing) {
+      case 'East':
+        return { score: '100% Vastu Approved', note: 'East facing: Promotes health, solar warmth, and financial prosperity.' };
+      case 'North':
+        return { score: '100% Vastu Approved', note: 'North facing: Governed by Kuber; ideal for abundance and career growth.' };
+      case 'South':
+        return { score: 'Vastu Compliant with Portico', note: 'South facing: Elevated entry design recommended; high energy and vitality.' };
+      default:
+        return { score: 'Vastu Approved', note: 'Balanced energy alignment with wide frontage.' };
+    }
+  };
+
+  const vastuData = selectedPlot ? getVastuInfo(selectedPlot.roadFacing) : null;
+
   return (
-    <div className="w-full space-y-6">
-      {/* Top Banner & Control Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#C7A35A]/30 bg-[#050A17]/80 p-4 backdrop-blur-md">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-[#1EA275] animate-ping" />
-            <h2 className="font-serif text-lg font-bold text-white tracking-wide">
-              A.K.G.V. Infraa City — Varanasi Layout Plan
-            </h2>
+    <div className={`w-full space-y-6 ${isFullscreen ? 'fixed inset-0 z-50 overflow-y-auto bg-[#040814] p-6' : ''}`}>
+      {/* 1. Header Toolbar with Authentic Branding, View Modes & Filters */}
+      <div className="flex flex-col gap-4 rounded-2xl border border-[#C7A35A]/30 bg-[#050A17]/90 p-4 shadow-2xl backdrop-blur-md">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#1EA275] animate-ping" />
+              <h2 className="font-serif text-lg font-bold text-white tracking-wide">
+                A.K.G.V. INFRAA CITY VARANASI — COMPLETE MASTER LAYOUT PLAN
+              </h2>
+              <span className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382] uppercase tracking-wider">
+                55 Approved Plots
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Approved Blueprint Scale: {AREA_SCHEDULE.scale} | Area: {AREA_SCHEDULE.totalAreaSqft.toLocaleString()} sqft | Er. Rajesh Kumar Patel (R.P. Home Design)
+            </p>
           </div>
-          <p className="text-xs text-gray-400">
-            Scale: {AREA_SCHEDULE.scale} | Er. Rajesh Kumar Patel (R.P. Home Design)
-          </p>
+
+          {/* Action CTAs */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Original Brochure Photo Modal */}
+            <button
+              onClick={() => setShowBrochureModal(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A] bg-[#0B1734] px-3 py-1.5 text-xs font-semibold text-[#DFC382] shadow-sm transition hover:bg-[#C7A35A] hover:text-[#0B1734]"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>Original Brochure Photo</span>
+            </button>
+
+            {/* Fullscreen Toggle */}
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#0B1734] px-3 py-1.5 text-xs text-gray-300 hover:text-white"
+            >
+              {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* View Blueprint Photo CTA */}
-          <button
-            onClick={() => setShowBrochureModal(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A] bg-[#0B1734] px-3 py-1.5 text-xs font-semibold text-[#DFC382] transition hover:bg-[#C7A35A] hover:text-[#0B1734]"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            <span>View Original Blueprint Photo</span>
-          </button>
+        {/* 2. Interactive Control Bar: View Modes, Layers & Zoom */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
+          {/* View Mode Switcher */}
+          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#0B1734] p-1 text-xs">
+            <button
+              onClick={() => setViewMode('villas')}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
+                viewMode === 'villas'
+                  ? 'bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] text-[#0B1734] shadow-md'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span>Villa View (Mini Houses)</span>
+            </button>
+            <button
+              onClick={() => setViewMode('cad')}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
+                viewMode === 'cad'
+                  ? 'bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] text-[#0B1734] shadow-md'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span>CAD Blueprint View</span>
+            </button>
+            <button
+              onClick={() => setViewMode('landscape')}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
+                viewMode === 'landscape'
+                  ? 'bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] text-[#0B1734] shadow-md'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              <TreePine className="h-3.5 w-3.5" />
+              <span>Landscape View</span>
+            </button>
+          </div>
 
-          {/* Block Filters */}
-          <div className="flex rounded-lg border border-white/10 bg-[#0B1734] p-0.5 text-xs">
+          {/* Layer Toggles */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <button
+              onClick={() => setShowDimensions(!showDimensions)}
+              className={`rounded-lg border px-2.5 py-1 font-medium transition ${
+                showDimensions
+                  ? 'border-[#C7A35A]/50 bg-[#C7A35A]/10 text-[#DFC382]'
+                  : 'border-white/10 text-gray-400 hover:text-white'
+              }`}
+            >
+              📏 Dimensions
+            </button>
+            <button
+              onClick={() => setShowVehicles(!showVehicles)}
+              className={`rounded-lg border px-2.5 py-1 font-medium transition ${
+                showVehicles
+                  ? 'border-[#C7A35A]/50 bg-[#C7A35A]/10 text-[#DFC382]'
+                  : 'border-white/10 text-gray-400 hover:text-white'
+              }`}
+            >
+              🚗 Mini Cars
+            </button>
+            <button
+              onClick={() => setShowLandscaping(!showLandscaping)}
+              className={`rounded-lg border px-2.5 py-1 font-medium transition ${
+                showLandscaping
+                  ? 'border-[#C7A35A]/50 bg-[#C7A35A]/10 text-[#DFC382]'
+                  : 'border-white/10 text-gray-400 hover:text-white'
+              }`}
+            >
+              🌿 Lawns & Trees
+            </button>
+          </div>
+
+          {/* Quick Search & Zoom Controls */}
+          <div className="flex items-center gap-2">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Find Plot (e.g. C-14, A-04)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-44 rounded-lg border border-white/10 bg-[#0B1734] py-1.5 pl-8 pr-3 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+              />
+            </div>
+
+            {/* Zoom Controls */}
+            <div className="flex items-center rounded-lg border border-white/10 bg-[#0B1734] p-0.5 text-xs">
+              <button
+                onClick={() => handleZoom(-0.15)}
+                className="rounded p-1 text-gray-300 hover:bg-white/10 hover:text-white"
+                title="Zoom Out"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </button>
+              <span className="px-2 font-mono font-bold text-gray-300 text-[11px]">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <button
+                onClick={() => handleZoom(0.15)}
+                className="rounded p-1 text-gray-300 hover:bg-white/10 hover:text-white"
+                title="Zoom In"
+              >
+                <ZoomIn className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleResetZoom}
+                className="rounded p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+                title="Reset View"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Block & Status Filter Badges */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-2 text-xs">
+          {/* Block Selection Tabs */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-400 font-medium">Blocks:</span>
             {(['ALL', 'A', 'B', 'C'] as const).map((block) => (
               <button
                 key={block}
                 onClick={() => setFilterBlock(block)}
-                className={`rounded px-2.5 py-1 font-medium transition ${
+                className={`rounded-md px-2.5 py-0.5 font-bold transition ${
                   filterBlock === block
-                    ? 'bg-[#C7A35A] text-[#0B1734] font-bold'
-                    : 'text-gray-300 hover:text-white'
+                    ? 'bg-[#C7A35A] text-[#0B1734]'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                {block === 'ALL' ? 'All Blocks' : `Block ${block}`}
+                {block === 'ALL' ? 'All (55)' : `Block ${block} (${plots.filter(p => p.block === block).length})`}
               </button>
             ))}
+          </div>
+
+          {/* Status Selection Tabs */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 font-medium">Status:</span>
+            <button
+              onClick={() => setFilterStatus('ALL')}
+              className={`rounded-md px-2.5 py-0.5 font-medium transition ${
+                filterStatus === 'ALL' ? 'bg-white/20 text-white font-bold' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterStatus('available_green')}
+              className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition ${
+                filterStatus === 'available_green' ? 'bg-emerald-500/30 text-emerald-300 font-bold' : 'text-emerald-400/70 hover:text-emerald-300'
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span>Available ({plots.filter(p => p.status === 'available_green').length})</span>
+            </button>
+            <button
+              onClick={() => setFilterStatus('booked_yellow')}
+              className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition ${
+                filterStatus === 'booked_yellow' ? 'bg-amber-500/30 text-amber-300 font-bold' : 'text-amber-400/70 hover:text-amber-300'
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              <span>Booked ({plots.filter(p => p.status === 'booked_yellow').length})</span>
+            </button>
+            <button
+              onClick={() => setFilterStatus('vacant_red')}
+              className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition ${
+                filterStatus === 'vacant_red' ? 'bg-red-500/30 text-red-300 font-bold' : 'text-red-400/70 hover:text-red-300'
+              }`}
+            >
+              <span className="h-2 w-2 rounded-full bg-red-400" />
+              <span>Reserved ({plots.filter(p => p.status === 'vacant_red').length})</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Main Interactive Map Layout Area */}
+      {/* Main Interactive Map & Inspector Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Interactive Vector Canvas Master Plan (8 Cols) */}
-        <div className="relative overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#070D1E] p-4 lg:col-span-8 shadow-2xl">
-          {/* Compass & North Indicator */}
-          <div className="absolute top-4 right-4 z-10 flex flex-col items-center rounded-xl border border-white/10 bg-[#0B1734]/90 p-2 shadow-lg backdrop-blur">
-            <Compass className="h-6 w-6 text-[#C7A35A] animate-spin-slow" />
-            <span className="text-[10px] font-bold text-white mt-1">N</span>
-            <span className="text-[8px] text-gray-400">Orientation</span>
+        <div className="relative overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 lg:col-span-8 shadow-2xl">
+          {/* Compass & North Vastu Rose */}
+          <div className="absolute top-4 right-4 z-10 flex flex-col items-center rounded-xl border border-white/10 bg-[#0B1734]/95 p-2 shadow-xl backdrop-blur">
+            <Compass className="h-7 w-7 text-[#C7A35A]" />
+            <span className="text-[10px] font-bold text-white mt-1">N (North)</span>
+            <span className="text-[8px] text-[#DFC382]">Vastu Aligned</span>
           </div>
 
           {/* Legend Overlay */}
-          <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-[#0B1734]/90 px-3 py-2 text-xs shadow-lg backdrop-blur">
+          <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-[#0B1734]/95 px-3.5 py-2 text-xs shadow-xl backdrop-blur">
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-[#16A34A]" />
-              <span className="text-gray-300 text-[11px]">Green: Available</span>
+              <span className="text-gray-300 text-[11px] font-medium">Green: Available</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-[#CA8A04]" />
-              <span className="text-gray-300 text-[11px]">Yellow: Booked</span>
+              <span className="text-gray-300 text-[11px] font-medium">Yellow: Booked</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-[#DC2626]" />
-              <span className="text-gray-300 text-[11px]">Red: Vacant/Reserved</span>
+              <span className="text-gray-300 text-[11px] font-medium">Red: Vacant/Reserved</span>
             </div>
           </div>
 
-          {/* SVG Vector Map Container */}
-          <div className="w-full overflow-x-auto pb-4">
-            <svg
-              viewBox="0 0 960 620"
-              className="min-w-[760px] w-full select-none"
-              style={{ filter: 'drop-shadow(0px 8px 24px rgba(0,0,0,0.5))' }}
+          {/* SVG Vector Map Container with Smooth Scaling */}
+          <div className="w-full overflow-x-auto pb-4 pt-2">
+            <div
+              className="transition-transform duration-200 origin-top-left"
+              style={{ transform: `scale(${zoomLevel})` }}
             >
-              <defs>
-                {/* Road Hatch Pattern */}
-                <pattern id="roadStripes" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                  <line x1="0" y1="0" x2="0" y2="20" stroke="#1E293B" strokeWidth="6" />
-                </pattern>
-                {/* Boundary Glow */}
-                <filter id="plotGlow">
-                  <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#C7A35A" floodOpacity="0.8" />
-                </filter>
-              </defs>
+              <svg
+                viewBox="0 0 1100 960"
+                className="min-w-[840px] w-full select-none"
+                style={{ filter: 'drop-shadow(0px 8px 30px rgba(0,0,0,0.6))' }}
+              >
+                <defs>
+                  {/* Glowing selection filter */}
+                  <filter id="plotGlow">
+                    <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#C7A35A" floodOpacity="0.9" />
+                  </filter>
+                  {/* Streetlight Radial Light Halo */}
+                  <radialGradient id="lightHalo" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stopColor="#FEF08A" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="#FEF08A" stopOpacity="0" />
+                  </radialGradient>
+                  {/* Boulevard Asphalt Texture */}
+                  <pattern id="asphalt" width="10" height="10" patternUnits="userSpaceOnUse">
+                    <rect width="10" height="10" fill="#131B2E" />
+                    <circle cx="2" cy="2" r="0.5" fill="#1E293B" />
+                    <circle cx="7" cy="7" r="0.5" fill="#1E293B" />
+                  </pattern>
+                </defs>
 
-              {/* Master Site Boundary */}
-              <rect
-                x="20"
-                y="20"
-                width="920"
-                height="580"
-                rx="8"
-                fill="#0B132B"
-                stroke="#C7A35A"
-                strokeWidth="2"
-                strokeDasharray="6 4"
-              />
+                {/* 1. MASTER SITE BOUNDARY (282' x 260' / 275') */}
+                <rect
+                  x="40"
+                  y="40"
+                  width="1020"
+                  height="880"
+                  rx="10"
+                  fill="#080E21"
+                  stroke="#C7A35A"
+                  strokeWidth="2.5"
+                  strokeDasharray="8 5"
+                />
 
-              {/* Outer Boundary Dimensions */}
-              <text x="480" y="38" fill="#DFC382" fontSize="11" textAnchor="middle" fontWeight="bold">
-                BOUNDARY: 282&apos;-0&quot;
-              </text>
-              <text x="930" y="310" fill="#DFC382" fontSize="11" textAnchor="middle" transform="rotate(90, 930, 310)" fontWeight="bold">
-                275&apos;-0&quot; / 260&apos;-0&quot;
-              </text>
-
-              {/* Main Entry Road Corridor: 30&apos;-0&quot; Wide */}
-              <g id="main-road-30ft">
-                <rect x="20" y="380" width="920" height="35" fill="#1A243D" />
-                <line x1="20" y1="397" x2="940" y2="397" stroke="#DFC382" strokeWidth="2" strokeDasharray="10 10" />
-                <rect x="60" y="385" width="280" height="25" rx="4" fill="#0B1734" opacity="0.9" />
-                <text x="200" y="402" fill="#DFC382" fontSize="11" textAnchor="middle" fontWeight="bold">
-                  PROPOSED ROAD - 30&apos;-0&quot; WIDE (MAIN BOULEVARD)
+                {/* Outer Boundary Dimensions */}
+                <text x="550" y="32" fill="#DFC382" fontSize="13" textAnchor="middle" fontWeight="bold" letterSpacing="1">
+                  BOUNDARY: 282&apos;-0&quot;
                 </text>
-              </g>
-
-              {/* Internal Access Roads: 25&apos;-0&quot; Wide Corridors */}
-              <g id="internal-roads-25ft">
-                {/* Horizontal Internal Road 1 */}
-                <rect x="20" y="240" width="920" height="32" fill="#162035" />
-                <line x1="20" y1="256" x2="940" y2="256" stroke="#94A3B8" strokeWidth="1" strokeDasharray="6 6" />
-                <text x="500" y="260" fill="#94A3B8" fontSize="10" textAnchor="middle">
-                  PROPOSED ROAD - 25&apos;-0&quot; WIDE
+                <text x="1075" y="480" fill="#DFC382" fontSize="12" textAnchor="middle" transform="rotate(90, 1075, 480)" fontWeight="bold">
+                  275&apos;-0&quot; / 260&apos;-0&quot; (SETBACK 15&apos; 10&quot;)
+                </text>
+                <text x="25" y="480" fill="#DFC382" fontSize="12" textAnchor="middle" transform="rotate(-90, 25, 480)" fontWeight="bold">
+                  BOUNDARY: 282&apos;-0&quot;
                 </text>
 
-                {/* Vertical Road separating Block A and Block B */}
-                <rect x="315" y="40" width="30" height="540" fill="#162035" />
-                <line x1="330" y1="40" x2="330" y2="580" stroke="#94A3B8" strokeWidth="1" strokeDasharray="6 6" />
-                <text x="330" y="160" fill="#94A3B8" fontSize="9" textAnchor="middle" transform="rotate(-90, 330, 160)">
-                  PROPOSED ROAD - 25&apos;-0&quot; WIDE
-                </text>
+                {/* 2. ROAD NETWORK & HIGHWAYS */}
+                {/* Horizontal Cross Boulevard: 25'-0" Wide (between Block C and Blocks A & B) */}
+                <g id="cross-road-25ft">
+                  <rect x="40" y="525" width="1020" height="60" fill="url(#asphalt)" />
+                  <line x1="40" y1="555" x2="1060" y2="555" stroke="#FFFFFF" strokeWidth="1.5" strokeDasharray="12 8" />
+                  <line x1="40" y1="527" x2="1060" y2="527" stroke="#EAB308" strokeWidth="1.5" />
+                  <line x1="40" y1="583" x2="1060" y2="583" stroke="#EAB308" strokeWidth="1.5" />
+                  <text x="550" y="559" fill="#DFC382" fontSize="11" textAnchor="middle" fontWeight="bold" letterSpacing="1">
+                    PROPOSED ROAD - 25&apos;-0&quot; WIDE
+                  </text>
+                </g>
 
-                {/* Vertical Road separating Block B and Block C */}
-                <rect x="575" y="40" width="22" height="540" fill="#162035" />
-                <line x1="586" y1="40" x2="586" y2="580" stroke="#94A3B8" strokeWidth="1" strokeDasharray="6 6" />
-                <text x="586" y="160" fill="#94A3B8" fontSize="8" textAnchor="middle" transform="rotate(-90, 586, 160)">
-                  ROAD 25&apos;-0&quot;
-                </text>
-
-                {/* Vertical Road inside Block C */}
-                <rect x="722" y="40" width="16" height="540" fill="#162035" />
-              </g>
-
-              {/* Block Labels */}
-              <text x="170" y="70" fill="#C7A35A" fontSize="14" fontWeight="800" textAnchor="middle" letterSpacing="2">
-                BLOCK &apos;A&apos;
-              </text>
-              <text x="440" y="70" fill="#C7A35A" fontSize="14" fontWeight="800" textAnchor="middle" letterSpacing="2">
-                BLOCK &apos;B&apos;
-              </text>
-              <text x="750" y="70" fill="#C7A35A" fontSize="14" fontWeight="800" textAnchor="middle" letterSpacing="2">
-                BLOCK &apos;C&apos;
-              </text>
-
-              {/* Render Plots */}
-              {plots.map((plot) => {
-                const isSelected = selectedPlot?.id === plot.id;
-                const statusMeta = getStatusColor(plot.status);
-
-                return (
-                  <g
-                    key={plot.id}
-                    onClick={() => handlePlotClick(plot)}
-                    className="cursor-pointer transition duration-150"
+                {/* Main Entry Road: 30'-0" Wide Boulevard running vertically through Blocks A & B */}
+                <g id="main-boulevard-30ft">
+                  <rect x="490" y="525" width="80" height="355" fill="url(#asphalt)" />
+                  <line x1="530" y1="525" x2="530" y2="880" stroke="#FDE047" strokeWidth="2" strokeDasharray="14 10" />
+                  <line x1="492" y1="525" x2="492" y2="880" stroke="#FFFFFF" strokeWidth="1" />
+                  <line x1="568" y1="525" x2="568" y2="880" stroke="#FFFFFF" strokeWidth="1" />
+                  <text
+                    x="530"
+                    y="720"
+                    fill="#DFC382"
+                    fontSize="11"
+                    textAnchor="middle"
+                    transform="rotate(-90, 530, 720)"
+                    fontWeight="bold"
+                    letterSpacing="1"
                   >
-                    {/* Plot Rectangle */}
-                    <rect
-                      x={plot.x}
-                      y={plot.y}
-                      width={plot.width}
-                      height={plot.height}
-                      fill={statusMeta.fill}
-                      stroke={isSelected ? '#FFFFFF' : statusMeta.stroke}
-                      strokeWidth={isSelected ? 3 : 1.5}
-                      rx="3"
-                      className="transition-all hover:brightness-125"
-                      style={isSelected ? { filter: 'url(#plotGlow)' } : undefined}
-                    />
+                    PROPOSED ROAD - 30&apos;-0&quot; WIDE (MAIN BOULEVARD)
+                  </text>
 
-                    {/* Plot Label */}
-                    <text
-                      x={plot.x + plot.width / 2}
-                      y={plot.y + plot.height / 2 - 8}
-                      fill="#FFFFFF"
-                      fontSize={plot.width < 50 ? '9' : '11'}
-                      fontWeight="bold"
-                      textAnchor="middle"
-                    >
-                      {plot.plotNumber}
-                    </text>
-
-                    {/* Plot Sqft */}
-                    <text
-                      x={plot.x + plot.width / 2}
-                      y={plot.y + plot.height / 2 + 6}
-                      fill="#FFFFFF"
-                      fontSize={plot.width < 50 ? '7' : '9'}
-                      opacity="0.95"
-                      textAnchor="middle"
-                    >
-                      {plot.areaSqft} sqft
-                    </text>
-
-                    {/* Plot Dimensions */}
-                    <text
-                      x={plot.x + plot.width / 2}
-                      y={plot.y + plot.height / 2 + 18}
-                      fill="#FFFFFF"
-                      fontSize="7"
-                      opacity="0.8"
-                      textAnchor="middle"
-                    >
-                      {plot.dimensions}
-                    </text>
+                  {/* Zebra Crosswalk at T-junction */}
+                  <g opacity="0.9">
+                    {[0, 8, 16, 24, 32, 40, 48, 56, 64, 72].map((off) => (
+                      <rect key={off} x={494 + off} y="582" width="5" height="18" fill="#FFFFFF" rx="1" />
+                    ))}
                   </g>
-                );
-              })}
-            </svg>
+
+                  {/* Grand Entrance Gate Arch at Bottom */}
+                  <g id="entrance-gate">
+                    <rect x="480" y="870" width="100" height="20" rx="3" fill="#0B1734" stroke="#C7A35A" strokeWidth="1.5" />
+                    <text x="530" y="884" fill="#DFC382" fontSize="8" fontWeight="bold" textAnchor="middle" letterSpacing="0.8">
+                      AKGV INFRA CITY — MAIN GATE (30&apos; WIDE)
+                    </text>
+                    {/* Security guard kiosk */}
+                    <rect x="465" y="865" width="12" height="15" rx="2" fill="#1E293B" stroke="#94A3B8" strokeWidth="0.8" />
+                  </g>
+                </g>
+
+                {/* Block C Internal Access Roads: 25'-0" Wide Corridors */}
+                <g id="block-c-roads-25ft">
+                  {/* Road 1: Between Section 1 and Section 2 */}
+                  <rect x="204" y="60" width="46" height="465" fill="url(#asphalt)" />
+                  <line x1="227" y1="60" x2="227" y2="525" stroke="#FFFFFF" strokeWidth="1" strokeDasharray="8 6" />
+                  <text x="227" y="290" fill="#94A3B8" fontSize="9" textAnchor="middle" transform="rotate(-90, 227, 290)">
+                    PROPOSED ROAD - 25&apos;-0&quot; WIDE
+                  </text>
+
+                  {/* Road 2: Between Section 2 and Section 3 */}
+                  <rect x="516" y="60" width="50" height="465" fill="url(#asphalt)" />
+                  <line x1="541" y1="60" x2="541" y2="525" stroke="#FFFFFF" strokeWidth="1" strokeDasharray="8 6" />
+                  <text x="541" y="290" fill="#94A3B8" fontSize="9" textAnchor="middle" transform="rotate(-90, 541, 290)">
+                    PROPOSED ROAD - 25&apos;-0&quot; WIDE
+                  </text>
+
+                  {/* Road 3: Far right perimeter road along Section 3 */}
+                  <rect x="833" y="60" width="46" height="465" fill="url(#asphalt)" />
+                  <line x1="856" y1="60" x2="856" y2="525" stroke="#FFFFFF" strokeWidth="1" strokeDasharray="8 6" />
+                  <text x="856" y="290" fill="#94A3B8" fontSize="9" textAnchor="middle" transform="rotate(-90, 856, 290)">
+                    PROPOSED ROAD - 25&apos;-0&quot; WIDE
+                  </text>
+                </g>
+
+                {/* 3. Landscaped Green Buffer on Right Side (Setback 15' 10") */}
+                <g id="right-buffer-park">
+                  <rect x="883" y="60" width="167" height="465" rx="6" fill="#0C2417" stroke="#166534" strokeWidth="1" />
+                  {/* Decorative Park Trees & Jogging Trail */}
+                  <path d="M 910 80 Q 940 200 920 320 T 950 500" stroke="#15803D" strokeWidth="2.5" fill="none" strokeDasharray="4 4" />
+                  <text x="965" y="260" fill="#4ADE80" fontSize="10" fontWeight="bold" textAnchor="middle" transform="rotate(90, 965, 260)">
+                    LANDSCAPED BOTANICAL BUFFER (15&apos;-10&quot;)
+                  </text>
+                  {/* Trees in Park */}
+                  {[90, 150, 220, 300, 380, 450].map((treeY) => (
+                    <circle key={treeY} cx="940" cy={treeY} r="9" fill="#15803D" opacity="0.8" />
+                  ))}
+                </g>
+
+                {/* 4. Avenue Palm Trees & Streetlights along Boulevard */}
+                <g id="boulevard-avenue-trees">
+                  {[550, 610, 670, 730, 790, 850].map((lampY) => (
+                    <g key={lampY}>
+                      {/* Left curb tree & light */}
+                      <circle cx="482" cy={lampY} r="7" fill="#15803D" />
+                      <circle cx="482" cy={lampY} r="14" fill="url(#lightHalo)" />
+                      {/* Right curb tree & light */}
+                      <circle cx="578" cy={lampY} r="7" fill="#15803D" />
+                      <circle cx="578" cy={lampY} r="14" fill="url(#lightHalo)" />
+                    </g>
+                  ))}
+                </g>
+
+                {/* 5. BLOCK LABELS & TITLE WATERMARKS */}
+                <text x="280" y="582" fill="#C7A35A" fontSize="13" fontWeight="800" textAnchor="middle" letterSpacing="2">
+                  BLOCK &apos;B&apos; (TOP ROW)
+                </text>
+                <text x="280" y="718" fill="#C7A35A" fontSize="13" fontWeight="800" textAnchor="middle" letterSpacing="2">
+                  BLOCK &apos;A&apos; (FRONT ROW)
+                </text>
+                <text x="780" y="582" fill="#C7A35A" fontSize="13" fontWeight="800" textAnchor="middle" letterSpacing="2">
+                  BLOCK &apos;B&apos; (TOP ROW)
+                </text>
+                <text x="780" y="718" fill="#C7A35A" fontSize="13" fontWeight="800" textAnchor="middle" letterSpacing="2">
+                  BLOCK &apos;A&apos; (FRONT ROW)
+                </text>
+                <text x="541" y="80" fill="#C7A35A" fontSize="14" fontWeight="800" textAnchor="middle" letterSpacing="2">
+                  BLOCK &apos;C&apos; (35 PREMIUM RESIDENTIAL PLOTS)
+                </text>
+
+                {/* 6. RENDER ALL 55 PLOTS WITH MINIATURE VILLAS */}
+                {plots.map((plot) => {
+                  const isSelected = selectedPlot?.id === plot.id;
+                  const isHovered = hoveredPlot?.id === plot.id;
+
+                  return (
+                    <g
+                      key={plot.id}
+                      onClick={() => handlePlotClick(plot)}
+                      onMouseEnter={() => setHoveredPlot(plot)}
+                      onMouseLeave={() => setHoveredPlot(null)}
+                    >
+                      <MiniVillaSvg
+                        plot={plot}
+                        isSelected={isSelected}
+                        isHovered={isHovered}
+                        viewMode={viewMode}
+                        showDimensions={showDimensions}
+                        showVehicles={showVehicles}
+                        showLandscaping={showLandscaping}
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Interactive Plot Details & Actions (4 Cols) */}
+        {/* Right Column: Interactive Plot Inspector & Booking Details (4 Cols) */}
         <div className="lg:col-span-4 space-y-4">
           {selectedPlot && currentStatusMeta ? (
-            <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734] p-5 shadow-xl space-y-5">
-              {/* Header */}
+            <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734] p-5 shadow-2xl space-y-5">
+              {/* Plot Header */}
               <div className="flex items-start justify-between border-b border-white/10 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-serif text-2xl font-bold text-white">
+                    <span className="font-serif text-3xl font-bold text-white tracking-wide">
                       Plot {selectedPlot.plotNumber}
                     </span>
-                    <span className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382]">
+                    <span className="rounded bg-[#C7A35A]/20 px-2.5 py-0.5 text-xs font-bold text-[#DFC382]">
                       Block {selectedPlot.block}
                     </span>
+                    {selectedPlot.isCornerPlot && (
+                      <span className="rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300">
+                        Corner Plot
+                      </span>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Rampur Township, Varanasi
+                  <p className="text-xs text-gray-400 mt-1">
+                    AKGV Infra City — Rampur Layout (Approved Er. Rajesh Kumar Patel)
                   </p>
                 </div>
 
-                {/* Status Badge */}
-                <div className={`rounded-full px-3 py-1 text-xs font-bold border ${currentStatusMeta.bg} ${currentStatusMeta.text}`}>
+                <div className={`rounded-xl border px-3 py-1.5 text-xs font-bold ${currentStatusMeta.bg} ${currentStatusMeta.text}`}>
                   {currentStatusMeta.label}
                 </div>
               </div>
 
-              {/* Dimensions & Specifications Grid */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-xl bg-[#050A17] p-3 border border-white/5">
-                  <span className="text-gray-400 block text-[11px]">Area</span>
-                  <span className="font-bold text-base text-white">{selectedPlot.areaSqft} sqft</span>
-                  <span className="text-[10px] text-gray-400 block">Verified schedule</span>
-                </div>
-                <div className="rounded-xl bg-[#050A17] p-3 border border-white/5">
-                  <span className="text-gray-400 block text-[11px]">Dimensions</span>
-                  <span className="font-bold text-base text-white">{selectedPlot.dimensions}</span>
-                  <span className="text-[10px] text-gray-400 block">Front x Depth</span>
-                </div>
-                <div className="rounded-xl bg-[#050A17] p-3 border border-white/5">
-                  <span className="text-gray-400 block text-[11px]">Frontage Road</span>
-                  <span className="font-bold text-sm text-[#DFC382]">{selectedPlot.roadWidth}</span>
-                  <span className="text-[10px] text-gray-400 block">Facing {selectedPlot.roadFacing}</span>
-                </div>
-                <div className="rounded-xl bg-[#050A17] p-3 border border-white/5">
-                  <span className="text-gray-400 block text-[11px]">Guide Price</span>
-                  <span className="font-bold text-sm text-emerald-400">
-                    {selectedPlot.basePriceInr
-                      ? `₹${(selectedPlot.basePriceInr / 100000).toFixed(2)} Lakh`
-                      : 'On Request'}
-                  </span>
-                  <span className="text-[10px] text-gray-400 block">Immediate Registry</span>
-                </div>
-              </div>
-
-              {/* 3D House Model Recommendation */}
-              {suitableHouses.length > 0 && (
-                <div className="rounded-xl border border-[#C7A35A]/20 bg-[#050A17]/80 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-[#DFC382]">
-                      <Building2 className="h-4 w-4 text-[#C7A35A]" />
-                      Recommended 3D House Design
-                    </span>
-                    <span className="text-[10px] text-gray-400">Dimension Verified</span>
+              {/* Vastu Compliance Badge */}
+              {vastuData && (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-400">
+                    <Compass className="h-4 w-4" />
+                    <span>{vastuData.score} ({selectedPlot.roadFacing} Facing)</span>
                   </div>
-                  <div className="text-xs">
-                    <p className="font-semibold text-white">{suitableHouses[0].name}</p>
-                    <p className="text-[11px] text-gray-400">{suitableHouses[0].subtitle}</p>
-                  </div>
-                  <Link
-                    href={`/house-viewer-3d?plot=${selectedPlot.plotNumber}`}
-                    className="flex items-center justify-center gap-1.5 w-full rounded-lg bg-[#C7A35A]/20 py-1.5 text-xs font-semibold text-[#DFC382] border border-[#C7A35A]/40 hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>Launch in 3D House Viewer</span>
-                  </Link>
+                  <p className="text-[11px] text-gray-300">
+                    {vastuData.note}
+                  </p>
                 </div>
               )}
 
+              {/* Technical Specifications Grid */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
+                  <span className="text-gray-400">Total Plot Area</span>
+                  <div className="text-base font-bold text-white">{selectedPlot.areaSqft} sqft</div>
+                  <span className="text-[10px] text-[#DFC382]">
+                    {(selectedPlot.areaSqft / 9).toFixed(1)} गज (Square Yards)
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
+                  <span className="text-gray-400">Dimensions</span>
+                  <div className="text-base font-bold text-white">{selectedPlot.dimensions}</div>
+                  <span className="text-[10px] text-gray-400">Length x Width</span>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
+                  <span className="text-gray-400">Road Frontage</span>
+                  <div className="text-xs font-bold text-white">{selectedPlot.roadWidth}</div>
+                  <span className="text-[10px] text-gray-400">Asphalt Road with Drainage</span>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
+                  <span className="text-gray-400">Base Price (INR)</span>
+                  <div className="text-base font-bold text-[#DFC382]">
+                    ₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)} Lakh
+                  </div>
+                  <span className="text-[10px] text-gray-400">
+                    @ ₹{(selectedPlot.basePriceInr || 1200000) / selectedPlot.areaSqft}/sqft
+                  </span>
+                </div>
+              </div>
+
+              {/* Compatible 3D Villa Models */}
+              <div className="space-y-2 border-t border-white/10 pt-4">
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+                  <Building2 className="h-4 w-4 text-[#C7A35A]" />
+                  <span>Compatible Architect House Designs</span>
+                </span>
+
+                <div className="space-y-2">
+                  {suitableHouses.map((house) => (
+                    <div
+                      key={house.id}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-[#050A17] p-3 text-xs transition hover:border-[#C7A35A]/50"
+                    >
+                      <div>
+                        <div className="font-bold text-white">{house.name}</div>
+                        <div className="text-[11px] text-gray-400">
+                          {house.bhk} • {house.carpetAreaSqft} sqft • Est. ₹{(house.estimatedCostInr / 100000).toFixed(1)} Lakh
+                        </div>
+                      </div>
+
+                      <Link
+                        href="/house-viewer-3d"
+                        className="rounded-lg border border-[#C7A35A] bg-[#0B1734] px-2.5 py-1 text-[11px] font-bold text-[#DFC382] transition hover:bg-[#C7A35A] hover:text-[#0B1734]"
+                      >
+                        Inspect 3D
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Action Buttons */}
-              <div className="space-y-2 pt-1">
+              <div className="space-y-2 pt-2">
                 {selectedPlot.status === 'available_green' ? (
                   <button
                     onClick={() => setBookingModalOpen(true)}
-                    className="w-full rounded-xl bg-gradient-to-r from-[#146B4D] to-[#1EA275] py-3 text-center text-sm font-bold text-white shadow-lg transition hover:brightness-110 active:scale-95"
+                    className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-sm font-bold text-[#0B1734] shadow-lg transition hover:brightness-110 active:scale-[0.98]"
                   >
-                    Request Plot Booking Now
+                    Hold / Book Plot Online (72h Token Hold)
                   </button>
                 ) : (
-                  <div className="rounded-xl bg-white/5 p-3 text-center text-xs text-gray-400 border border-white/10">
-                    {selectedPlot.status === 'booked_yellow'
-                      ? '⚠️ This plot is confirmed booked and unavailable for new booking requests.'
-                      : '🔒 This plot is in vacant/reserved designation. Contact sales administration to request availability.'}
+                  <div className="rounded-xl border border-white/10 bg-white/5 py-2.5 text-center text-xs text-gray-400">
+                    This plot is currently {selectedPlot.status.replace('_', ' ')}. Check available green plots or contact support.
                   </div>
                 )}
 
                 <Link
-                  href={`/site-visit?plot=${selectedPlot.plotNumber}&location=Rampur`}
-                  className="flex items-center justify-center gap-2 w-full rounded-xl border border-white/20 bg-[#050A17] py-2.5 text-center text-xs font-semibold text-gray-200 hover:border-[#C7A35A] hover:text-white transition"
+                  href="/site-visit"
+                  className="block w-full text-center rounded-xl border border-white/20 bg-white/5 py-2.5 text-xs font-bold text-white transition hover:bg-white/10"
                 >
-                  <Calendar className="h-4 w-4 text-[#C7A35A]" />
-                  <span>Schedule Site Visit</span>
+                  Schedule an On-Site Visit
                 </Link>
-              </div>
-
-              {/* Call-to-action Phone */}
-              <div className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs text-gray-400">
-                <span>Immediate Booking Inquiries:</span>
-                <a href="tel:6306917991" className="font-bold text-[#DFC382] hover:underline">
-                  +91 6306917991
-                </a>
               </div>
             </div>
           ) : (
-            <div className="flex h-64 items-center justify-center rounded-2xl border border-white/10 bg-[#0B1734] p-6 text-center text-gray-400 text-sm">
-              Click any plot on the layout map to inspect full dimensions, price, and compatible 3D house models.
+            <div className="flex h-64 items-center justify-center rounded-2xl border border-white/10 bg-[#0B1734] p-6 text-center text-gray-400 text-xs">
+              Select any plot on the master plan to inspect dimensions, road width, and suitable 3D house designs.
             </div>
           )}
 
-          {/* Area Schedule Summary Card */}
-          <div className="rounded-2xl border border-white/10 bg-[#050A17] p-4 text-xs space-y-3">
+          {/* Area Schedule Authentic Information Card */}
+          <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#050A17] p-4 text-xs space-y-3">
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
-              <span className="font-serif font-bold text-white">Area Schedule (Approved)</span>
-              <span className="text-[#C7A35A] font-semibold">{AREA_SCHEDULE.roadPercentage}% Roads</span>
+              <span className="font-serif font-bold text-white tracking-wide">
+                AREA SCHEDULE (BLUEPRINT GROUND TRUTH)
+              </span>
+              <span className="text-[10px] text-[#DFC382]">Scale 1:500</span>
             </div>
-            <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
-              <div className="rounded bg-white/5 p-2">
-                <span className="text-gray-400 block">Total Area</span>
-                <strong className="text-white">{AREA_SCHEDULE.totalAreaSqft}</strong>
-                <span className="text-[9px] text-gray-400 block">sqft</span>
+
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <span className="text-gray-400">Total Township Area:</span>
+                <span className="font-bold text-white block">{AREA_SCHEDULE.totalAreaSqft.toLocaleString()} sqft</span>
               </div>
-              <div className="rounded bg-white/5 p-2">
-                <span className="text-gray-400 block">Plot Area</span>
-                <strong className="text-[#1EA275]">{AREA_SCHEDULE.plotAreaSqft}</strong>
-                <span className="text-[9px] text-gray-400 block">sqft</span>
+              <div>
+                <span className="text-gray-400">Net Plot Area:</span>
+                <span className="font-bold text-white block">{AREA_SCHEDULE.plotAreaSqft.toLocaleString()} sqft</span>
               </div>
-              <div className="rounded bg-white/5 p-2">
-                <span className="text-gray-400 block">Road Area</span>
-                <strong className="text-[#DFC382]">{AREA_SCHEDULE.roadAreaSqft}</strong>
-                <span className="text-[9px] text-gray-400 block">sqft</span>
+              <div>
+                <span className="text-gray-400">Internal Road Area:</span>
+                <span className="font-bold text-white block">{AREA_SCHEDULE.roadAreaSqft.toLocaleString()} sqft</span>
               </div>
+              <div>
+                <span className="text-gray-400">Road Area Ratio:</span>
+                <span className="font-bold text-[#DFC382] block">{AREA_SCHEDULE.roadPercentage}%</span>
+              </div>
+            </div>
+
+            {/* Authentic Hindi Slogan from Brochure */}
+            <div className="rounded-lg bg-[#0B1734] p-2.5 text-[11px] text-gray-300 space-y-1 border border-white/5">
+              <p className="font-bold text-[#DFC382]">अपने सपनों का प्लॉट खरीदें</p>
+              <p className="text-[10px] text-gray-400">
+                सुव्यवस्थित प्लॉट्स अफोर्डेबल रेट्स में | शांत, सुरक्षित एवं विकासशील क्षेत्र | पानी, बिजली, नाली की सुविधाएं उपलब्ध
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Booking Request Modal */}
+      {/* Booking Form Modal */}
       {bookingModalOpen && selectedPlot && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-[#C7A35A] bg-[#0B1734] p-6 shadow-2xl space-y-4">
+          <div className="relative max-w-md w-full rounded-2xl border border-[#C7A35A] bg-[#0B1734] p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
                 <h3 className="font-serif text-lg font-bold text-white">
-                  Booking Request — Plot {selectedPlot.plotNumber}
+                  Hold Plot #{selectedPlot.plotNumber}
                 </h3>
                 <p className="text-xs text-gray-400">
-                  {selectedPlot.areaSqft} sqft ({selectedPlot.dimensions}) | Rampur, Varanasi
+                  Block {selectedPlot.block} • {selectedPlot.areaSqft} sqft ({selectedPlot.dimensions})
                 </p>
               </div>
               <button
@@ -580,13 +903,13 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
 
       {/* Blueprint Original Photograph Lightbox Modal */}
       {showBrochureModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 backdrop-blur-md">
           <div className="relative max-h-[95vh] max-w-4xl w-full overflow-hidden rounded-2xl border border-[#C7A35A] bg-[#050A17] shadow-2xl flex flex-col">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 bg-[#0B1734]">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <FileText className="h-4 w-4 text-[#C7A35A]" />
                 <span className="font-serif text-sm font-bold text-white">
-                  Original Blueprint Photograph — A.K.G.V. Infraa City Varanasi
+                  Original Approved Brochure Photographs — AKGV Infra City
                 </span>
               </div>
               <button
@@ -596,18 +919,75 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="relative flex-1 overflow-auto p-4 flex items-center justify-center">
-              <Image
-                src="/assets/layout_plan_brochure.png"
-                alt="Original Layout Plan Brochure of AKGV Infra City"
-                width={800}
-                height={1200}
-                className="rounded-lg object-contain max-h-[80vh] w-auto border border-white/10"
-              />
+
+            {/* Modal Tabs */}
+            <div className="flex border-b border-white/10 bg-[#0B1734]/80 px-4 pt-2 text-xs">
+              <button
+                onClick={() => setActiveBrochureTab('layout')}
+                className={`border-b-2 px-4 py-2 font-bold transition ${
+                  activeBrochureTab === 'layout'
+                    ? 'border-[#C7A35A] text-[#DFC382]'
+                    : 'border-transparent text-gray-400 hover:text-white'
+                }`}
+              >
+                Blueprint Layout Plan
+              </button>
+              <button
+                onClick={() => setActiveBrochureTab('photo')}
+                className={`border-b-2 px-4 py-2 font-bold transition ${
+                  activeBrochureTab === 'photo'
+                    ? 'border-[#C7A35A] text-[#DFC382]'
+                    : 'border-transparent text-gray-400 hover:text-white'
+                }`}
+              >
+                Physical Yellow Brochure Photo
+              </button>
+              <button
+                onClick={() => setActiveBrochureTab('rewards')}
+                className={`border-b-2 px-4 py-2 font-bold transition ${
+                  activeBrochureTab === 'rewards'
+                    ? 'border-[#C7A35A] text-[#DFC382]'
+                    : 'border-transparent text-gray-400 hover:text-white'
+                }`}
+              >
+                11-Tier Rewards & Commission Plan
+              </button>
             </div>
+
+            {/* Modal Image Display */}
+            <div className="relative flex-1 overflow-auto p-4 flex items-center justify-center bg-[#02050E]">
+              {activeBrochureTab === 'layout' && (
+                <Image
+                  src="/assets/layout_plan_brochure.png"
+                  alt="Original Layout Plan Brochure of AKGV Infra City"
+                  width={800}
+                  height={1200}
+                  className="rounded-lg object-contain max-h-[75vh] w-auto border border-white/10"
+                />
+              )}
+              {activeBrochureTab === 'photo' && (
+                <Image
+                  src="/assets/brochure_full_photo.png"
+                  alt="Physical Brochure Photograph of AKGV Infra City"
+                  width={800}
+                  height={1200}
+                  className="rounded-lg object-contain max-h-[75vh] w-auto border border-white/10"
+                />
+              )}
+              {activeBrochureTab === 'rewards' && (
+                <Image
+                  src="/assets/rewards_plan_brochure.jpg"
+                  alt="11-Tier Rewards Brochure of AKGV Infra City"
+                  width={800}
+                  height={1200}
+                  className="rounded-lg object-contain max-h-[75vh] w-auto border border-white/10"
+                />
+              )}
+            </div>
+
             <div className="border-t border-white/10 bg-[#0B1734] px-4 py-2 text-[11px] text-gray-400 flex items-center justify-between">
-              <span>Authentic blueprint photograph supplied by AKGV Infra City Private Limited.</span>
-              <span className="text-[#DFC382]">Scale 1:500 | Area: 77550 sqft</span>
+              <span>Authentic documents provided by AKGV Infra City Private Limited.</span>
+              <span className="text-[#DFC382]">Scale 1:500 | Area: 77,550 sqft</span>
             </div>
           </div>
         </div>
