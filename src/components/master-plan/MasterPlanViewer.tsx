@@ -87,6 +87,14 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
     });
   }, [plots, filterBlock, filterStatus, filterSize, searchQuery]);
 
+  // Layer order: Render selected plot LAST in SVG DOM so that scaled miniature house floats smoothly above neighbors
+  const orderedPlots = useMemo(() => {
+    if (!selectedPlot) return filteredPlots;
+    const others = filteredPlots.filter((p) => p.id !== selectedPlot.id);
+    const current = filteredPlots.find((p) => p.id === selectedPlot.id);
+    return current ? [...others, current] : filteredPlots;
+  }, [filteredPlots, selectedPlot]);
+
   // Status Meta
   const getStatusColor = (status: PlotStatus) => {
     switch (status) {
@@ -407,6 +415,23 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: Interactive Vector Canvas Master Plan (8 Cols) */}
         <div className="relative overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 lg:col-span-8 shadow-2xl">
+          {/* Interactive Tap-to-Enlarge Instruction Pill */}
+          <div className="mb-2 flex items-center justify-between rounded-xl border border-[#C7A35A]/25 bg-[#0B1734]/85 px-3 py-1.5 text-[11px] text-[#DFC382] backdrop-blur">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-[#C7A35A] animate-pulse" />
+              <span className="font-semibold">
+                {language === 'hi' 
+                  ? '💡 किसी भी प्लॉट पर टैप/क्लिक करें — वह 3D विला डिज़ाइन और विवरण के साथ बड़ा (Enlarge) हो जाएगा।' 
+                  : language === 'hinglish' 
+                  ? '💡 Kisi bhi plot par tap/click karein — woh 3D villa design aur details ke saath bada (Enlarge) ho jayega.' 
+                  : '💡 Tap or click any plot — it will smoothly enlarge with miniature 3D architectural villa details & booking options.'}
+              </span>
+            </div>
+            <span className="text-[10px] text-gray-400 hidden sm:inline">
+              {language === 'hi' ? 'केवल ज़मीन/प्लॉट्स की बिक्री' : language === 'hinglish' ? 'Sirf Plots Ki Bikri' : 'Residential Plots Only'}
+            </span>
+          </div>
+
           {/* Compass & North Vastu Rose */}
           <div className="absolute top-4 right-4 z-10 flex flex-col items-center rounded-xl border border-white/10 bg-[#0B1734]/95 p-2 shadow-xl backdrop-blur">
             <Compass className="h-7 w-7 text-[#C7A35A]" />
@@ -477,7 +502,16 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 style={{ filter: 'drop-shadow(0px 8px 30px rgba(0,0,0,0.6))' }}
               >
                 <defs>
-                  {/* Glowing selection filter */}
+                  {/* High-Altitude 3D Elevation Drop Shadow Filter for Enlarged Selected Plot */}
+                  <filter id="selectedPlotElevate" x="-60%" y="-60%" width="220%" height="220%">
+                    <feDropShadow dx="0" dy="16" stdDeviation="16" floodColor="#000000" floodOpacity="0.95" />
+                    <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#DFC382" floodOpacity="0.85" />
+                  </filter>
+                  {/* Subtle Hover Shadow */}
+                  <filter id="hoverPlotGlow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#000000" floodOpacity="0.6" />
+                  </filter>
+                  {/* Legacy Glowing selection filter */}
                   <filter id="plotGlow">
                     <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#C7A35A" floodOpacity="0.9" />
                   </filter>
@@ -636,8 +670,8 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   BLOCK &apos;C&apos; (35 PREMIUM RESIDENTIAL PLOTS)
                 </text>
 
-                {/* 6. RENDER ALL 55 PLOTS WITH MINIATURE VILLAS */}
-                {plots.map((plot) => {
+                {/* 6. RENDER ALL 55 PLOTS WITH MINIATURE VILLAS (Selected Plot Rendered Last for 3D Elevation) */}
+                {orderedPlots.map((plot) => {
                   const isSelected = selectedPlot?.id === plot.id;
                   const isHovered = hoveredPlot?.id === plot.id;
 
