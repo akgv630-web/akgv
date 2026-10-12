@@ -59,10 +59,14 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1 rounded bg-[#146B4D]/30 px-2 py-0.5 font-medium text-[#1EA275] border border-[#146B4D]/50">
               <span className="h-1.5 w-1.5 rounded-full bg-[#1EA275] animate-pulse"></span>
-              {COMPANY_DETAILS.taglineEn}
+              {language === 'hi' ? COMPANY_DETAILS.taglineHi : COMPANY_DETAILS.taglineEn}
             </span>
             <span className="text-gray-400">|</span>
-            <span className="text-gray-300">Rampur • Lahartara • Mirza Murad (Varanasi, UP)</span>
+            <span className="text-gray-300">
+              {language === 'hi'
+                ? 'रामपुर • लहरतारा • मिर्ज़ा मुराद (वाराणसी, उ.प्र.)'
+                : 'Rampur • Lahartara • Mirza Murad (Varanasi, UP)'}
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <a
@@ -197,7 +201,9 @@ export function Navbar() {
             className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-4 py-2 text-xs font-bold text-[#0B1734] shadow-md transition hover:brightness-110 active:scale-95"
           >
             <User className="h-3.5 w-3.5" />
-            <span>Open Dashboard</span>
+            <span>
+              {language === 'hi' ? 'डैशबोर्ड खोलें' : language === 'hinglish' ? 'Dashboard Kholein' : 'Open Dashboard'}
+            </span>
           </Link>
         </div>
 
@@ -207,7 +213,7 @@ export function Navbar() {
             href={getDashboardPath(currentUser.role)}
             className="rounded-lg bg-[#C7A35A] px-2.5 py-1.5 text-xs font-bold text-[#0B1734]"
           >
-            Dashboard
+            {language === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

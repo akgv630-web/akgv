@@ -24,6 +24,7 @@ import {
 import { HouseModel, Plot } from '@/types';
 import { HOUSE_MODELS, INITIAL_PLOTS } from '@/data/groundTruth';
 import { PlotHoldCertificateModal } from '@/components/common/PlotHoldCertificateModal';
+import { useApp } from '@/context/AppContext';
 
 // Procedural 3D Architectural Villa Component with high detail
 function ProceduralVilla({
@@ -225,6 +226,9 @@ export function HouseViewer3D({
   initialPlot?: Plot;
   initialHouseModel?: HouseModel;
 }) {
+  const { t, language } = useApp();
+  const c = t.houseViewer;
+
   const [selectedHouse, setSelectedHouse] = useState<HouseModel>(initialHouseModel || HOUSE_MODELS[0]);
   const [selectedPlot, setSelectedPlot] = useState<Plot>(initialPlot || INITIAL_PLOTS[3]); // A-04 default
   const [selectedThemeIndex, setSelectedThemeIndex] = useState(0);
@@ -284,11 +288,11 @@ export function HouseViewer3D({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#C7A35A] animate-pulse" />
             <h2 className="font-serif text-lg font-bold text-white tracking-wide">
-              3D Future Home Simulation (प्रस्तावित गृह विज़ुअलाइज़ेशन)
+              {c.title}
             </h2>
           </div>
           <p className="text-xs text-gray-400">
-            Sample Elevation: <strong className="text-white">{selectedHouse.name}</strong> on Plot{' '}
+            {c.subtitle}: <strong className="text-white">{selectedHouse.name}</strong> • Plot{' '}
             <strong className="text-[#DFC382]">{selectedPlot.plotNumber}</strong> ({selectedPlot.dimensions} • {selectedPlot.areaSqft} sqft)
           </p>
         </div>
@@ -298,12 +302,12 @@ export function HouseViewer3D({
           {isPlotCompatible ? (
             <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>Plot-Fit Approved ({selectedPlot.areaSqft} sqft ≥ {selectedHouse.minPlotAreaSqft} sqft)</span>
+              <span>{c.fitApproved} ({selectedPlot.areaSqft} sqft ≥ {selectedHouse.minPlotAreaSqft} sqft)</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400">
               <ShieldAlert className="h-3.5 w-3.5" />
-              <span>Plot Area Insufficient for this Model</span>
+              <span>{c.fitFailed}</span>
             </div>
           )}
         </div>
@@ -313,14 +317,14 @@ export function HouseViewer3D({
       <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/20 px-4 py-3 text-xs text-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-lg">
         <div className="flex items-start gap-2.5">
           <span className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382] uppercase tracking-wider shrink-0 mt-0.5">
-            प्लॉट बिक्री सूचना
+            {c.noticeBadge}
           </span>
           <span className="text-gray-300 leading-relaxed text-[11px]">
-            <strong className="text-white">AKGV Infra City केवल प्रमाणित आवासीय प्लॉट्स की बिक्री करती है (कंपनी मकान निर्माण नहीं करती है)।</strong> यह 3D व्यूअर केवल आपके प्लॉट पर भविष्य के मकान के वास्तु, सेटबैक व कार पार्किंग के विज़ुअलाइज़ेशन के लिए है।
+            {c.noticeText}
           </span>
         </div>
         <span className="text-[11px] text-[#DFC382] font-semibold shrink-0">
-          Township Plots Only
+          {c.noticeTag}
         </span>
       </div>
 
@@ -504,10 +508,10 @@ export function HouseViewer3D({
               onClick={() => setHoldModalOpen(true)}
               className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3.5 py-2 text-xs font-bold text-[#0B1734] shadow-xl hover:brightness-110 active:scale-95 transition"
             >
-              <span>⚡ Hold Plot #{selectedPlot.plotNumber} (₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)}L)</span>
+              <span>⚡ {c.canvasHoldBtn} #{selectedPlot.plotNumber} (₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)}L)</span>
             </button>
             <div className="hidden sm:block rounded-lg border border-white/10 bg-[#050A17]/80 px-2.5 py-1 text-[10px] text-gray-400 backdrop-blur">
-              Sample 3D Elevation • AKGV Infra Sells Plots
+              {c.canvasGuide}
             </div>
           </div>
         </div>
@@ -518,7 +522,7 @@ export function HouseViewer3D({
           <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734] p-5 shadow-xl space-y-4">
             <div>
               <label className="text-xs font-bold text-[#DFC382] uppercase tracking-wider block mb-1.5">
-                Choose House Architectural Model
+                {c.chooseModel}
               </label>
               <div className="space-y-2">
                 {HOUSE_MODELS.map((model) => (
@@ -549,7 +553,7 @@ export function HouseViewer3D({
             {/* Select Plot to Verify Fitment */}
             <div>
               <label className="text-xs font-bold text-[#DFC382] uppercase tracking-wider block mb-1.5">
-                Simulate on Plot
+                {c.simulateOnPlot}
               </label>
               <select
                 value={selectedPlot.id}
@@ -571,7 +575,7 @@ export function HouseViewer3D({
             <div>
               <label className="text-xs font-bold text-[#DFC382] uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
                 <Palette className="h-3.5 w-3.5 text-[#C7A35A]" />
-                Exterior Palette & Finishes
+                {c.finishesLabel}
               </label>
               <div className="grid grid-cols-1 gap-2">
                 {selectedHouse.exteriorThemes.map((theme, index) => (
@@ -607,7 +611,7 @@ export function HouseViewer3D({
             {/* Features List */}
             <div className="border-t border-white/10 pt-3">
               <span className="text-[11px] font-semibold text-gray-400 block mb-2">
-                Architectural Highlights:
+                {c.highlightsTitle}
               </span>
               <ul className="space-y-1.5 text-[11px] text-gray-300">
                 {selectedHouse.features.slice(0, 3).map((f, i) => (
@@ -625,18 +629,22 @@ export function HouseViewer3D({
                 onClick={() => setHoldModalOpen(true)}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
               >
-                <span>⚡ Place 72-Hour Hold on Plot #{selectedPlot.plotNumber}</span>
+                <span>⚡ {c.drawerHoldBtn} #{selectedPlot.plotNumber}</span>
               </button>
 
               <a
                 href={`https://wa.me/916306917991?text=${encodeURIComponent(
-                  `Namaste AKGV Infra City! I am interested in purchasing Plot #${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}) in Varanasi. Please share plot registry and booking details.`
+                  language === 'hi'
+                    ? `नमस्ते एकेजीवी इन्फ्रा सिटी! मैं वाराणसी में प्लॉट #${selectedPlot.plotNumber} (${selectedPlot.areaSqft} वर्गफुट, ब्लॉक ${selectedPlot.block}) खरीदने में रुचि रखता हूँ। कृपया मुझे प्लॉट रजिस्ट्री और बुकिंग की पूरी जानकारी दें।`
+                    : language === 'hinglish'
+                    ? `Namaste AKGV Infra City! Main Varanasi me Plot #${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}) kharidne me interested hoon. Please mujhe plot registry aur booking ki details share karein.`
+                    : `Namaste AKGV Infra City! I am interested in purchasing Plot #${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}) in Varanasi. Please share plot registry and booking details.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
               >
-                <span>💬 Inquire About Plot #{selectedPlot.plotNumber} on WhatsApp</span>
+                <span>💬 {c.drawerWhatsAppBtn} #{selectedPlot.plotNumber}</span>
               </a>
             </div>
           </div>

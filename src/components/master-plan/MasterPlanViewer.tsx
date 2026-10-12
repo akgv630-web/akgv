@@ -37,7 +37,8 @@ import { MiniVillaSvg } from './MiniVillaSvg';
 import { PlotHoldCertificateModal } from '@/components/common/PlotHoldCertificateModal';
 
 export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (plot: Plot) => void }) {
-  const { plots, createBookingRequest, setSelectedPlotForViewer } = useApp();
+  const { plots, createBookingRequest, setSelectedPlotForViewer, t, language } = useApp();
+  const c = t.masterPlan;
 
   // Selected plot state (default A-04)
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(plots.find(p => p.plotNumber === 'A-04') || plots[0]);
@@ -95,7 +96,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           stroke: '#22C55E',
           text: 'text-emerald-400',
           bg: 'bg-emerald-500/10 border-emerald-500/30',
-          label: 'Available for Booking',
+          label: language === 'hi' ? 'बुकिंग हेतु उपलब्ध' : language === 'hinglish' ? 'Booking Ke Liye Available' : 'Available for Booking',
         };
       case 'booked_yellow':
         return {
@@ -103,7 +104,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           stroke: '#EAB308',
           text: 'text-amber-400',
           bg: 'bg-amber-500/10 border-amber-500/30',
-          label: 'Confirmed Booked',
+          label: language === 'hi' ? 'बुक किया जा चुका है' : language === 'hinglish' ? 'Book Ho Chuka Hai' : 'Confirmed Booked',
         };
       case 'vacant_red':
       default:
@@ -112,7 +113,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           stroke: '#EF4444',
           text: 'text-red-400',
           bg: 'bg-red-500/10 border-red-500/30',
-          label: 'Vacant / Reserved',
+          label: language === 'hi' ? 'आरक्षित / रिक्त' : language === 'hinglish' ? 'Reserved / Vacant' : 'Vacant / Reserved',
         };
     }
   };
@@ -236,7 +237,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <Home className="h-3.5 w-3.5" />
-              <span>Villa View (Mini Houses)</span>
+              <span>{c.viewModes.villas}</span>
             </button>
             <button
               onClick={() => setViewMode('cad')}
@@ -247,7 +248,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <Layers className="h-3.5 w-3.5" />
-              <span>CAD Blueprint View</span>
+              <span>{c.viewModes.cad}</span>
             </button>
             <button
               onClick={() => setViewMode('landscape')}
@@ -258,7 +259,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <TreePine className="h-3.5 w-3.5" />
-              <span>Landscape View</span>
+              <span>{c.viewModes.landscape}</span>
             </button>
           </div>
 
@@ -272,7 +273,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   : 'border-white/10 text-gray-400 hover:text-white'
               }`}
             >
-              📏 Dimensions
+              📏 {c.showDimensions}
             </button>
             <button
               onClick={() => setShowVehicles(!showVehicles)}
@@ -282,7 +283,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   : 'border-white/10 text-gray-400 hover:text-white'
               }`}
             >
-              🚗 Mini Cars
+              🚗 {c.showVehicles}
             </button>
             <button
               onClick={() => setShowLandscaping(!showLandscaping)}
@@ -292,7 +293,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   : 'border-white/10 text-gray-400 hover:text-white'
               }`}
             >
-              🌿 Lawns & Trees
+              🌿 {c.showLandscaping}
             </button>
           </div>
 
@@ -303,7 +304,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Find Plot (e.g. C-14, A-04)..."
+                placeholder={c.filters.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-44 rounded-lg border border-white/10 bg-[#0B1734] py-1.5 pl-8 pr-3 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
@@ -332,7 +333,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               <button
                 onClick={handleResetZoom}
                 className="rounded p-1 text-gray-400 hover:bg-white/10 hover:text-white"
-                title="Reset View"
+                title={c.filters.reset}
               >
                 <RotateCcw className="h-3.5 w-3.5" />
               </button>
@@ -355,7 +356,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                {block === 'ALL' ? 'All (55)' : `Block ${block} (${plots.filter(p => p.block === block).length})`}
+                {block === 'ALL' ? `${c.filters.allBlocks} (55)` : `Block ${block} (${plots.filter(p => p.block === block).length})`}
               </button>
             ))}
           </div>
@@ -369,7 +370,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 filterStatus === 'ALL' ? 'bg-white/20 text-white font-bold' : 'text-gray-400 hover:text-white'
               }`}
             >
-              All
+              {c.filters.allStatus}
             </button>
             <button
               onClick={() => setFilterStatus('available_green')}
@@ -378,7 +379,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>Available ({plots.filter(p => p.status === 'available_green').length})</span>
+              <span>{language === 'hi' ? 'उपलब्ध' : language === 'hinglish' ? 'Available' : 'Available'} ({plots.filter(p => p.status === 'available_green').length})</span>
             </button>
             <button
               onClick={() => setFilterStatus('booked_yellow')}
@@ -387,7 +388,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span>Booked ({plots.filter(p => p.status === 'booked_yellow').length})</span>
+              <span>{language === 'hi' ? 'बुक' : language === 'hinglish' ? 'Booked' : 'Booked'} ({plots.filter(p => p.status === 'booked_yellow').length})</span>
             </button>
             <button
               onClick={() => setFilterStatus('vacant_red')}
@@ -396,7 +397,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <span className="h-2 w-2 rounded-full bg-red-400" />
-              <span>Reserved ({plots.filter(p => p.status === 'vacant_red').length})</span>
+              <span>{language === 'hi' ? 'आरक्षित' : language === 'hinglish' ? 'Reserved' : 'Reserved'} ({plots.filter(p => p.status === 'vacant_red').length})</span>
             </button>
           </div>
         </div>
@@ -680,7 +681,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     </span>
                     {selectedPlot.isCornerPlot && (
                       <span className="rounded bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300">
-                        Corner Plot
+                        {c.inspector.cornerPlot}
                       </span>
                     )}
                   </div>
@@ -710,32 +711,32 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               {/* Technical Specifications Grid */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
-                  <span className="text-gray-400">Total Plot Area</span>
+                  <span className="text-gray-400">{c.inspector.totalArea}</span>
                   <div className="text-base font-bold text-white">{selectedPlot.areaSqft} sqft</div>
                   <span className="text-[10px] text-[#DFC382]">
-                    {(selectedPlot.areaSqft / 9).toFixed(1)} गज (Square Yards)
+                    {(selectedPlot.areaSqft / 9).toFixed(1)} {c.inspector.squareYards}
                   </span>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
-                  <span className="text-gray-400">Dimensions</span>
+                  <span className="text-gray-400">{c.inspector.dimensions}</span>
                   <div className="text-base font-bold text-white">{selectedPlot.dimensions}</div>
-                  <span className="text-[10px] text-gray-400">Length x Width</span>
+                  <span className="text-[10px] text-gray-400">{c.inspector.dimensionsSub}</span>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
-                  <span className="text-gray-400">Road Frontage</span>
+                  <span className="text-gray-400">{c.inspector.roadFrontage}</span>
                   <div className="text-xs font-bold text-white">{selectedPlot.roadWidth}</div>
-                  <span className="text-[10px] text-gray-400">Asphalt Road with Drainage</span>
+                  <span className="text-[10px] text-gray-400">{c.inspector.roadFrontageSub}</span>
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 space-y-1">
-                  <span className="text-gray-400">Base Price (INR)</span>
+                  <span className="text-gray-400">{c.inspector.basePrice}</span>
                   <div className="text-base font-bold text-[#DFC382]">
                     ₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)} Lakh
                   </div>
                   <span className="text-[10px] text-gray-400">
-                    @ ₹{(selectedPlot.basePriceInr || 1200000) / selectedPlot.areaSqft}/sqft
+                    @ ₹{Math.round((selectedPlot.basePriceInr || 1200000) / selectedPlot.areaSqft)}/sqft
                   </span>
                 </div>
               </div>
@@ -745,10 +746,10 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
                     <Building2 className="h-4 w-4 text-[#C7A35A]" />
-                    <span>Sample House Elevations (प्रस्तावित मकान डिज़ाइन)</span>
+                    <span>{c.inspector.sampleElevationTitle}</span>
                   </span>
                   <p className="text-[10px] text-gray-400 mt-0.5">
-                    *AKGV Infra City केवल प्लॉट्स की बिक्री करती है। यह केवल यह दर्शाने के लिए है कि आपके प्लॉट पर भविष्य का मकान कैसा दिख सकता है।
+                    {c.inspector.sampleElevationNote}
                   </p>
                 </div>
 
@@ -761,7 +762,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                       <div>
                         <div className="font-bold text-white">{house.name}</div>
                         <div className="text-[11px] text-gray-400">
-                          {house.bhk} • {house.carpetAreaSqft} sqft • Est. Construction ₹{(house.estimatedCostInr / 100000).toFixed(1)}L
+                          {house.bhk} • {house.carpetAreaSqft} sqft • {c.inspector.estimatedConstruction} ₹{(house.estimatedCostInr / 100000).toFixed(1)}L
                         </div>
                       </div>
 
@@ -769,7 +770,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                         href="/house-viewer-3d"
                         className="rounded-lg border border-[#C7A35A] bg-[#0B1734] px-2.5 py-1 text-[11px] font-bold text-[#DFC382] transition hover:bg-[#C7A35A] hover:text-[#0B1734]"
                       >
-                        3D Preview
+                        {c.inspector.inspect3dBtn}
                       </Link>
                     </div>
                   ))}
@@ -783,11 +784,11 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     onClick={() => setBookingModalOpen(true)}
                     className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-sm font-bold text-[#0B1734] shadow-lg transition hover:brightness-110 active:scale-[0.98]"
                   >
-                    Hold / Book Plot Online (72h Token Hold)
+                    {c.inspector.holdPlotBtn}
                   </button>
                 ) : (
                   <div className="rounded-xl border border-white/10 bg-white/5 py-2.5 text-center text-xs text-gray-400">
-                    This plot is currently {selectedPlot.status.replace('_', ' ')}. Check available green plots or contact support.
+                    {c.inspector.vacantNotice}
                   </div>
                 )}
 
@@ -795,7 +796,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   href="/site-visit"
                   className="block w-full text-center rounded-xl border border-white/20 bg-white/5 py-2.5 text-xs font-bold text-white transition hover:bg-white/10"
                 >
-                  Schedule an On-Site Visit
+                  {c.inspector.scheduleVisitBtn}
                 </Link>
               </div>
             </div>
@@ -809,35 +810,35 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#050A17] p-4 text-xs space-y-3">
             <div className="flex items-center justify-between border-b border-white/10 pb-2">
               <span className="font-serif font-bold text-white tracking-wide">
-                AREA SCHEDULE (BLUEPRINT GROUND TRUTH)
+                {c.inspector.areaScheduleTitle}
               </span>
-              <span className="text-[10px] text-[#DFC382]">Scale 1:500</span>
+              <span className="text-[10px] text-[#DFC382]">{c.inspector.scaleText}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div>
-                <span className="text-gray-400">Total Township Area:</span>
+                <span className="text-gray-400">{c.inspector.townshipArea}</span>
                 <span className="font-bold text-white block">{AREA_SCHEDULE.totalAreaSqft.toLocaleString()} sqft</span>
               </div>
               <div>
-                <span className="text-gray-400">Net Plot Area:</span>
+                <span className="text-gray-400">{c.inspector.netPlotArea}</span>
                 <span className="font-bold text-white block">{AREA_SCHEDULE.plotAreaSqft.toLocaleString()} sqft</span>
               </div>
               <div>
-                <span className="text-gray-400">Internal Road Area:</span>
+                <span className="text-gray-400">{c.inspector.internalRoadArea}</span>
                 <span className="font-bold text-white block">{AREA_SCHEDULE.roadAreaSqft.toLocaleString()} sqft</span>
               </div>
               <div>
-                <span className="text-gray-400">Road Area Ratio:</span>
+                <span className="text-gray-400">{c.inspector.roadRatio}</span>
                 <span className="font-bold text-[#DFC382] block">{AREA_SCHEDULE.roadPercentage}%</span>
               </div>
             </div>
 
-            {/* Authentic Hindi Slogan from Brochure */}
+            {/* Authentic Slogan from Brochure */}
             <div className="rounded-lg bg-[#0B1734] p-2.5 text-[11px] text-gray-300 space-y-1 border border-white/5">
-              <p className="font-bold text-[#DFC382]">अपने सपनों का प्लॉट खरीदें</p>
+              <p className="font-bold text-[#DFC382]">{c.inspector.sloganTitle}</p>
               <p className="text-[10px] text-gray-400">
-                सुव्यवस्थित प्लॉट्स अफोर्डेबल रेट्स में | शांत, सुरक्षित एवं विकासशील क्षेत्र | पानी, बिजली, नाली की सुविधाएं उपलब्ध
+                {c.inspector.sloganSubtitle}
               </p>
             </div>
           </div>

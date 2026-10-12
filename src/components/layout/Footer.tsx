@@ -5,7 +5,11 @@ import Link from 'next/link';
 import { Building, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
 import { COMPANY_DETAILS, PROJECT_LOCATIONS } from '@/data/groundTruth';
 
+import { useApp } from '@/context/AppContext';
+
 export function Footer() {
+  const { language } = useApp();
+
   return (
     <footer className="border-t border-[#C7A35A]/30 bg-[#050A17] text-gray-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
@@ -23,7 +27,7 @@ export function Footer() {
               </div>
             </div>
             <p className="mt-4 text-xs italic text-[#DFC382]">
-              &ldquo;{COMPANY_DETAILS.taglineEn}&rdquo;
+              &ldquo;{language === 'hi' ? COMPANY_DETAILS.taglineHi : COMPANY_DETAILS.taglineEn}&rdquo;
             </p>
             <p className="mt-2 text-xs text-gray-400 leading-relaxed">
               Leading township developers delivering planned residential colonies with 30ft and 25ft wide roads, underground electrification, and transparent registry readiness in Uttar Pradesh.

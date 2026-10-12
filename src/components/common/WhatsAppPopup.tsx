@@ -14,35 +14,16 @@ import {
   Phone
 } from 'lucide-react';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
+import { useApp } from '@/context/AppContext';
 
 export function WhatsAppPopup() {
+  const { t, language } = useApp();
+  const c = t.whatsAppPopup;
+
   const [isOpen, setIsOpen] = useState(false);
   const [customMessage, setCustomMessage] = useState('');
 
   const phoneNumber = '916306917991'; // Official primary phone: 6306917991
-
-  const quickTemplates = [
-    {
-      id: 'book-plot',
-      title: '🏡 Book a Plot (प्लॉट बुकिंग)',
-      text: 'Namaste AKGV Infra City! I am interested in booking a residential plot in Varanasi (Rampur / Lahartara / Mirza Murad). Please share available plot numbers, dimensions, and token hold details.',
-    },
-    {
-      id: 'site-visit',
-      title: '🚗 Free Site Visit (साइट विजिट)',
-      text: 'Namaste! I would like to schedule a free site visit to AKGV Infra City with free cab pickup. Please share available dates and coordinate.',
-    },
-    {
-      id: 'rewards',
-      title: '💰 11-Tier Rewards & Commission Plan',
-      text: 'Namaste! I want to join AKGV Infra City as an Associate Member and understand the 11-Tier Commission & Rewards Plan (from 4% to 14%). Please guide me on registration.',
-    },
-    {
-      id: 'joining-kit',
-      title: '📦 ₹999 Joining Kit (जॉइनिंग किट)',
-      text: 'Namaste! Please provide details regarding the ₹999 Physical Associate Joining Kit (Official Bag, Pen, Diary, and Document Folder).',
-    },
-  ];
 
   const handleSendTemplate = (text: string) => {
     const encoded = encodeURIComponent(text);
@@ -52,7 +33,12 @@ export function WhatsAppPopup() {
 
   const handleSendCustom = (e: React.FormEvent) => {
     e.preventDefault();
-    const textToSend = customMessage.trim() || 'Namaste AKGV Infra City, I have an inquiry regarding your townships.';
+    const defaultText = language === 'hi' 
+      ? 'नमस्ते एकेजीवी इन्फ्रा सिटी, मुझे आपकी टाउनशिप प्लॉट्स के बारे में जानकारी चाहिए।' 
+      : language === 'hinglish' 
+      ? 'Namaste AKGV Infra City, mujhe aapke township plots ke regarding inquiry karni hai.' 
+      : 'Namaste AKGV Infra City, I have an inquiry regarding your townships.';
+    const textToSend = customMessage.trim() || defaultText;
     const encoded = encodeURIComponent(textToSend);
     const url = `https://wa.me/${phoneNumber}?text=${encoded}`;
     window.open(url, '_blank', 'noopener,noreferrer');
@@ -66,7 +52,7 @@ export function WhatsAppPopup() {
         {!isOpen && (
           <div className="mb-2 hidden sm:flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-[#0B1734]/95 px-3 py-1 text-[11px] font-semibold text-emerald-300 shadow-xl backdrop-blur-md animate-bounce">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>Chat on WhatsApp (6306917991)</span>
+            <span>{c.buttonLabel}</span>
           </div>
         )}
 
@@ -105,12 +91,10 @@ export function WhatsAppPopup() {
               </div>
               <div>
                 <h3 className="font-serif text-sm font-bold leading-tight">
-                  AKGV Infra City Support
+                  {c.title}
                 </h3>
                 <p className="text-[11px] text-emerald-100 flex items-center gap-1">
-                  <span>🟢 Online</span>
-                  <span>•</span>
-                  <span>Direct WhatsApp</span>
+                  <span>{c.onlineStatus}</span>
                 </p>
               </div>
             </div>
@@ -128,20 +112,20 @@ export function WhatsAppPopup() {
             <div className="rounded-xl bg-[#0B1734] p-3 border border-white/10 text-gray-300 space-y-1.5">
               <div className="flex items-center gap-1.5 font-bold text-[#DFC382]">
                 <Phone className="h-3.5 w-3.5 text-[#25D366]" />
-                <span>Official Helpline: +91 6306917991</span>
+                <span>{c.helplineText}</span>
               </div>
               <p className="text-[11px] text-gray-400">
-                Aap directly hamari customer team se WhatsApp par baat kar sakte hain. Niche diye gaye options par click karein:
+                {c.promptText}
               </p>
             </div>
 
             {/* Quick Formatted Message Buttons */}
             <div className="space-y-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                Choose a pre-formatted message:
+                {c.chooseTemplate}
               </span>
 
-              {quickTemplates.map((template) => (
+              {c.templates.map((template) => (
                 <button
                   key={template.id}
                   onClick={() => handleSendTemplate(template.text)}
@@ -163,12 +147,12 @@ export function WhatsAppPopup() {
             {/* Custom Message Input Form */}
             <form onSubmit={handleSendCustom} className="space-y-2 border-t border-white/10 pt-3">
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400">
-                Or type your own custom message:
+                {c.customLabel}
               </label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Type message here..."
+                  placeholder={c.customPlaceholder}
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
                   className="flex-1 rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#25D366] focus:outline-none"
@@ -186,7 +170,7 @@ export function WhatsAppPopup() {
 
           {/* Footer note */}
           <div className="border-t border-white/10 bg-[#0B1734] px-4 py-2 text-[10px] text-gray-400 text-center">
-            Replies within minutes • AKGV Infra City Private Limited
+            {c.repliesNote}
           </div>
         </div>
       )}

@@ -21,4 +21,32 @@ describe('Multi-Language Localization Tests', () => {
     expect(DICTIONARY.hi.phoneLabel).toContain('6306917991');
     expect(DICTIONARY.hinglish.phoneLabel).toContain('6306917991');
   });
+
+  it('should ensure English keys do not contain Devanagari script (no language mismatch)', () => {
+    const devanagariRegex = /[\u0900-\u097F]/;
+    // Check titles and badges in English
+    expect(devanagariRegex.test(DICTIONARY.en.hero.badge)).toBe(false);
+    expect(devanagariRegex.test(DICTIONARY.en.masterPlan.inspector.sloganTitle)).toBe(false);
+    expect(devanagariRegex.test(DICTIONARY.en.houseViewer.title)).toBe(false);
+    expect(devanagariRegex.test(DICTIONARY.en.loanCalc.title)).toBe(false);
+    expect(devanagariRegex.test(DICTIONARY.en.trust.title)).toBe(false);
+    expect(devanagariRegex.test(DICTIONARY.en.certificate.modalTitleGenerated)).toBe(false);
+    expect(devanagariRegex.test(DICTIONARY.en.whatsAppPopup.title)).toBe(false);
+  });
+
+  it('should ensure Hindi keys use authentic Devanagari script', () => {
+    const devanagariRegex = /[\u0900-\u097F]/;
+    expect(devanagariRegex.test(DICTIONARY.hi.hero.badge)).toBe(true);
+    expect(devanagariRegex.test(DICTIONARY.hi.masterPlan.inspector.sloganTitle)).toBe(true);
+    expect(devanagariRegex.test(DICTIONARY.hi.houseViewer.title)).toBe(true);
+    expect(devanagariRegex.test(DICTIONARY.hi.loanCalc.title)).toBe(true);
+    expect(devanagariRegex.test(DICTIONARY.hi.trust.title)).toBe(true);
+    expect(devanagariRegex.test(DICTIONARY.hi.certificate.modalTitleGenerated)).toBe(true);
+  });
+
+  it('should strictly affirm plot-sales-only business model in houseViewer notices across all languages', () => {
+    expect(DICTIONARY.en.houseViewer.noticeText).toContain('does NOT construct houses');
+    expect(DICTIONARY.hi.houseViewer.noticeText).toContain('कंपनी मकान निर्माण नहीं करती है');
+    expect(DICTIONARY.hinglish.houseViewer.noticeText).toContain('Company house construction nahi karti');
+  });
 });

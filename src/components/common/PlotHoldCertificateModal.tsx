@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Plot } from '@/types';
 import { COMPANY_DETAILS, HOUSE_MODELS } from '@/data/groundTruth';
+import { useApp } from '@/context/AppContext';
 
 interface PlotHoldCertificateModalProps {
   plot: Plot | null;
@@ -34,6 +35,9 @@ export function PlotHoldCertificateModal({
   preferredHouseModelId = 'model-royal-villa',
   onConfirmBooking
 }: PlotHoldCertificateModalProps) {
+  const { t, language } = useApp();
+  const c = t.certificate;
+
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [selectedHouseId, setSelectedHouseId] = useState(preferredHouseModelId);
@@ -62,12 +66,78 @@ export function PlotHoldCertificateModal({
     return () => clearInterval(interval);
   }, [isGenerated]);
 
+  const selectedHouse = useMemo(
+    () => HOUSE_MODELS.find((h) => h.id === selectedHouseId) || HOUSE_MODELS[0],
+    [selectedHouseId]
+  );
+  const plotPriceLakh = plot ? ((plot.basePriceInr || 1200000) / 100000).toFixed(2) : '0';
+  const tokenAmount = 21000; // Standard 72h Token Hold amount
+
+  const whatsappMessage = useMemo(() => {
+    if (!plot) return '';
+    if (language === 'hi') {
+      return `*एकेजीवी इन्फ्रा सिटी — 72 घंटे का आवासीय प्लॉट होल्ड अनुरोध*
+━━━━━━━━━━━━━━━━━━━━
+*बुकिंग संदर्भ क्रमांक:* ${certificateRef}
+*आवंटित संपत्ति:* आवासीय प्लॉट #${plot.plotNumber} (ब्लॉक ${plot.block})
+*प्लॉट क्षेत्रफल:* ${plot.areaSqft} वर्गफुट (${(plot.areaSqft / 9).toFixed(1)} गज)
+*आयाम:* ${plot.dimensions}
+*सड़क की चौड़ाई:* ${plot.roadWidth}
+*दिशा (वास्तु):* ${plot.roadFacing} (100% वास्तु अनुकूल)
+*प्लॉट मूल्य:* ₹${plotPriceLakh} लाख
+*सैंपल एलिवेशन मॉडल:* ${selectedHouse.name} (केवल संदर्भ हेतु)
+━━━━━━━━━━━━━━━━━━━━
+*खरीदार का नाम:* ${buyerName}
+*मोबाइल नंबर:* ${buyerPhone}
+*होल्ड अवधि:* 72 घंटे की निश्चित गारंटी
+*टोकन राशि:* ₹${tokenAmount.toLocaleString()}
+
+_कृपया प्लॉट टोकन होल्ड सत्यापन हेतु कंपनी का बैंक खाता विवरण एवं यूपीआई क्यूआर कोड साझा करें।_`;
+    }
+    if (language === 'hinglish') {
+      return `*AKGV INFRA CITY — 72-HOUR RESIDENTIAL PLOT HOLD REQUEST*
+━━━━━━━━━━━━━━━━━━━━
+*Booking Reference:* ${certificateRef}
+*Allocated Plot:* Residential Plot #${plot.plotNumber} (Block ${plot.block})
+*Plot Area:* ${plot.areaSqft} sqft (${(plot.areaSqft / 9).toFixed(1)} Gaj)
+*Dimensions:* ${plot.dimensions}
+*Road Width:* ${plot.roadWidth}
+*Facing:* ${plot.roadFacing} Facing (100% Vastu Approved)
+*Plot Valuation:* ₹${plotPriceLakh} Lakh
+*Sample Elevation Reference:* ${selectedHouse.name} (Sirf Reference Ke Liye)
+━━━━━━━━━━━━━━━━━━━━
+*Buyer Name:* ${buyerName}
+*Buyer Mobile:* ${buyerPhone}
+*Hold Duration:* 72 Hours Guaranteed
+*Token Payable:* ₹${tokenAmount.toLocaleString()}
+
+_Please official bank account details aur UPI QR code send karein plot token hold confirmation ke liye._`;
+    }
+    return `*AKGV INFRA CITY — 72-HOUR RESIDENTIAL PLOT HOLD REQUEST*
+━━━━━━━━━━━━━━━━━━━━
+*Booking Reference:* ${certificateRef}
+*Allocated Asset:* Residential Plot #${plot.plotNumber} (Block ${plot.block})
+*Plot Area:* ${plot.areaSqft} sqft (${(plot.areaSqft / 9).toFixed(1)} Sq. Yards)
+*Dimensions:* ${plot.dimensions}
+*Road Width:* ${plot.roadWidth}
+*Facing:* ${plot.roadFacing} Facing (100% Vastu Approved)
+*Plot Valuation:* ₹${plotPriceLakh} Lakh
+*Sample Elevation Reference:* ${selectedHouse.name} (For Reference Only)
+━━━━━━━━━━━━━━━━━━━━
+*Buyer Name:* ${buyerName}
+*Buyer Mobile:* ${buyerPhone}
+*Hold Duration:* 72 Hours Guaranteed
+*Token Payable:* ₹${tokenAmount.toLocaleString()}
+
+_Please share official bank account details & UPI QR for plot token hold verification._`;
+  }, [language, certificateRef, plot, plotPriceLakh, selectedHouse, buyerName, buyerPhone, tokenAmount]);
+
   if (!isOpen || !plot) return null;
 
   const handleGenerateCertificate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyerName.trim() || !buyerPhone.trim()) {
-      alert('Please enter your full name and valid mobile number');
+      alert(language === 'hi' ? 'कृपया अपना पूरा नाम और मान्य मोबाइल नंबर दर्ज करें' : language === 'hinglish' ? 'Kripya apna poora naam aur valid mobile number enter karein' : 'Please enter your full name and valid mobile number');
       return;
     }
 
@@ -82,28 +152,6 @@ export function PlotHoldCertificateModal({
     }
   };
 
-  const selectedHouse = HOUSE_MODELS.find((h) => h.id === selectedHouseId) || HOUSE_MODELS[0];
-  const plotPriceLakh = ((plot.basePriceInr || 1200000) / 100000).toFixed(2);
-  const tokenAmount = 21000; // Standard 72h Token Hold amount
-
-  const whatsappMessage = `*AKGV INFRA CITY — 72-HOUR RESIDENTIAL PLOT HOLD REQUEST*
-━━━━━━━━━━━━━━━━━━━━
-*Booking Reference:* ${certificateRef}
-*Allocated Asset:* Residential Plot #${plot.plotNumber} (Block ${plot.block})
-*Plot Area:* ${plot.areaSqft} sqft (${(plot.areaSqft / 9).toFixed(1)} Gaj)
-*Dimensions:* ${plot.dimensions}
-*Road Width:* ${plot.roadWidth}
-*Facing:* ${plot.roadFacing} Facing (100% Vastu Approved)
-*Plot Valuation:* ₹${plotPriceLakh} Lakh
-*Sample Elevation Reference:* ${selectedHouse.name} (केवल संदर्भ हेतु)
-━━━━━━━━━━━━━━━━━━━━
-*Buyer Name:* ${buyerName}
-*Buyer Mobile:* ${buyerPhone}
-*Hold Duration:* 72 Hours Guaranteed
-*Token Payable:* ₹${tokenAmount.toLocaleString()}
-
-_Please share official bank account details & UPI QR for plot token hold verification._`;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-4 backdrop-blur-md overflow-y-auto">
       <div className="relative my-auto w-full max-w-xl rounded-2xl border border-[#C7A35A] bg-[#070D1E] shadow-2xl overflow-hidden">
@@ -112,7 +160,7 @@ _Please share official bank account details & UPI QR for plot token hold verific
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
             <h3 className="font-serif text-sm sm:text-base font-bold text-white tracking-wide">
-              {isGenerated ? 'Official 72-Hour Plot Hold Certificate' : `Instant Hold Booking — Plot #${plot.plotNumber}`}
+              {isGenerated ? c.modalTitleGenerated : `${c.modalTitleGenerating} — Plot #${plot.plotNumber}`}
             </h3>
           </div>
           <button
@@ -130,28 +178,30 @@ _Please share official bank account details & UPI QR for plot token hold verific
             <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17] p-3.5 space-y-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Selected Asset</span>
+                  <span className="text-[10px] text-gray-400 uppercase tracking-wider block">{c.selectedAsset}</span>
                   <div className="font-serif text-xl font-bold text-white">
                     Plot {plot.plotNumber} <span className="text-[#DFC382] text-sm font-sans">(Block {plot.block})</span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-gray-400 uppercase tracking-wider block">Base Price</span>
+                  <span className="text-[10px] text-gray-400 uppercase tracking-wider block">{c.basePrice}</span>
                   <div className="font-bold text-[#DFC382] text-base">₹{plotPriceLakh} Lakh</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2 border-t border-white/5 pt-2 text-[11px] text-gray-300">
                 <div>
-                  <span className="text-gray-500 block">Area:</span>
-                  <span className="font-semibold text-white">{plot.areaSqft} sqft ({(plot.areaSqft / 9).toFixed(1)} गज)</span>
+                  <span className="text-gray-500 block">{c.area}</span>
+                  <span className="font-semibold text-white">
+                    {plot.areaSqft} sqft ({(plot.areaSqft / 9).toFixed(1)} {language === 'hi' ? 'गज' : language === 'hinglish' ? 'Gaj' : 'Sq. Yd'})
+                  </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Dimensions:</span>
+                  <span className="text-gray-500 block">{c.dimensions}</span>
                   <span className="font-semibold text-white">{plot.dimensions}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Facing:</span>
+                  <span className="text-gray-500 block">{c.facing}</span>
                   <span className="font-semibold text-emerald-400">{plot.roadFacing}</span>
                 </div>
               </div>
@@ -160,35 +210,35 @@ _Please share official bank account details & UPI QR for plot token hold verific
             {/* Inputs */}
             <div>
               <label className="block font-semibold text-gray-200 mb-1">
-                Buyer Full Name <span className="text-[#C7A35A]">*</span>
+                {c.buyerName} <span className="text-[#C7A35A]">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
-                placeholder="e.g. Ramesh Chandra Sharma"
+                placeholder={c.buyerNamePlaceholder}
                 className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none text-xs"
               />
             </div>
 
             <div>
               <label className="block font-semibold text-gray-200 mb-1">
-                Mobile Number (WhatsApp Enabled) <span className="text-[#C7A35A]">*</span>
+                {c.mobileNumber} <span className="text-[#C7A35A]">*</span>
               </label>
               <input
                 type="tel"
                 required
                 value={buyerPhone}
                 onChange={(e) => setBuyerPhone(e.target.value)}
-                placeholder="e.g. 9839123456"
+                placeholder={c.mobilePlaceholder}
                 className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none text-xs"
               />
             </div>
 
             <div>
               <label className="block font-semibold text-gray-200 mb-1">
-                Sample House Elevation Idea (Optional — केवल संदर्भ हेतु)
+                {c.sampleElevationIdea}
               </label>
               <select
                 value={selectedHouseId}
@@ -202,7 +252,7 @@ _Please share official bank account details & UPI QR for plot token hold verific
                 ))}
               </select>
               <span className="text-[10px] text-gray-400 mt-1 block">
-                *नोट: AKGV Infra City केवल आवासीय प्लॉट्स बेचती है। मकान निर्माण खरीदार स्वयं अपनी पसंद से कराते हैं।
+                {c.sampleElevationDisclaimer}
               </span>
             </div>
 
@@ -210,10 +260,10 @@ _Please share official bank account details & UPI QR for plot token hold verific
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-[11px] text-emerald-300 space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-emerald-400">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Zero-Risk 72-Hour Legal Plot Hold</span>
+                <span>{c.guaranteeTitle}</span>
               </div>
               <p className="text-gray-300">
-                Residential Plot #{plot.plotNumber} will be temporarily locked in your name across our system for 72 hours. AKGV Infra City provides freehold land with 30ft/25ft wide roads, sweet water, drainage, and direct registry.
+                {c.guaranteeDesc.replace('{plotNumber}', plot.plotNumber)}
               </p>
             </div>
 
@@ -224,13 +274,13 @@ _Please share official bank account details & UPI QR for plot token hold verific
                 onClick={onClose}
                 className="rounded-xl px-4 py-2.5 text-gray-400 hover:text-white text-xs"
               >
-                Cancel
+                {c.cancelBtn}
               </button>
               <button
                 type="submit"
                 className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-2.5 font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition text-xs"
               >
-                Generate 72-Hour Hold Certificate
+                {c.generateBtn}
               </button>
             </div>
           </form>
@@ -241,7 +291,7 @@ _Please share official bank account details & UPI QR for plot token hold verific
             <div className="flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-amber-300">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-amber-400" />
-                <span className="font-semibold text-xs">Hold Expiry Countdown:</span>
+                <span className="font-semibold text-xs">{c.countdownLabel}</span>
               </div>
               <div className="font-mono font-bold text-sm text-amber-200">
                 {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
@@ -255,61 +305,63 @@ _Please share official bank account details & UPI QR for plot token hold verific
             >
               {/* Luxury Watermark Crest */}
               <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                <span className="font-serif text-8xl font-black text-[#C7A35A]">AKGV</span>
+                <span className="font-serif text-8xl font-black text-[#C7A35A]">{c.watermarkCrest}</span>
               </div>
 
               {/* Certificate Header */}
               <div className="text-center border-b border-[#C7A35A]/30 pb-3 space-y-1">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-[#C7A35A]/20 px-3 py-0.5 text-[9px] font-bold text-[#DFC382] uppercase tracking-wider">
                   <Sparkles className="h-3 w-3" />
-                  <span>Official Temporary Holding Certificate</span>
+                  <span>{c.certBadge}</span>
                 </div>
                 <h4 className="font-serif text-lg font-bold text-white tracking-wide">
-                  AKGV INFRA CITY PRIVATE LIMITED
+                  {c.companyHeader}
                 </h4>
                 <p className="text-[10px] text-gray-400">
-                  Township Development & Infrastructure • Varanasi (U.P.) | Phone: +91 6306917991
+                  {c.companySub}
                 </p>
                 <div className="text-[10px] font-mono font-bold text-[#DFC382] pt-1">
-                  REF NO: {certificateRef}
+                  {c.refNo} {certificateRef}
                 </div>
               </div>
 
               {/* Holding Details Matrix */}
               <div className="grid grid-cols-2 gap-3 text-[11px]">
                 <div className="rounded-lg bg-[#0B1734] p-2.5 space-y-0.5 border border-white/5">
-                  <span className="text-gray-400 text-[10px] block">Allocated Plot</span>
+                  <span className="text-gray-400 text-[10px] block">{c.allocatedPlot}</span>
                   <span className="font-bold text-white text-sm">Plot #{plot.plotNumber}</span>
                   <span className="text-[10px] text-[#DFC382] block">Block {plot.block} • {plot.dimensions}</span>
                 </div>
 
                 <div className="rounded-lg bg-[#0B1734] p-2.5 space-y-0.5 border border-white/5">
-                  <span className="text-gray-400 text-[10px] block">Plot Area</span>
+                  <span className="text-gray-400 text-[10px] block">{c.plotAreaLabel}</span>
                   <span className="font-bold text-white text-sm">{plot.areaSqft} SQFT</span>
-                  <span className="text-[10px] text-[#DFC382] block">{(plot.areaSqft / 9).toFixed(1)} Gaj (Square Yards)</span>
+                  <span className="text-[10px] text-[#DFC382] block">
+                    {(plot.areaSqft / 9).toFixed(1)} {language === 'hi' ? 'गज' : language === 'hinglish' ? 'Gaj' : 'Sq. Yd'}
+                  </span>
                 </div>
 
                 <div className="rounded-lg bg-[#0B1734] p-2.5 space-y-0.5 border border-white/5">
-                  <span className="text-gray-400 text-[10px] block">Beneficiary (Buyer)</span>
+                  <span className="text-gray-400 text-[10px] block">{c.beneficiary}</span>
                   <span className="font-bold text-white">{buyerName}</span>
                   <span className="text-[10px] text-gray-400 block">+91 {buyerPhone}</span>
                 </div>
 
                 <div className="rounded-lg bg-[#0B1734] p-2.5 space-y-0.5 border border-white/5">
-                  <span className="text-gray-400 text-[10px] block">Base Plot Valuation</span>
+                  <span className="text-gray-400 text-[10px] block">{c.plotValuationLabel}</span>
                   <span className="font-bold text-[#DFC382] text-sm">₹{plotPriceLakh} Lakh</span>
-                  <span className="text-[10px] text-emerald-400 block">Token: ₹{tokenAmount.toLocaleString()}</span>
+                  <span className="text-[10px] text-emerald-400 block">{c.tokenPayableLabel} ₹{tokenAmount.toLocaleString()}</span>
                 </div>
               </div>
 
               {/* Road & Layout Verification */}
               <div className="rounded-lg border border-white/10 bg-[#0B1734]/50 p-2.5 text-[10px] text-gray-300 space-y-1">
                 <div className="flex items-center justify-between font-semibold text-white">
-                  <span>Frontage Road: {plot.roadWidth}</span>
-                  <span className="text-emerald-400">{plot.roadFacing} Facing (100% Vastu)</span>
+                  <span>{c.frontageRoad} {plot.roadWidth}</span>
+                  <span className="text-emerald-400">{plot.roadFacing} {c.approvedFacing}</span>
                 </div>
                 <p className="text-gray-400">
-                  Layout Planned & Approved by: Er. Rajesh Kumar Patel (R.P. Home Design) • Total Township: 77,550 sqft
+                  {c.plannerNote}
                 </p>
               </div>
 
@@ -320,14 +372,14 @@ _Please share official bank account details & UPI QR for plot token hold verific
                     <QrCode className="h-8 w-8" />
                   </div>
                   <div>
-                    <span className="font-bold text-white block">Digital Hold Registered</span>
-                    <span className="text-gray-400">Valid for 72 Hours from issuance</span>
+                    <span className="font-bold text-white block">{c.digitalRegistered}</span>
+                    <span className="text-gray-400">{c.validityNotice}</span>
                   </div>
                 </div>
 
                 <div className="text-right">
                   <div className="font-serif font-bold text-[#DFC382] italic">Er. Rajesh Patel</div>
-                  <span className="text-gray-400 text-[9px] block">Authorized Reg. Civil Engineer</span>
+                  <span className="text-gray-400 text-[9px] block">{c.authorizedEngineer}</span>
                 </div>
               </div>
             </div>
@@ -341,7 +393,7 @@ _Please share official bank account details & UPI QR for plot token hold verific
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3 text-xs font-bold text-white shadow-lg hover:bg-emerald-600 transition"
               >
-                <span>💬 Send Certificate to WhatsApp (+91 6306917991)</span>
+                <span>💬 {c.sendWhatsAppCta}</span>
               </a>
 
               {/* Print / Save & Buyer Portal Links */}
@@ -352,7 +404,7 @@ _Please share official bank account details & UPI QR for plot token hold verific
                   className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/5 py-2.5 text-xs font-semibold text-gray-200 hover:bg-white/10 transition"
                 >
                   <Printer className="h-3.5 w-3.5 text-[#C7A35A]" />
-                  <span>Print Certificate</span>
+                  <span>{c.printCertBtn}</span>
                 </button>
 
                 <Link
@@ -360,7 +412,7 @@ _Please share official bank account details & UPI QR for plot token hold verific
                   onClick={onClose}
                   className="flex items-center justify-center gap-1.5 rounded-xl border border-[#C7A35A] bg-[#0B1734] py-2.5 text-xs font-bold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition text-center"
                 >
-                  <span>Open Buyer Portal</span>
+                  <span>{c.openBuyerPortalBtn}</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               </div>

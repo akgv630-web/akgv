@@ -14,8 +14,12 @@ import {
   Sparkles
 } from 'lucide-react';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
+import { useApp } from '@/context/AppContext';
 
 export function LoanEmiCalculator() {
+  const { t, language } = useApp();
+  const c = t.loanCalc;
+
   // Input states
   const [propertyPrice, setPropertyPrice] = useState<number>(1400000); // 14 Lakh INR default
   const [downPaymentPercent, setDownPaymentPercent] = useState<number>(20); // 20%
@@ -70,15 +74,60 @@ export function LoanEmiCalculator() {
     };
   }, [propertyPrice, downPaymentPercent, tenureYears, interestRate, buyerGender]);
 
-  const bankPartners = [
-    { name: 'State Bank of India', rate: '8.40%*', tag: 'Max Pre-Approvals' },
-    { name: 'HDFC Bank', rate: '8.50%*', tag: 'Fast Sanction' },
-    { name: 'ICICI Bank', rate: '8.65%*', tag: 'Instant Digital' },
-    { name: 'Bank of Baroda', rate: '8.45%*', tag: 'Varanasi Hub' },
-    { name: 'Punjab National Bank', rate: '8.50%*', tag: 'Low Processing Fee' }
-  ];
+  const bankPartners = useMemo(() => [
+    {
+      name: 'State Bank of India',
+      rate: '8.40%*',
+      tag: language === 'hi' ? 'अधिकतम प्री-अप्रूवल' : language === 'hinglish' ? 'Max Pre-Approvals' : 'Max Pre-Approvals'
+    },
+    {
+      name: 'HDFC Bank',
+      rate: '8.50%*',
+      tag: language === 'hi' ? 'शीघ्र स्वीकृति' : language === 'hinglish' ? 'Fast Sanction' : 'Fast Sanction'
+    },
+    {
+      name: 'ICICI Bank',
+      rate: '8.65%*',
+      tag: language === 'hi' ? 'त्वरित डिजिटल' : language === 'hinglish' ? 'Instant Digital' : 'Instant Digital'
+    },
+    {
+      name: 'Bank of Baroda',
+      rate: '8.45%*',
+      tag: language === 'hi' ? 'वाराणसी शाखा' : language === 'hinglish' ? 'Varanasi Hub' : 'Varanasi Hub'
+    },
+    {
+      name: 'Punjab National Bank',
+      rate: '8.50%*',
+      tag: language === 'hi' ? 'कम प्रोसेसिंग फीस' : language === 'hinglish' ? 'Low Processing Fee' : 'Low Processing Fee'
+    }
+  ], [language]);
 
-  const whatsappInquiryText = `*AKGV INFRA CITY — BANK LOAN & EMI INQUIRY*
+  const whatsappInquiryText = useMemo(() => {
+    if (language === 'hi') {
+      return `*एकेजीवी इन्फ्रा सिटी — बैंक लोन एवं ईएमआई पूछताछ*
+━━━━━━━━━━━━━━━━━━━━
+*प्लॉट मूल्यांकन:* ₹${(propertyPrice / 100000).toFixed(2)} लाख
+*डाउन पेमेंट (${downPaymentPercent}%):* ₹${downPaymentAmount.toLocaleString()}
+*अनुमानित बैंक लोन:* ₹${loanPrincipal.toLocaleString()}
+*लोन अवधि:* ${tenureYears} वर्ष (${tenureYears * 12} महीने)
+*मासिक किस्त (EMI):* ₹${monthlyEmi.toLocaleString()} / महीना
+*अनुमानित यूपी रजिस्ट्री व स्टाम्प:* ₹${totalRegistryCost.toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━
+कृपया मुझे वाराणसी में बैंक लोन प्री-अप्रूवल सहायता हेतु संपर्क करें।`;
+    }
+    if (language === 'hinglish') {
+      return `*AKGV INFRA CITY — BANK LOAN & EMI INQUIRY*
+━━━━━━━━━━━━━━━━━━━━
+*Plot Valuation:* ₹${(propertyPrice / 100000).toFixed(2)} Lakh
+*Down Payment (${downPaymentPercent}%):* ₹${downPaymentAmount.toLocaleString()}
+*Estimated Loan:* ₹${loanPrincipal.toLocaleString()}
+*Preferred Tenure:* ${tenureYears} Saal (${tenureYears * 12} Mahine)
+*Monthly EMI:* ₹${monthlyEmi.toLocaleString()} / month
+*Estimated UP Registry & Stamp:* ₹${totalRegistryCost.toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━
+Please mujhe Varanasi me bank loan pre-approval ke liye guidance provide karein.`;
+    }
+    return `*AKGV INFRA CITY — BANK LOAN & EMI INQUIRY*
 ━━━━━━━━━━━━━━━━━━━━
 *Plot Valuation:* ₹${(propertyPrice / 100000).toFixed(2)} Lakh
 *Down Payment (${downPaymentPercent}%):* ₹${downPaymentAmount.toLocaleString()}
@@ -88,6 +137,7 @@ export function LoanEmiCalculator() {
 *Estimated UP Stamp & Registry:* ₹${totalRegistryCost.toLocaleString()}
 ━━━━━━━━━━━━━━━━━━━━
 Please connect me with your banking desk for pre-approval assistance in Varanasi.`;
+  }, [language, propertyPrice, downPaymentPercent, downPaymentAmount, loanPrincipal, tenureYears, monthlyEmi, totalRegistryCost]);
 
   return (
     <div className="w-full rounded-3xl border border-[#C7A35A]/30 bg-gradient-to-b from-[#080E21] via-[#0B1734] to-[#080E21] p-5 sm:p-8 shadow-2xl space-y-8">
@@ -96,21 +146,21 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-[#C7A35A]/40 bg-[#C7A35A]/10 px-3.5 py-1 text-xs font-semibold text-[#DFC382]">
             <Calculator className="h-3.5 w-3.5 text-[#C7A35A]" />
-            <span>Interactive Financial Planning</span>
+            <span>{c.badge}</span>
           </div>
           <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white mt-2">
-            Bank Loan, EMI & Stamp Duty Estimator
+            {c.title}
           </h3>
           <p className="text-xs text-gray-400 mt-1 max-w-xl">
-            Calculate your monthly repayment, loan eligibility, and Uttar Pradesh government registry stamp duty for your plot in Varanasi.
+            {c.subtitle}
           </p>
         </div>
 
         <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
           <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0" />
           <div>
-            <span className="font-bold block text-white">Bank Loan Assistance</span>
-            <span className="text-[11px] text-emerald-300">Tie-ups with leading PSU & Private Banks</span>
+            <span className="font-bold block text-white">{c.bankAssistance}</span>
+            <span className="text-[11px] text-emerald-300">{c.bankAssistanceSub}</span>
           </div>
         </div>
       </div>
@@ -122,7 +172,7 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
           {/* 1. Property Price Slider */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-gray-200">Plot / Property Valuation</span>
+              <span className="font-semibold text-gray-200">{c.propertyValuation}</span>
               <span className="font-mono text-base font-bold text-[#DFC382]">
                 ₹{(propertyPrice / 100000).toFixed(2)} Lakh (₹{propertyPrice.toLocaleString()})
               </span>
@@ -146,7 +196,7 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
           {/* 2. Down Payment Slider */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-gray-200">Down Payment ({downPaymentPercent}%)</span>
+              <span className="font-semibold text-gray-200">{c.downPayment} ({downPaymentPercent}%)</span>
               <span className="font-mono text-sm font-bold text-white">
                 ₹{downPaymentAmount.toLocaleString()}
               </span>
@@ -161,7 +211,7 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
               className="w-full accent-[#1EA275] cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-gray-500 font-mono">
-              <span>10% (Min Down)</span>
+              <span>10% (Min)</span>
               <span>20% (Recommended)</span>
               <span>50%</span>
             </div>
@@ -170,9 +220,9 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
           {/* 3. Loan Tenure Slider */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-gray-200">Loan Tenure</span>
+              <span className="font-semibold text-gray-200">{c.tenure}</span>
               <span className="font-mono text-sm font-bold text-white">
-                {tenureYears} Years ({tenureYears * 12} Months)
+                {tenureYears} {c.years} ({tenureYears * 12} {c.months})
               </span>
             </div>
             <input
@@ -185,16 +235,16 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
               className="w-full accent-[#C7A35A] cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-gray-500 font-mono">
-              <span>3 Years</span>
-              <span>10 Years</span>
-              <span>20 Years</span>
+              <span>3 {c.years}</span>
+              <span>10 {c.years}</span>
+              <span>20 {c.years}</span>
             </div>
           </div>
 
           {/* 4. Interest Rate Slider */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-gray-200">Annual Interest Rate</span>
+              <span className="font-semibold text-gray-200">{c.interestRate}</span>
               <span className="font-mono text-sm font-bold text-emerald-400">
                 {interestRate.toFixed(2)}% p.a.
               </span>
@@ -210,7 +260,7 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
             />
             <div className="flex justify-between text-[10px] text-gray-500 font-mono">
               <span>7.5% (Prime)</span>
-              <span>8.5% (Market Avg)</span>
+              <span>8.5% (Avg)</span>
               <span>12.0%</span>
             </div>
           </div>
@@ -220,9 +270,9 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileCheck2 className="h-4 w-4 text-[#C7A35A]" />
-                <span className="text-xs font-bold text-white">UP Stamp Duty Calculator</span>
+                <span className="text-xs font-bold text-white">{c.stampDutyTitle}</span>
               </div>
-              <span className="text-[10px] text-gray-400">Uttar Pradesh Revenue Dept</span>
+              <span className="text-[10px] text-gray-400">{c.stampDutyDept}</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -235,8 +285,8 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
                     : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
                 }`}
               >
-                <span className="font-bold block text-xs">Women / Joint Registry</span>
-                <span className="text-[10px] text-emerald-400">6% Stamp + 1% Reg (1% Subsidy)</span>
+                <span className="font-bold block text-xs">{c.femaleRegistry}</span>
+                <span className="text-[10px] text-emerald-400">{c.femaleDesc}</span>
               </button>
 
               <button
@@ -248,8 +298,8 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
                     : 'border-white/5 bg-white/5 text-gray-400 hover:text-white'
                 }`}
               >
-                <span className="font-bold block text-xs">Male Registry</span>
-                <span className="text-[10px] text-gray-400">7% Stamp + 1% Registration</span>
+                <span className="font-bold block text-xs">{c.maleRegistry}</span>
+                <span className="text-[10px] text-gray-400">{c.maleDesc}</span>
               </button>
             </div>
           </div>
@@ -260,35 +310,35 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
           {/* Main EMI Highlight Card */}
           <div className="rounded-3xl border-2 border-[#C7A35A] bg-gradient-to-br from-[#0B1734] to-[#050A17] p-6 text-center shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 rounded-bl-xl bg-[#C7A35A] px-3 py-1 text-[10px] font-bold text-[#0B1734]">
-              Estimated Repayment
+              {c.estimatedRepayment}
             </div>
 
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-300 block">
-              Monthly Equated Installment (EMI)
+              {c.monthlyEmiTitle}
             </span>
             <div className="font-mono text-3xl sm:text-4xl font-extrabold text-[#DFC382] my-2">
-              ₹{monthlyEmi.toLocaleString()} <span className="text-xs text-gray-400 font-sans font-normal">/ month</span>
+              ₹{monthlyEmi.toLocaleString()} <span className="text-xs text-gray-400 font-sans font-normal">{c.perMonth}</span>
             </div>
             <p className="text-[11px] text-gray-400">
-              For loan principal of ₹{loanPrincipal.toLocaleString()} over {tenureYears} years
+              {c.forPrincipal} ₹{loanPrincipal.toLocaleString()} ({tenureYears} {c.years})
             </p>
 
             {/* Financial Breakdown Table */}
             <div className="mt-5 space-y-2 border-t border-white/10 pt-4 text-xs text-left">
               <div className="flex justify-between text-gray-300">
-                <span>Principal Loan Amount:</span>
+                <span>{c.principalLoanAmount}</span>
                 <span className="font-mono font-semibold text-white">₹{loanPrincipal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-gray-300">
-                <span>Total Interest Payable:</span>
+                <span>{c.totalInterestPayable}</span>
                 <span className="font-mono font-semibold text-amber-400">₹{totalInterest.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-gray-300">
-                <span>Total Amount (P + I):</span>
+                <span>{c.totalAmountPayable}</span>
                 <span className="font-mono font-semibold text-white">₹{totalPayable.toLocaleString()}</span>
               </div>
               <div className="flex justify-between border-t border-white/5 pt-2 text-[#DFC382]">
-                <span>Est. Registry & Stamp Duty (UP):</span>
+                <span>{c.estRegistryCost}</span>
                 <span className="font-mono font-bold">₹{totalRegistryCost.toLocaleString()}</span>
               </div>
             </div>
@@ -301,7 +351,7 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3 text-xs font-bold text-white shadow-lg hover:bg-emerald-600 transition"
               >
-                <span>💬 Check Loan Eligibility via WhatsApp</span>
+                <span>💬 {c.checkEligibilityWhatsApp}</span>
               </a>
             </div>
           </div>
@@ -310,7 +360,7 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
           <div className="rounded-2xl border border-white/10 bg-[#050A17] p-4 text-xs space-y-3">
             <span className="font-bold text-white flex items-center gap-1.5">
               <Building className="h-4 w-4 text-[#C7A35A]" />
-              <span>Approved Bank Partners in Varanasi</span>
+              <span>{c.approvedBanksTitle}</span>
             </span>
 
             <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -326,7 +376,7 @@ Please connect me with your banking desk for pre-approval assistance in Varanasi
             </div>
 
             <p className="text-[10px] text-gray-500 text-center">
-              *Interest rates are subject to applicant credit score (CIBIL 750+) and bank appraisal guidelines.
+              {c.rateDisclaimer}
             </p>
           </div>
         </div>

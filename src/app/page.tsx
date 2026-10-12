@@ -34,32 +34,7 @@ export default function HomePage() {
   const { t, language } = useApp();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
-  const faqs = [
-    {
-      q: 'Does AKGV Infra City build houses or only sell residential plots? (क्या कंपनी मकान बनाती है या सिर्फ प्लॉट बेचती है?)',
-      a: 'AKGV Infra City Private Limited केवल सुव्यवस्थित एवं कानूनी रूप से प्रमाणित आवासीय प्लॉट्स (Developed Residential Plots) की बिक्री करती है। हम 30ft व 25ft चौड़ी पक्की सड़कें, भूमिगत नाली, बिजली ट्रांसफार्मर, सोलर स्ट्रीट लाइट्स, मीठा पानी एवं बाउंड्री जैसी पूर्ण टाउनशिप सुविधाएं विकसित करके देते हैं। वेबसाइट पर दिया गया 3D हाउस व्यूअर केवल संदर्भ व विज़ुअलाइज़ेशन के लिए है ताकि आप देख सकें कि आपके प्लॉट पर भविष्य का मकान कैसा बन सकता है। मकान निर्माण खरीदार स्वयं अपनी पसंद से कराते हैं।',
-    },
-    {
-      q: 'Where are the flagship project locations of AKGV Infra City?',
-      a: 'Initial flagship townships are strategically located in Rampur (outskirts with direct 30ft entrance roads), Lahartara (central Varanasi near Cantt Station), and Mirza Murad (industrial & expressway growth corridor along NH-19).',
-    },
-    {
-      q: 'What road widths and infrastructure amenities are provided?',
-      a: 'As transcribed in our official blueprint, the development features a 30\'-0" wide main proposed boulevard and 25\'-0" wide internal cross-roads, complete with underground drainage lines, electricity transformer infrastructure, and water connectivity ready for immediate residential construction.',
-    },
-    {
-      q: 'How does the plot booking and hold workflow function?',
-      a: 'Buyers can select an available green plot on our interactive digital master plan and place a 72-hour temporary hold. Payment proofs (UPI QR or Bank NEFT) are verified manually by authorized staff before issuing an official receipt and marking the plot yellow.',
-    },
-    {
-      q: 'What is the ₹999 Joining Kit and how is payment collected?',
-      a: 'The ₹999 Joining Kit is strictly collected in cash offline and provides physical business materials: 1 Executive Bag, 1 Metallic Pen, 1 Executive Diary, and 1 Project File. An official printed cash receipt is generated in the portal.',
-    },
-    {
-      q: 'Can buyers visualize compatible houses in 3D before booking?',
-      a: 'Yes! Our interactive 3D House Viewer allows you to rotate suitable house designs 360 degrees, inspect dimensions, switch daylight and exterior finishes, and verify that the layout fits your selected plot dimensions.',
-    },
-  ];
+  const faqs = t.faqs;
 
   return (
     <div className="flex flex-col gap-16 pb-20">
@@ -142,12 +117,12 @@ export default function HomePage() {
           <div className="pt-6">
             <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-[#050A17]/80 px-5 py-2.5 text-xs text-gray-300 shadow">
               <PhoneCall className="h-4 w-4 text-[#C7A35A]" />
-              <span>Direct Sales Desk:</span>
+              <span>{t.hero.directDesk}</span>
               <a href={`tel:${COMPANY_DETAILS.phone}`} className="font-bold text-[#DFC382] hover:underline">
                 {COMPANY_DETAILS.displayPhone}
               </a>
               <span className="hidden sm:inline text-gray-500">•</span>
-              <span className="hidden sm:inline text-emerald-400">Immediate Site Visit Assistance</span>
+              <span className="hidden sm:inline text-emerald-400">{t.hero.immediateAssistance}</span>
             </div>
           </div>
         </div>
@@ -157,13 +132,13 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
           <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
-            Prime Growth Corridors
+            {t.locations.badge}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            Township Locations in Uttar Pradesh
+            {t.locations.title}
           </h2>
           <p className="text-xs text-gray-400">
-            Selected for high capital appreciation, rapid infrastructural expansion, and pristine residential living.
+            {t.locations.subtitle}
           </p>
         </div>
 
@@ -182,7 +157,7 @@ export default function HomePage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0B1734] via-transparent to-transparent" />
                 <span className="absolute top-3 right-3 rounded-full bg-[#050A17]/80 px-3 py-1 text-[11px] font-bold text-[#DFC382] border border-[#C7A35A]/40 backdrop-blur">
-                  {loc.availablePlots} Plots Available
+                  {loc.availablePlots} {t.locations.plotsAvailable}
                 </span>
               </div>
 
@@ -208,14 +183,14 @@ export default function HomePage() {
                       href="/master-plan"
                       className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition active:scale-95"
                     >
-                      <span>⚡ Book Plot in {loc.city}</span>
+                      <span>⚡ {t.locations.bookPlotIn} {loc.city}</span>
                     </Link>
 
                     <Link
                       href={`/projects#${loc.slug}`}
                       className="flex items-center justify-between text-xs font-semibold text-[#DFC382] hover:underline pt-0.5"
                     >
-                      <span>View Location Inventory & Map</span>
+                      <span>{t.locations.viewInventory}</span>
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
@@ -230,7 +205,11 @@ export default function HomePage() {
       <section id="master-plan" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#1EA275] uppercase tracking-wider">
-            Blueprint-Accurate Digital Map
+            {language === 'hi'
+              ? 'ब्लूप्रिंट-आधारित डिजिटल मास्टर प्लान'
+              : language === 'hinglish'
+              ? 'Blueprint-Accurate Digital Map'
+              : 'Blueprint-Accurate Digital Map'}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
             {t.masterPlan.title}
@@ -247,13 +226,13 @@ export default function HomePage() {
       <section id="house-viewer-3d" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
-            Sample Elevation & Fitment Simulation
+            {t.houseViewer.badge}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            Visualize Your Future Home on Your Purchased Plot in 3D
+            {t.houseViewer.title}
           </h2>
           <p className="text-xs text-gray-400">
-            AKGV Infra City केवल पूर्ण विकसित आवासीय प्लॉट्स बेचती है। यह 3D सिम्युलेटर केवल यह देखने के लिए है कि आपके खरीदे गए प्लॉट पर भविष्य का मकान (वास्तु, सेटबैक व कार पार्किंग) कैसा बन सकता है।
+            {t.houseViewer.noticeText}
           </p>
         </div>
 
@@ -269,7 +248,11 @@ export default function HomePage() {
       <section id="rewards" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#DFC382] uppercase tracking-wider">
-            Growth & Recognition
+            {language === 'hi'
+              ? 'प्रोत्साहन एवं विकास'
+              : language === 'hinglish'
+              ? 'Growth & Recognition'
+              : 'Growth & Recognition'}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
             {t.rewards.title}
@@ -291,27 +274,35 @@ export default function HomePage() {
       <section id="joining-kit" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-            Offline Transparency
+            {t.joiningKit.badge}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            Member Joining Kit (₹999 Cash Ledger)
+            {t.joiningKit.title}
           </h2>
           <p className="text-xs text-gray-400">
-            Physical onboarding kit with Bag, Pen, Diary and File. Strictly collected in cash offline and tracked in our administrative ledger.
+            {t.joiningKit.subtitle}
           </p>
         </div>
 
         <JoiningKitLedger />
       </section>
 
-      {/* 7. FREQUENTLY ASKED QUESTIONS */}
+      {/* 9. FREQUENTLY ASKED QUESTIONS */}
       <section className="mx-auto max-w-4xl px-4 sm:px-6 space-y-6">
         <div className="text-center space-y-2">
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            Frequently Asked Questions
+            {language === 'hi'
+              ? 'अक्सर पूछे जाने वाले प्रश्न'
+              : language === 'hinglish'
+              ? 'Aksar Puche Jane Wale Sawal (FAQs)'
+              : 'Frequently Asked Questions'}
           </h2>
           <p className="text-xs text-gray-400">
-            Clear answers regarding plot bookings, registry process, and company operations.
+            {language === 'hi'
+              ? 'प्लॉट बुकिंग, रजिस्ट्री प्रक्रिया और टाउनशिप सुविधाओं से जुड़े स्पष्ट उत्तर।'
+              : language === 'hinglish'
+              ? 'Plot booking, registry process aur township facilities se jude clear answers.'
+              : 'Clear answers regarding plot bookings, registry process, and company operations.'}
           </p>
         </div>
 
@@ -348,10 +339,10 @@ export default function HomePage() {
         <div className="relative overflow-hidden rounded-3xl border border-[#C7A35A] bg-gradient-to-r from-[#0B1734] via-[#050A17] to-[#0B1734] p-8 sm:p-12 text-center shadow-2xl">
           <div className="mx-auto max-w-2xl space-y-4">
             <h2 className="font-serif text-2xl sm:text-4xl font-bold text-white">
-              Ready to Secure Your Plot in Varanasi?
+              {t.ctaBanner.title}
             </h2>
             <p className="text-xs sm:text-sm text-gray-300">
-              Schedule a guided site inspection with our senior representatives in Rampur, Lahartara or Mirza Murad today.
+              {t.ctaBanner.subtitle}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
               <a
@@ -359,14 +350,14 @@ export default function HomePage() {
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-3.5 text-sm font-bold text-[#0B1734] shadow hover:brightness-110"
               >
                 <PhoneCall className="h-4 w-4" />
-                <span>Call {COMPANY_DETAILS.displayPhone}</span>
+                <span>{t.ctaBanner.callBtn} {COMPANY_DETAILS.displayPhone}</span>
               </a>
               <Link
                 href="/site-visit"
                 className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10"
               >
                 <Calendar className="h-4 w-4 text-[#1EA275]" />
-                <span>Book Site Visit Online</span>
+                <span>{t.ctaBanner.siteVisitBtn}</span>
               </Link>
             </div>
           </div>
