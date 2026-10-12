@@ -86,23 +86,23 @@ export function PlotHoldCertificateModal({
   const plotPriceLakh = ((plot.basePriceInr || 1200000) / 100000).toFixed(2);
   const tokenAmount = 21000; // Standard 72h Token Hold amount
 
-  const whatsappMessage = `*AKGV INFRA CITY — 72-HOUR PLOT HOLD REQUEST*
+  const whatsappMessage = `*AKGV INFRA CITY — 72-HOUR RESIDENTIAL PLOT HOLD REQUEST*
 ━━━━━━━━━━━━━━━━━━━━
 *Booking Reference:* ${certificateRef}
-*Plot Number:* Plot #${plot.plotNumber} (Block ${plot.block})
+*Allocated Asset:* Residential Plot #${plot.plotNumber} (Block ${plot.block})
 *Plot Area:* ${plot.areaSqft} sqft (${(plot.areaSqft / 9).toFixed(1)} Gaj)
 *Dimensions:* ${plot.dimensions}
 *Road Width:* ${plot.roadWidth}
 *Facing:* ${plot.roadFacing} Facing (100% Vastu Approved)
-*Base Valuation:* ₹${plotPriceLakh} Lakh
-*Selected Villa:* ${selectedHouse.name} (${selectedHouse.bhk})
+*Plot Valuation:* ₹${plotPriceLakh} Lakh
+*Sample Elevation Reference:* ${selectedHouse.name} (केवल संदर्भ हेतु)
 ━━━━━━━━━━━━━━━━━━━━
 *Buyer Name:* ${buyerName}
 *Buyer Mobile:* ${buyerPhone}
 *Hold Duration:* 72 Hours Guaranteed
 *Token Payable:* ₹${tokenAmount.toLocaleString()}
 
-_Please share official bank account details & UPI QR for token verification._`;
+_Please share official bank account details & UPI QR for plot token hold verification._`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-4 backdrop-blur-md overflow-y-auto">
@@ -188,7 +188,7 @@ _Please share official bank account details & UPI QR for token verification._`;
 
             <div>
               <label className="block font-semibold text-gray-200 mb-1">
-                Preferred Villa Design (Optional Preview)
+                Sample House Elevation Idea (Optional — केवल संदर्भ हेतु)
               </label>
               <select
                 value={selectedHouseId}
@@ -201,16 +201,19 @@ _Please share official bank account details & UPI QR for token verification._`;
                   </option>
                 ))}
               </select>
+              <span className="text-[10px] text-gray-400 mt-1 block">
+                *नोट: AKGV Infra City केवल आवासीय प्लॉट्स बेचती है। मकान निर्माण खरीदार स्वयं अपनी पसंद से कराते हैं।
+              </span>
             </div>
 
             {/* Hold Guarantee Note */}
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-[11px] text-emerald-300 space-y-1">
               <div className="flex items-center gap-1.5 font-bold text-emerald-400">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Zero-Risk 72-Hour Legal Hold</span>
+                <span>Zero-Risk 72-Hour Legal Plot Hold</span>
               </div>
               <p className="text-gray-300">
-                Plot #{plot.plotNumber} will be temporarily locked in your name across our system for 72 hours. No other buyer can book this plot during your hold period.
+                Residential Plot #{plot.plotNumber} will be temporarily locked in your name across our system for 72 hours. AKGV Infra City provides freehold land with 30ft/25ft wide roads, sweet water, drainage, and direct registry.
               </p>
             </div>
 

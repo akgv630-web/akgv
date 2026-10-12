@@ -28,7 +28,7 @@ export function MobileBottomNav() {
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/master-plan', label: 'Plots', icon: Layers },
-    { href: '/house-viewer-3d', label: '3D Villa', icon: Building2 },
+    { href: '/house-viewer-3d', label: '3D Design', icon: Building2 },
     { href: '/rewards-plan', label: 'Rewards', icon: Trophy },
     { href: getDashboardPath(currentUser.role), label: 'Portal', icon: User },
   ];

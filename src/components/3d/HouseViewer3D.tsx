@@ -284,12 +284,12 @@ export function HouseViewer3D({
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#C7A35A] animate-pulse" />
             <h2 className="font-serif text-lg font-bold text-white tracking-wide">
-              Interactive 3D Architectural House Viewer
+              3D Future Home Simulation (प्रस्तावित गृह विज़ुअलाइज़ेशन)
             </h2>
           </div>
           <p className="text-xs text-gray-400">
-            Selected Model: <strong className="text-white">{selectedHouse.name}</strong> on Plot{' '}
-            <strong className="text-[#DFC382]">{selectedPlot.plotNumber}</strong> ({selectedPlot.dimensions})
+            Sample Elevation: <strong className="text-white">{selectedHouse.name}</strong> on Plot{' '}
+            <strong className="text-[#DFC382]">{selectedPlot.plotNumber}</strong> ({selectedPlot.dimensions} • {selectedPlot.areaSqft} sqft)
           </p>
         </div>
 
@@ -309,18 +309,18 @@ export function HouseViewer3D({
         </div>
       </div>
 
-      {/* Model Type Distinction Banner */}
-      <div className="rounded-xl border border-[#C7A35A]/30 bg-[#0B1734] px-4 py-2.5 text-xs text-gray-300 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382] uppercase tracking-wider">
-            Procedural Demonstration Model
+      {/* Official Business Clarification Notice */}
+      <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/20 px-4 py-3 text-xs text-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-lg">
+        <div className="flex items-start gap-2.5">
+          <span className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382] uppercase tracking-wider shrink-0 mt-0.5">
+            प्लॉट बिक्री सूचना
           </span>
-          <span className="text-gray-400">
-            Interactive real-time 3D simulation for plot boundary and scale inspection. Does not replace architect-approved municipal CAD drawings.
+          <span className="text-gray-300 leading-relaxed text-[11px]">
+            <strong className="text-white">AKGV Infra City केवल प्रमाणित आवासीय प्लॉट्स की बिक्री करती है (कंपनी मकान निर्माण नहीं करती है)।</strong> यह 3D व्यूअर केवल आपके प्लॉट पर भविष्य के मकान के वास्तु, सेटबैक व कार पार्किंग के विज़ुअलाइज़ेशन के लिए है।
           </span>
         </div>
-        <span className="text-[11px] text-[#DFC382] font-semibold hidden md:inline">
-          Upload custom GLB in Admin
+        <span className="text-[11px] text-[#DFC382] font-semibold shrink-0">
+          Township Plots Only
         </span>
       </div>
 
@@ -504,10 +504,10 @@ export function HouseViewer3D({
               onClick={() => setHoldModalOpen(true)}
               className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3.5 py-2 text-xs font-bold text-[#0B1734] shadow-xl hover:brightness-110 active:scale-95 transition"
             >
-              <span>⚡ Hold Plot #{selectedPlot.plotNumber} with This Villa</span>
+              <span>⚡ Hold Plot #{selectedPlot.plotNumber} (₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)}L)</span>
             </button>
             <div className="hidden sm:block rounded-lg border border-white/10 bg-[#050A17]/80 px-2.5 py-1 text-[10px] text-gray-400 backdrop-blur">
-              Click & Drag to rotate 360° | Scroll to zoom
+              Sample 3D Elevation • AKGV Infra Sells Plots
             </div>
           </div>
         </div>
@@ -625,18 +625,18 @@ export function HouseViewer3D({
                 onClick={() => setHoldModalOpen(true)}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
               >
-                <span>⚡ Hold Plot #{selectedPlot.plotNumber} with {selectedHouse.name}</span>
+                <span>⚡ Place 72-Hour Hold on Plot #{selectedPlot.plotNumber}</span>
               </button>
 
               <a
                 href={`https://wa.me/916306917991?text=${encodeURIComponent(
-                  `Namaste AKGV Infra City! I am reviewing the 3D model "${selectedHouse.name}" (${selectedHouse.bhk}) for Plot #${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft). Please share construction and plot hold details.`
+                  `Namaste AKGV Infra City! I am interested in purchasing Plot #${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}) in Varanasi. Please share plot registry and booking details.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
               >
-                <span>💬 Discuss Villa Architecture on WhatsApp</span>
+                <span>💬 Inquire About Plot #{selectedPlot.plotNumber} on WhatsApp</span>
               </a>
             </div>
           </div>

@@ -36,6 +36,10 @@ export default function HomePage() {
 
   const faqs = [
     {
+      q: 'Does AKGV Infra City build houses or only sell residential plots? (क्या कंपनी मकान बनाती है या सिर्फ प्लॉट बेचती है?)',
+      a: 'AKGV Infra City Private Limited केवल सुव्यवस्थित एवं कानूनी रूप से प्रमाणित आवासीय प्लॉट्स (Developed Residential Plots) की बिक्री करती है। हम 30ft व 25ft चौड़ी पक्की सड़कें, भूमिगत नाली, बिजली ट्रांसफार्मर, सोलर स्ट्रीट लाइट्स, मीठा पानी एवं बाउंड्री जैसी पूर्ण टाउनशिप सुविधाएं विकसित करके देते हैं। वेबसाइट पर दिया गया 3D हाउस व्यूअर केवल संदर्भ व विज़ुअलाइज़ेशन के लिए है ताकि आप देख सकें कि आपके प्लॉट पर भविष्य का मकान कैसा बन सकता है। मकान निर्माण खरीदार स्वयं अपनी पसंद से कराते हैं।',
+    },
+    {
       q: 'Where are the flagship project locations of AKGV Infra City?',
       a: 'Initial flagship townships are strategically located in Rampur (outskirts with direct 30ft entrance roads), Lahartara (central Varanasi near Cantt Station), and Mirza Murad (industrial & expressway growth corridor along NH-19).',
     },
@@ -243,13 +247,13 @@ export default function HomePage() {
       <section id="house-viewer-3d" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
-            Real-Time 3D Architectural Simulation
+            Sample Elevation & Fitment Simulation
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            Inspect Compatible House Models in 3D
+            Visualize Your Future Home on Your Purchased Plot in 3D
           </h2>
           <p className="text-xs text-gray-400">
-            Rotate 360°, inspect dimensions, test lighting conditions, and verify how your proposed villa fits on your selected plot.
+            AKGV Infra City केवल पूर्ण विकसित आवासीय प्लॉट्स बेचती है। यह 3D सिम्युलेटर केवल यह देखने के लिए है कि आपके खरीदे गए प्लॉट पर भविष्य का मकान (वास्तु, सेटबैक व कार पार्किंग) कैसा बन सकता है।
           </p>
         </div>
 

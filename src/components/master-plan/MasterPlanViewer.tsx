@@ -740,12 +740,17 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 </div>
               </div>
 
-              {/* Compatible 3D Villa Models */}
+              {/* Sample House Elevations for Future Construction */}
               <div className="space-y-2 border-t border-white/10 pt-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                  <Building2 className="h-4 w-4 text-[#C7A35A]" />
-                  <span>Compatible Architect House Designs</span>
-                </span>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-[#C7A35A]" />
+                    <span>Sample House Elevations (प्रस्तावित मकान डिज़ाइन)</span>
+                  </span>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    *AKGV Infra City केवल प्लॉट्स की बिक्री करती है। यह केवल यह दर्शाने के लिए है कि आपके प्लॉट पर भविष्य का मकान कैसा दिख सकता है।
+                  </p>
+                </div>
 
                 <div className="space-y-2">
                   {suitableHouses.map((house) => (
@@ -756,7 +761,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                       <div>
                         <div className="font-bold text-white">{house.name}</div>
                         <div className="text-[11px] text-gray-400">
-                          {house.bhk} • {house.carpetAreaSqft} sqft • Est. ₹{(house.estimatedCostInr / 100000).toFixed(1)} Lakh
+                          {house.bhk} • {house.carpetAreaSqft} sqft • Est. Construction ₹{(house.estimatedCostInr / 100000).toFixed(1)}L
                         </div>
                       </div>
 
@@ -764,7 +769,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                         href="/house-viewer-3d"
                         className="rounded-lg border border-[#C7A35A] bg-[#0B1734] px-2.5 py-1 text-[11px] font-bold text-[#DFC382] transition hover:bg-[#C7A35A] hover:text-[#0B1734]"
                       >
-                        Inspect 3D
+                        3D Preview
                       </Link>
                     </div>
                   ))}
