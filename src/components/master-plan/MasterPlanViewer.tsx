@@ -895,6 +895,31 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   </p>
                 </div>
 
+                {/* Real Photorealistic 3D Villa Elevation Card */}
+                <div className="relative h-44 w-full overflow-hidden rounded-xl border border-white/10 bg-[#050A17] shadow-inner group">
+                  <Image
+                    src={suitableHouses[0]?.imageUrl || '/assets/villa_vertical_luxury.jpg'}
+                    alt={`Real Villa Design for Plot ${selectedPlot.plotNumber}`}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B1734] via-transparent to-transparent" />
+                  <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-white text-xs">{suitableHouses[0]?.name || 'Royal Villa 3BHK'}</div>
+                      <div className="text-[10px] text-gray-300">{suitableHouses[0]?.bhk} • {suitableHouses[0]?.carpetAreaSqft} sqft</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowVillaSpotlightModal(true)}
+                      className="flex items-center gap-1 rounded-lg bg-[#C7A35A] px-2.5 py-1 text-[11px] font-bold text-[#0B1734] shadow hover:brightness-110"
+                    >
+                      <Maximize2 className="h-3 w-3" />
+                      <span>{language === 'hi' ? 'बड़ा करें' : language === 'hinglish' ? 'Enlarge' : 'Enlarge'}</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   {suitableHouses.map((house) => (
                     <div
