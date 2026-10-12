@@ -121,6 +121,15 @@ export default function HomePage() {
               <Calendar className="h-4 w-4 text-[#1EA275]" />
               <span>{t.hero.bookVisit}</span>
             </Link>
+
+            <a
+              href="https://wa.me/916306917991?text=Namaste%20AKGV%20Infra%20City!%20I%20am%20interested%20in%20booking%20a%20plot%20in%20Varanasi.%20Please%20share%20details."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-sm font-bold text-white shadow-xl hover:bg-emerald-600 transition active:scale-95"
+            >
+              <span>💬 WhatsApp (6306917991)</span>
+            </a>
           </div>
 
           {/* Direct Phone Assistance Bar */}
@@ -188,13 +197,22 @@ export default function HomePage() {
                     <span className="truncate">{loc.roadConnectivity}</span>
                   </div>
 
-                  <Link
-                    href={`/projects#${loc.slug}`}
-                    className="flex items-center justify-between text-xs font-semibold text-[#DFC382] hover:underline pt-1"
-                  >
-                    <span>View Location Inventory & Map</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
+                  <div className="pt-2 flex flex-col gap-2">
+                    <Link
+                      href="/master-plan"
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition active:scale-95"
+                    >
+                      <span>⚡ Book Plot in {loc.city}</span>
+                    </Link>
+
+                    <Link
+                      href={`/projects#${loc.slug}`}
+                      className="flex items-center justify-between text-xs font-semibold text-[#DFC382] hover:underline pt-0.5"
+                    >
+                      <span>View Location Inventory & Map</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

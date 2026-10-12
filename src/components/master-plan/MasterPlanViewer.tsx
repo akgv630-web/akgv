@@ -412,6 +412,41 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             <span className="text-[8px] text-[#DFC382]">Vastu Aligned</span>
           </div>
 
+          {/* Floating Plot Direct Booking Quick-Bar */}
+          {selectedPlot && (
+            <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-[#C7A35A] bg-[#0B1734]/95 p-2 shadow-2xl backdrop-blur-md animate-in fade-in duration-150">
+              <div className="flex items-center gap-2 px-1">
+                <span className="font-serif text-sm font-bold text-white">Plot {selectedPlot.plotNumber}</span>
+                <span className="text-[11px] text-[#DFC382] font-semibold">{selectedPlot.areaSqft} sqft</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${selectedPlot.status === 'available_green' ? 'bg-emerald-500/20 text-emerald-400' : selectedPlot.status === 'booked_yellow' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                  {selectedPlot.status === 'available_green' ? '● Available' : selectedPlot.status === 'booked_yellow' ? '● Booked' : '● Reserved'}
+                </span>
+              </div>
+
+              {selectedPlot.status === 'available_green' && (
+                <button
+                  type="button"
+                  onClick={() => setBookingModalOpen(true)}
+                  className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3 py-1.5 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 active:scale-95 transition"
+                >
+                  <span>⚡ Book Plot #{selectedPlot.plotNumber}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `Namaste AKGV Infra City! I am interested in booking Plot ${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}) in Varanasi. Please share booking procedures and bank details for ₹50,000 token hold.`;
+                  window.open(`https://wa.me/916306917991?text=${encodeURIComponent(text)}`, '_blank');
+                }}
+                className="flex items-center gap-1 rounded-lg bg-[#25D366] px-2.5 py-1.5 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
+                title="Direct WhatsApp Inquiry"
+              >
+                <span>💬 WhatsApp</span>
+              </button>
+            </div>
+          )}
+
           {/* Legend Overlay */}
           <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-[#0B1734]/95 px-3.5 py-2 text-xs shadow-xl backdrop-blur">
             <div className="flex items-center gap-1.5">
@@ -893,6 +928,19 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     className="rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-2 font-bold text-[#0B1734] shadow hover:brightness-110"
                   >
                     Confirm Booking Request
+                  </button>
+                </div>
+
+                <div className="border-t border-white/10 pt-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = `Namaste AKGV Infra City! I want to confirm my booking hold for Plot ${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}). Name: ${buyerName || 'Buyer'}, Phone: ${buyerPhone || '6306917991'}. Please send bank details.`;
+                      window.open(`https://wa.me/916306917991?text=${encodeURIComponent(text)}`, '_blank');
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
+                  >
+                    <span>💬 Book Directly via WhatsApp (+91 6306917991)</span>
                   </button>
                 </div>
               </form>

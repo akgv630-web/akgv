@@ -82,6 +82,14 @@ export default function ProjectsPage() {
                   <span>Schedule Site Visit</span>
                 </Link>
                 <a
+                  href={`https://wa.me/916306917991?text=Namaste%20AKGV%20Infra%20City!%20I%20want%20to%20inquire%20about%20plots%20in%20${encodeURIComponent(loc.name)}.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-xl bg-[#25D366] px-4 py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
+                >
+                  <span>💬 WhatsApp</span>
+                </a>
+                <a
                   href={`tel:${COMPANY_DETAILS.phone}`}
                   className="flex items-center gap-1.5 text-xs text-[#DFC382] font-semibold hover:underline ml-auto"
                 >

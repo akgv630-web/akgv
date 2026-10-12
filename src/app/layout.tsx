@@ -4,6 +4,9 @@ import './globals.css';
 import { AppProvider } from '@/context/AppContext';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { WhatsAppPopup } from '@/components/common/WhatsAppPopup';
+import { MobileBottomNav } from '@/components/common/MobileBottomNav';
+import { PwaInstallPrompt } from '@/components/common/PwaInstallPrompt';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -54,10 +57,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="flex min-h-screen flex-col bg-[#0B1734] font-sans text-[#F6F1E7] selection:bg-[#C7A35A] selection:text-[#0B1734]">
+      <body className="flex min-h-screen flex-col bg-[#0B1734] font-sans text-[#F6F1E7] selection:bg-[#C7A35A] selection:text-[#0B1734] overflow-x-hidden">
         <AppProvider>
+          <PwaInstallPrompt />
           <Navbar />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 pb-16 sm:pb-0">{children}</main>
+          <WhatsAppPopup />
+          <MobileBottomNav />
           <Footer />
         </AppProvider>
       </body>

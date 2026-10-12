@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import {
   Bike,
@@ -18,20 +19,27 @@ import {
   HelpCircle,
   Home,
   Info,
+  Layers,
+  MapPin,
+  MessageCircle,
   Plane,
   ShieldAlert,
   Smartphone,
   Sparkles,
   Trophy,
-  X
+  X,
+  ExternalLink,
+  ArrowRight
 } from 'lucide-react';
 import { COMMISSION_LEVELS_GROUND_TRUTH, COMPANY_DETAILS } from '@/data/groundTruth';
+import { CommissionLevelRule } from '@/types';
 import { useApp } from '@/context/AppContext';
 
 export function CommissionRewardsView() {
   const { language } = useApp();
   const [testVolumeInr, setTestVolumeInr] = useState<number>(8500000); // 85 Lakh (Gold Star)
   const [showBrochureModal, setShowBrochureModal] = useState(false);
+  const [selectedLevelForAction, setSelectedLevelForAction] = useState<CommissionLevelRule | null>(null);
 
   // Determine matching tier
   const activeLevel = [...COMMISSION_LEVELS_GROUND_TRUTH]
@@ -102,6 +110,12 @@ export function CommissionRewardsView() {
     return `₹${(val / 100000).toFixed(0)} लाख`;
   };
 
+  const handleWhatsAppInquiryForLevel = (level: CommissionLevelRule) => {
+    const text = `Namaste AKGV Infra City! I am interested in achieving Level ${level.levelNumber} (${level.rankTitleEn} / ${level.rankTitleHi}) with ${level.commissionPercent}% commission and qualifying for the ${level.rewardNameEn} (${level.rewardNameHi}). Please share plot booking details and target milestones.`;
+    const encoded = encodeURIComponent(text);
+    window.open(`https://wa.me/916306917991?text=${encoded}`, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="w-full space-y-8">
       {/* Header Banner */}
@@ -164,7 +178,7 @@ export function CommissionRewardsView() {
           <input
             type="range"
             min={100000}
-            max={500000000} // Up to 50 Cr
+            max={500000000}
             step={500000}
             value={testVolumeInr}
             onChange={(e) => setTestVolumeInr(Number(e.target.value))}
@@ -222,8 +236,8 @@ export function CommissionRewardsView() {
           </div>
 
           {/* Unlocked Reward */}
-          <div className="rounded-xl border border-[#C7A35A]/50 bg-[#0B1734] p-4 text-center">
-            <span className="text-xs text-[#DFC382] block">Brochure Reward</span>
+          <div className="rounded-xl border border-[#C7A35A]/50 bg-[#0B1734] p-4 text-center cursor-pointer hover:border-[#C7A35A] transition" onClick={() => setSelectedLevelForAction(activeLevel)}>
+            <span className="text-xs text-[#DFC382] block">Brochure Reward (Click to Book)</span>
             <div className="flex items-center justify-center gap-2 mt-1">
               {getRewardIcon(activeLevel.badgeIcon)}
               <span className="font-serif text-lg font-bold text-white">
@@ -231,7 +245,7 @@ export function CommissionRewardsView() {
               </span>
             </div>
             <span className="text-[11px] text-gray-400 block mt-1">
-              ({activeLevel.rewardNameEn})
+              ({activeLevel.rewardNameEn}) • Click to Enquire
             </span>
           </div>
         </div>
@@ -257,31 +271,88 @@ export function CommissionRewardsView() {
         )}
       </div>
 
-      {/* Complete Levels 1 to 11 Brochure Master Table */}
+      {/* Complete Levels 1 to 11 Brochure Master Section */}
       <div className="overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#050A17] shadow-xl">
-        <div className="bg-[#0B1734] px-6 py-4 border-b border-white/10 flex items-center justify-between">
+        <div className="bg-[#0B1734] px-4 py-4 sm:px-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-serif text-base font-bold text-white">
               Official 11-Tier Commission & Rewards Chart
             </h3>
             <p className="text-xs text-gray-400">
-              Transcribed with complete fidelity from the official AKGV Infra City brochure
+              Click on any level to book plots, target that rank, or contact on WhatsApp
             </p>
           </div>
           <span className="rounded bg-[#C7A35A]/20 px-3 py-1 text-xs font-bold text-[#DFC382]">
-            11 Approved Ranks
+            11 Approved Ranks • Click Any to Book
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile-Friendly Card View (Visible on screens < sm) */}
+        <div className="divide-y divide-white/10 sm:hidden">
+          {COMMISSION_LEVELS_GROUND_TRUTH.map((level) => {
+            const isCurrentActive = activeLevel.levelNumber === level.levelNumber;
+            return (
+              <div
+                key={level.levelNumber}
+                onClick={() => setSelectedLevelForAction(level)}
+                className={`p-4 space-y-3 cursor-pointer transition active:scale-[0.99] ${
+                  isCurrentActive ? 'bg-[#C7A35A]/15 border-l-4 border-[#C7A35A]' : 'hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#C7A35A]/20 font-serif font-bold text-xs text-[#DFC382]">
+                      #{level.levelNumber}
+                    </span>
+                    <div>
+                      <h4 className="font-bold text-sm text-white">{level.rankTitleHi}</h4>
+                      <p className="text-[10px] text-gray-400">{level.rankTitleEn}</p>
+                    </div>
+                  </div>
+
+                  <span className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-400">
+                    {level.commissionPercent}% Commission
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs bg-[#0B1734] p-2.5 rounded-xl border border-white/5">
+                  <div>
+                    <span className="text-[10px] text-gray-400 block">बिजनेस टारगेट:</span>
+                    <span className="font-semibold text-gray-200">
+                      {formatLakhCrore(level.minBusinessInr)} — {formatLakhCrore(level.maxBusinessInr)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-400 block">रिवार्ड उपहार:</span>
+                    <span className="font-bold text-[#DFC382] flex items-center gap-1">
+                      {level.rewardNameHi}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734] shadow"
+                >
+                  <span>🎯 इस लेवल पर प्लॉट बुक करें / विवरण</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table View (Visible on screens >= sm) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-white/10 bg-[#0B1734]/80 text-[#DFC382] uppercase text-[10px] tracking-wider">
               <tr>
-                <th className="px-4 py-3 text-center">लेवल (Level)</th>
-                <th className="px-4 py-3">पद / रैंक (Rank / Post)</th>
-                <th className="px-4 py-3">बिजनेस टारगेट (Business Target)</th>
-                <th className="px-4 py-3 text-center">कमीशन (Commission)</th>
-                <th className="px-4 py-3">रिवार्ड (Reward)</th>
+                <th className="px-4 py-3 text-center">लेवल</th>
+                <th className="px-4 py-3">पद / रैंक (Rank)</th>
+                <th className="px-4 py-3">बिजनेस टारगेट (Target)</th>
+                <th className="px-4 py-3 text-center">कमीशन</th>
+                <th className="px-4 py-3">रिवार्ड उपहार (Reward)</th>
+                <th className="px-4 py-3 text-center">कार्रवाई / एक्शन</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-gray-200">
@@ -290,7 +361,8 @@ export function CommissionRewardsView() {
                 return (
                   <tr
                     key={level.levelNumber}
-                    className={`transition hover:bg-white/5 ${
+                    onClick={() => setSelectedLevelForAction(level)}
+                    className={`cursor-pointer transition hover:bg-[#C7A35A]/10 ${
                       isCurrentActive ? 'bg-[#C7A35A]/15 font-semibold text-white' : ''
                     }`}
                   >
@@ -321,6 +393,17 @@ export function CommissionRewardsView() {
                         </span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedLevelForAction(level);
+                        }}
+                        className="rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3 py-1.5 text-[11px] font-bold text-[#0B1734] shadow hover:brightness-110 active:scale-95 transition"
+                      >
+                        🎯 बुक / लक्ष्य चुनें
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -328,6 +411,108 @@ export function CommissionRewardsView() {
           </table>
         </div>
       </div>
+
+      {/* Interactive Level Action & Booking Modal */}
+      {selectedLevelForAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
+          <div className="relative max-w-lg w-full rounded-2xl border border-[#C7A35A] bg-[#0B1734] p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#C7A35A] to-[#9E7E36] text-[#0B1734] shadow">
+                  {getRewardIcon(selectedLevelForAction.badgeIcon)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-serif text-xl font-bold text-white">
+                      Level {selectedLevelForAction.levelNumber}: {selectedLevelForAction.rankTitleHi}
+                    </span>
+                    <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400">
+                      {selectedLevelForAction.commissionPercent}% Commission
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#DFC382]">
+                    {selectedLevelForAction.rankTitleEn} • Official Brochure Rank
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedLevelForAction(null)}
+                className="rounded-lg p-1 text-gray-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Level Milestone Overview */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl bg-[#050A17] p-3 border border-white/10">
+                <span className="text-gray-400 block">Business Target</span>
+                <span className="text-base font-bold text-white block mt-0.5">
+                  {formatLakhCrore(selectedLevelForAction.minBusinessInr)} — {formatLakhCrore(selectedLevelForAction.maxBusinessInr)}
+                </span>
+              </div>
+              <div className="rounded-xl bg-[#050A17] p-3 border border-white/10">
+                <span className="text-gray-400 block">Reward Gift</span>
+                <span className="text-base font-bold text-[#DFC382] block mt-0.5">
+                  {selectedLevelForAction.rewardNameHi}
+                </span>
+                <span className="text-[10px] text-gray-400">({selectedLevelForAction.rewardNameEn})</span>
+              </div>
+            </div>
+
+            {/* Direct Booking & Action Options */}
+            <div className="space-y-2.5 pt-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">
+                Choose Action for this Level:
+              </span>
+
+              {/* Action 1: Book Plots to Qualify */}
+              <Link
+                href="/master-plan"
+                onClick={() => setSelectedLevelForAction(null)}
+                className="flex items-center justify-between rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] p-3 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition"
+              >
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  <span>🏡 इस लेवल के लिए प्लॉट बुक करें (Master Layout Plan)</span>
+                </div>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+
+              {/* Action 2: Direct WhatsApp Chat */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleWhatsAppInquiryForLevel(selectedLevelForAction);
+                  setSelectedLevelForAction(null);
+                }}
+                className="w-full flex items-center justify-between rounded-xl bg-[#25D366] p-3 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
+              >
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  <span>💬 WhatsApp पर इस लेवल के लिए सीधा मेसेज भेजें</span>
+                </div>
+                <ExternalLink className="h-4 w-4" />
+              </button>
+
+              {/* Action 3: Free Site Visit */}
+              <Link
+                href="/site-visit"
+                onClick={() => setSelectedLevelForAction(null)}
+                className="flex items-center justify-between rounded-xl border border-white/20 bg-white/5 p-3 text-xs font-semibold text-white hover:bg-white/10 transition"
+              >
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-[#DFC382]" />
+                  <span>🚗 फ्री साइट विजिट बुक करें (Schedule Free Site Visit)</span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-400" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Compliance & Offline Kit Ledger Notice */}
       <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 text-xs text-gray-300 space-y-3">
