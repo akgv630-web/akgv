@@ -82,6 +82,7 @@ export interface HouseModel {
     accentColor: string;
     roofColor: string;
   }[];
+  imageUrl?: string;
   gltfModelUrl?: string;
 }
 

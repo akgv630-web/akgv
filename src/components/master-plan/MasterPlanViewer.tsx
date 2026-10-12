@@ -68,6 +68,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const [buyerPhone, setBuyerPhone] = useState('');
   const [selectedHouseModelId, setSelectedHouseModelId] = useState<string>('model-royal-villa');
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState<string | null>(null);
+  const [showVillaSpotlightModal, setShowVillaSpotlightModal] = useState(false);
 
   // Filtered plots computation
   const filteredPlots = useMemo(() => {
@@ -471,6 +472,16 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               >
                 <span>💬 WhatsApp</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setShowVillaSpotlightModal(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A] bg-[#050A17] px-2.5 py-1.5 text-xs font-bold text-[#DFC382] shadow hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
+                title="Tap to view enlarged 3D villa elevation & blueprint details"
+              >
+                <Maximize2 className="h-3 w-3" />
+                <span>🔍 {language === 'hi' ? '3D विला बड़ा करें' : language === 'hinglish' ? '3D Villa Enlarge Karein' : 'Enlarge 3D Villa'}</span>
+              </button>
             </div>
           )}
 
@@ -504,13 +515,110 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 <defs>
                   {/* High-Altitude 3D Elevation Drop Shadow Filter for Enlarged Selected Plot */}
                   <filter id="selectedPlotElevate" x="-60%" y="-60%" width="220%" height="220%">
-                    <feDropShadow dx="0" dy="16" stdDeviation="16" floodColor="#000000" floodOpacity="0.95" />
-                    <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor="#DFC382" floodOpacity="0.85" />
+                    <feDropShadow dx="0" dy="18" stdDeviation="18" floodColor="#000000" floodOpacity="0.95" />
+                    <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#DFC382" floodOpacity="0.85" />
                   </filter>
                   {/* Subtle Hover Shadow */}
                   <filter id="hoverPlotGlow" x="-30%" y="-30%" width="160%" height="160%">
                     <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#000000" floodOpacity="0.6" />
                   </filter>
+                  {/* Directional Sun Cast Shadow Filters */}
+                  <filter id="houseCastShadow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="3" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.75" />
+                  </filter>
+                  <filter id="treeCastShadow" x="-40%" y="-40%" width="180%" height="180%">
+                    <feDropShadow dx="2" dy="3" stdDeviation="2" floodColor="#000000" floodOpacity="0.6" />
+                  </filter>
+
+                  {/* Realistic Multi-Tone Roof Slope Gradients */}
+                  <linearGradient id="roofGreenSlopeSun" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#22C55E" />
+                    <stop offset="60%" stopColor="#15803D" />
+                    <stop offset="100%" stopColor="#14532D" />
+                  </linearGradient>
+                  <linearGradient id="roofGreenSlopeShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#14532D" />
+                    <stop offset="100%" stopColor="#052E16" />
+                  </linearGradient>
+
+                  <linearGradient id="roofYellowSlopeSun" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#FBBF24" />
+                    <stop offset="60%" stopColor="#D97706" />
+                    <stop offset="100%" stopColor="#92400E" />
+                  </linearGradient>
+                  <linearGradient id="roofYellowSlopeShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#92400E" />
+                    <stop offset="100%" stopColor="#451A03" />
+                  </linearGradient>
+
+                  <linearGradient id="roofRedSlopeSun" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#F87171" />
+                    <stop offset="60%" stopColor="#DC2626" />
+                    <stop offset="100%" stopColor="#991B1B" />
+                  </linearGradient>
+                  <linearGradient id="roofRedSlopeShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#991B1B" />
+                    <stop offset="100%" stopColor="#450A0A" />
+                  </linearGradient>
+
+                  {/* Architectural Facade & Glazing Gradients */}
+                  <linearGradient id="wallIvoryStucco" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#FFFFFF" />
+                    <stop offset="60%" stopColor="#F8FAFC" />
+                    <stop offset="100%" stopColor="#E2E8F0" />
+                  </linearGradient>
+                  <linearGradient id="glassSkyGlaze" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#E0F2FE" />
+                    <stop offset="45%" stopColor="#38BDF8" />
+                    <stop offset="100%" stopColor="#0284C7" />
+                  </linearGradient>
+                  <linearGradient id="glassWarmIlluminated" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FEF08A" />
+                    <stop offset="100%" stopColor="#F59E0B" />
+                  </linearGradient>
+
+                  {/* Pool Water with Caustic Shimmer */}
+                  <linearGradient id="poolTurquoise" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#67E8F9" />
+                    <stop offset="50%" stopColor="#06B6D4" />
+                    <stop offset="100%" stopColor="#0891B2" />
+                  </linearGradient>
+
+                  {/* Metallic Car Gradients */}
+                  <linearGradient id="carMetallicSilver" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FFFFFF" />
+                    <stop offset="40%" stopColor="#CBD5E1" />
+                    <stop offset="85%" stopColor="#64748B" />
+                    <stop offset="100%" stopColor="#334155" />
+                  </linearGradient>
+                  <linearGradient id="carMetallicGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FEF08A" />
+                    <stop offset="50%" stopColor="#EAB308" />
+                    <stop offset="100%" stopColor="#854D0E" />
+                  </linearGradient>
+
+                  {/* Manicured Lawn Radial Depth Gradients */}
+                  <radialGradient id="lawnDepthGreen" cx="50%" cy="50%" r="55%">
+                    <stop offset="0%" stopColor="#064E3B" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#022C1A" stopOpacity="1" />
+                  </radialGradient>
+                  <radialGradient id="lawnDepthAmber" cx="50%" cy="50%" r="55%">
+                    <stop offset="0%" stopColor="#3E300B" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#1E1602" stopOpacity="1" />
+                  </radialGradient>
+                  <radialGradient id="lawnDepthRed" cx="50%" cy="50%" r="55%">
+                    <stop offset="0%" stopColor="#3E1114" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#1E0507" stopOpacity="1" />
+                  </radialGradient>
+
+                  {/* 3D Spherical Tree Canopy Gradient */}
+                  <radialGradient id="treeCanopy3D" cx="30%" cy="30%" r="70%">
+                    <stop offset="0%" stopColor="#4ADE80" />
+                    <stop offset="35%" stopColor="#16A34A" />
+                    <stop offset="75%" stopColor="#15803D" />
+                    <stop offset="100%" stopColor="#052E16" />
+                  </radialGradient>
+
                   {/* Legacy Glowing selection filter */}
                   <filter id="plotGlow">
                     <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#C7A35A" floodOpacity="0.9" />
@@ -979,6 +1087,136 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             <div className="border-t border-white/10 bg-[#0B1734] px-4 py-2 text-[11px] text-gray-400 flex items-center justify-between">
               <span>Authentic documents provided by AKGV Infra City Private Limited.</span>
               <span className="text-[#DFC382]">Scale 1:500 | Area: 77,550 sqft</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3D Villa Architectural Spotlight & Elevation Magnifier Modal */}
+      {showVillaSpotlightModal && selectedPlot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
+          <div className="relative max-h-[92vh] max-w-3xl w-full overflow-hidden rounded-2xl border border-[#C7A35A] bg-[#070D1E] shadow-2xl flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5 bg-[#0B1734]">
+              <div className="flex items-center gap-2.5">
+                <Building2 className="h-5 w-5 text-[#C7A35A]" />
+                <div>
+                  <h3 className="font-serif text-base font-bold text-white tracking-wide">
+                    Plot #{selectedPlot.plotNumber} — 3D Villa Architectural Elevation Spotlight
+                  </h3>
+                  <span className="text-[11px] text-[#DFC382]">
+                    Block {selectedPlot.block} • {selectedPlot.areaSqft} sqft ({(selectedPlot.areaSqft / 9).toFixed(1)} Gaj) • {selectedPlot.dimensions}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowVillaSpotlightModal(false)}
+                className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/10 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto p-5 space-y-4">
+              {/* High-Definition Architectural Villa Render */}
+              <div className="relative h-64 sm:h-80 w-full overflow-hidden rounded-xl border border-white/10 bg-[#050A17] shadow-inner">
+                <Image
+                  src={suitableHouses[0]?.imageUrl || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'}
+                  alt={`Sample 3D Villa Elevation for Plot ${selectedPlot.plotNumber}`}
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#070D1E] via-transparent to-transparent" />
+
+                {/* Overlaid Badges */}
+                <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-[#0B1734]/90 px-3 py-1 text-xs font-bold text-[#DFC382] border border-[#C7A35A]/50 backdrop-blur">
+                    {suitableHouses[0]?.name || 'Royal Villa 3BHK Duplex'}
+                  </span>
+                  <span className="rounded-full bg-emerald-950/80 px-2.5 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/40 backdrop-blur">
+                    {selectedPlot.roadFacing} Facing • 100% Vastu Approved
+                  </span>
+                </div>
+
+                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
+                  <span className="font-semibold bg-[#0B1734]/90 px-2.5 py-1 rounded-lg backdrop-blur border border-white/10">
+                    Road Frontage: {selectedPlot.roadWidth}
+                  </span>
+                  <span className="font-bold text-[#DFC382] bg-[#0B1734]/90 px-2.5 py-1 rounded-lg backdrop-blur border border-[#C7A35A]/40">
+                    Plot Value: ₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)} Lakh
+                  </span>
+                </div>
+              </div>
+
+              {/* Technical Specifications Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
+                  <span className="text-gray-400 text-[11px]">Plot Dimensions</span>
+                  <div className="font-bold text-white text-sm">{selectedPlot.dimensions}</div>
+                  <span className="text-[10px] text-gray-400">Length x Width</span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
+                  <span className="text-gray-400 text-[11px]">Total Area</span>
+                  <div className="font-bold text-[#DFC382] text-sm">{selectedPlot.areaSqft} sqft</div>
+                  <span className="text-[10px] text-[#DFC382]">{(selectedPlot.areaSqft / 9).toFixed(1)} Square Yards</span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
+                  <span className="text-gray-400 text-[11px]">Proposed Boulevard</span>
+                  <div className="font-bold text-white text-sm">{selectedPlot.roadWidth}</div>
+                  <span className="text-[10px] text-gray-400">Drainage & Lights</span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
+                  <span className="text-gray-400 text-[11px]">Booking Status</span>
+                  <div className={`font-bold text-sm ${selectedPlot.status === 'available_green' ? 'text-emerald-400' : selectedPlot.status === 'booked_yellow' ? 'text-amber-400' : 'text-red-400'}`}>
+                    {selectedPlot.status === 'available_green' ? '● Available' : selectedPlot.status === 'booked_yellow' ? '● Booked' : '● Reserved'}
+                  </div>
+                  <span className="text-[10px] text-gray-400">Immediate Registry</span>
+                </div>
+              </div>
+
+              {/* Notice & Disclaimer */}
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] text-amber-200/90 leading-relaxed">
+                <span className="font-bold text-[#DFC382]">⚠️ {language === 'hi' ? 'महत्वपूर्ण सूचना:' : language === 'hinglish' ? 'Important Notice:' : 'Important Notice:'}</span>{' '}
+                {language === 'hi'
+                  ? 'एकेजीवी इन्फ्रा सिटी केवल स्वीकृत आवासीय प्लॉट्स (ज़मीन) की बिक्री करती है। ऊपर दिखाया गया 3D विला आपकी भावी निर्माण योजना एवं वास्तु अनुकूलन को समझने हेतु एक वास्तुशिल्प सिमुलेशन (Sample Architectural Elevation) है।'
+                  : language === 'hinglish'
+                  ? 'AKGV Infra City strictly approved residential plots (zameen) sell karti hai. Upar dikhaya gaya 3D villa aapke future home construction aur Vastu fit ko samajhne ke liye ek architectural sample simulation hai.'
+                  : 'AKGV Infra City Private Limited exclusively develops and sells approved residential plots with full infrastructure. The 3D villa shown above is a sample architectural elevation provided for future construction reference and visualization.'}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                {selectedPlot.status === 'available_green' && (
+                  <button
+                    onClick={() => {
+                      setShowVillaSpotlightModal(false);
+                      setBookingModalOpen(true);
+                    }}
+                    className="flex-1 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-xs font-bold text-[#0B1734] shadow-lg transition hover:brightness-110 active:scale-[0.98]"
+                  >
+                    ⚡ Hold Plot #{selectedPlot.plotNumber} (72h Token Hold)
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = `Namaste AKGV Infra City! I am inspecting Plot ${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}) on the Master Plan. Please share full booking process and available payment options for token hold.`;
+                    window.open(`https://wa.me/916306917991?text=${encodeURIComponent(text)}`, '_blank');
+                  }}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#25D366] px-4 py-3 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
+                >
+                  <span>💬 WhatsApp Inquiry</span>
+                </button>
+
+                <Link
+                  href="/house-viewer-3d"
+                  className="rounded-xl border border-[#C7A35A] bg-[#0B1734] px-4 py-3 text-xs font-bold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition text-center"
+                >
+                  🕶️ 360° 3D Orbit Viewer
+                </Link>
+              </div>
             </div>
           </div>
         </div>

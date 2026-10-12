@@ -267,7 +267,8 @@ export const HOUSE_MODELS: HouseModel[] = [
         accentColor: '#146B4D',
         roofColor: '#334155'
       }
-    ]
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'model-emerald-duplex',
@@ -301,7 +302,8 @@ export const HOUSE_MODELS: HouseModel[] = [
         accentColor: '#475569',
         roofColor: '#0F172A'
       }
-    ]
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'model-palatial-estate',
@@ -328,7 +330,8 @@ export const HOUSE_MODELS: HouseModel[] = [
         accentColor: '#C7A35A',
         roofColor: '#1F2937'
       }
-    ]
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80'
   }
 ];
 
