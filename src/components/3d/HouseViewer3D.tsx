@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { HouseModel, Plot } from '@/types';
 import { HOUSE_MODELS, INITIAL_PLOTS } from '@/data/groundTruth';
+import { PlotHoldCertificateModal } from '@/components/common/PlotHoldCertificateModal';
 
 // Procedural 3D Architectural Villa Component with high detail
 function ProceduralVilla({
@@ -230,6 +231,7 @@ export function HouseViewer3D({
   const [lightingMode, setLightingMode] = useState<'day' | 'golden' | 'night'>('day');
   const [showDimensions, setShowDimensions] = useState(true);
   const [showRoof, setShowRoof] = useState(true);
+  const [holdModalOpen, setHoldModalOpen] = useState(false);
   const controlsRef = useRef<any>(null);
 
   const activeTheme = selectedHouse.exteriorThemes[selectedThemeIndex] || selectedHouse.exteriorThemes[0];
@@ -496,9 +498,17 @@ export function HouseViewer3D({
             </button>
           </div>
 
-          {/* Mouse / Touch Guide Badge */}
-          <div className="absolute bottom-4 left-4 z-10 hidden sm:block rounded-lg border border-white/10 bg-[#050A17]/80 px-2.5 py-1 text-[10px] text-gray-400 backdrop-blur">
-            Click & Drag to rotate 360° | Scroll to zoom | Right click to pan
+          {/* Direct Floating Book Button inside 3D Canvas */}
+          <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setHoldModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3.5 py-2 text-xs font-bold text-[#0B1734] shadow-xl hover:brightness-110 active:scale-95 transition"
+            >
+              <span>⚡ Hold Plot #{selectedPlot.plotNumber} with This Villa</span>
+            </button>
+            <div className="hidden sm:block rounded-lg border border-white/10 bg-[#050A17]/80 px-2.5 py-1 text-[10px] text-gray-400 backdrop-blur">
+              Click & Drag to rotate 360° | Scroll to zoom
+            </div>
           </div>
         </div>
 
@@ -608,9 +618,38 @@ export function HouseViewer3D({
                 ))}
               </ul>
             </div>
+
+            {/* Direct Booking & Consultation Actions */}
+            <div className="border-t border-white/10 pt-4 space-y-2">
+              <button
+                onClick={() => setHoldModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
+              >
+                <span>⚡ Hold Plot #{selectedPlot.plotNumber} with {selectedHouse.name}</span>
+              </button>
+
+              <a
+                href={`https://wa.me/916306917991?text=${encodeURIComponent(
+                  `Namaste AKGV Infra City! I am reviewing the 3D model "${selectedHouse.name}" (${selectedHouse.bhk}) for Plot #${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft). Please share construction and plot hold details.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
+              >
+                <span>💬 Discuss Villa Architecture on WhatsApp</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Official 72-Hour Plot Hold Certificate Modal */}
+      <PlotHoldCertificateModal
+        plot={selectedPlot}
+        isOpen={holdModalOpen}
+        onClose={() => setHoldModalOpen(false)}
+        preferredHouseModelId={selectedHouse.id}
+      />
     </div>
   );
 }

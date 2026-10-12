@@ -27,6 +27,8 @@ import { MasterPlanViewer } from '@/components/master-plan/MasterPlanViewer';
 import { HouseViewer3D } from '@/components/3d/HouseViewer3D';
 import { CommissionRewardsView } from '@/components/rewards/CommissionRewardsView';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
+import { TrustAndLegalSection } from '@/components/home/TrustAndLegalSection';
+import { LoanEmiCalculator } from '@/components/calculator/LoanEmiCalculator';
 
 export default function HomePage() {
   const { t, language } = useApp();
@@ -254,7 +256,12 @@ export default function HomePage() {
         <HouseViewer3D />
       </section>
 
-      {/* 5. LEVEL COMMISSION & REWARD PLAN (EMBEDDED) */}
+      {/* 5. TRUST, LEGAL GUARANTEE & INFRASTRUCTURE STANDARDS */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6">
+        <TrustAndLegalSection />
+      </section>
+
+      {/* 6. LEVEL COMMISSION & REWARD PLAN (EMBEDDED) */}
       <section id="rewards" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#DFC382] uppercase tracking-wider">
@@ -271,7 +278,12 @@ export default function HomePage() {
         <CommissionRewardsView />
       </section>
 
-      {/* 6. OFFLINE JOINING KIT LEDGER SECTION */}
+      {/* 7. BANK LOAN, EMI & STAMP DUTY ESTIMATOR */}
+      <section id="loan-calculator" className="mx-auto max-w-7xl px-4 sm:px-6">
+        <LoanEmiCalculator />
+      </section>
+
+      {/* 8. OFFLINE JOINING KIT LEDGER SECTION */}
       <section id="joining-kit" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">

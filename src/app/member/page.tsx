@@ -23,6 +23,7 @@ import { useApp } from '@/context/AppContext';
 import { calculateMemberLevel, DEMO_PROFILES } from '@/lib/store';
 import { COMMISSION_LEVELS_GROUND_TRUTH, COMPANY_DETAILS } from '@/data/groundTruth';
 import { FieldGpsCameraCapture } from '@/components/gps-camera/FieldGpsCameraCapture';
+import { AssociateIdCard } from '@/components/member/AssociateIdCard';
 
 export function MemberPortalPage() {
   const { currentUser, kitIssues } = useApp();
@@ -136,50 +137,15 @@ export function MemberPortalPage() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
           {/* Virtual Card Graphic */}
           <div className="md:col-span-6 flex justify-center">
-            <div className="w-full max-w-sm rounded-3xl border-2 border-[#C7A35A] bg-gradient-to-br from-[#0B1734] via-[#050A17] to-[#0B1734] p-6 shadow-2xl space-y-6 relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-[#C7A35A]/30 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-serif font-bold text-xs text-[#C7A35A]">AKGV</span>
-                  <span className="text-[10px] text-gray-300 tracking-wider">INFRA CITY PVT LTD</span>
-                </div>
-                <span className="text-[9px] rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[#DFC382] font-mono">
-                  OFFICIAL ID
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="h-20 w-20 rounded-2xl bg-white/10 border border-[#C7A35A] flex items-center justify-center text-white font-serif text-2xl font-bold">
-                  {currentUser.fullName.charAt(0)}
-                </div>
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-white">{currentUser.fullName}</h3>
-                  <span className="text-xs font-semibold text-emerald-400 block">{currentLevel.rankTitleHi}</span>
-                  <span className="font-mono text-xs text-[#DFC382] block mt-0.5">
-                    ID: {currentUser.memberId || 'AKGV0001'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-[#050A17] p-3 text-xs space-y-1 text-gray-300">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Phone:</span>
-                  <span className="text-white">{currentUser.phone}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Commission Tier:</span>
-                  <span className="text-emerald-400 font-bold">{currentLevel.commissionPercent}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Joining Kit (₹999):</span>
-                  <span className="text-emerald-400 font-semibold">✓ Acknowledged</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-[#C7A35A]/30 pt-3 text-[10px] text-gray-400">
-                <span>Authorized Business Associate</span>
-                <span className="font-serif text-[#C7A35A]">Er. Rajesh Patel</span>
-              </div>
-            </div>
+            <AssociateIdCard
+              name={currentUser.fullName}
+              memberId={currentUser.memberId || 'AKGV0001'}
+              rank={`${currentLevel.rankTitleHi} (${currentLevel.rankTitleEn})`}
+              phone={currentUser.phone}
+              email={currentUser.email}
+              joinedDate="15 Jan 2026"
+              kitStatus="VERIFIED"
+            />
           </div>
 
           {/* Joining Kit Handover Verification */}

@@ -34,6 +34,7 @@ import { useApp } from '@/context/AppContext';
 import { AREA_SCHEDULE, HOUSE_MODELS } from '@/data/groundTruth';
 import { Plot, PlotStatus } from '@/types';
 import { MiniVillaSvg } from './MiniVillaSvg';
+import { PlotHoldCertificateModal } from '@/components/common/PlotHoldCertificateModal';
 
 export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (plot: Plot) => void }) {
   const { plots, createBookingRequest, setSelectedPlotForViewer } = useApp();
@@ -838,116 +839,18 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         </div>
       </div>
 
-      {/* Booking Form Modal */}
-      {bookingModalOpen && selectedPlot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="relative max-w-md w-full rounded-2xl border border-[#C7A35A] bg-[#0B1734] p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div>
-                <h3 className="font-serif text-lg font-bold text-white">
-                  Hold Plot #{selectedPlot.plotNumber}
-                </h3>
-                <p className="text-xs text-gray-400">
-                  Block {selectedPlot.block} • {selectedPlot.areaSqft} sqft ({selectedPlot.dimensions})
-                </p>
-              </div>
-              <button
-                onClick={() => setBookingModalOpen(false)}
-                className="rounded-lg p-1 text-gray-400 hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {bookingSuccessMsg ? (
-              <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4 text-emerald-400 text-xs text-center space-y-2">
-                <CheckCircle2 className="h-8 w-8 mx-auto text-emerald-400" />
-                <p className="font-semibold text-sm">{bookingSuccessMsg}</p>
-              </div>
-            ) : (
-              <form onSubmit={handleBookingSubmit} className="space-y-4 text-xs">
-                <div>
-                  <label className="block text-gray-300 mb-1 font-medium">Buyer Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Pradeep Verma"
-                    value={buyerName}
-                    onChange={(e) => setBuyerName(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-[#050A17] px-3 py-2 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 mb-1 font-medium">Contact Phone (Mobile Number)</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="e.g. 9812345678"
-                    value={buyerPhone}
-                    onChange={(e) => setBuyerPhone(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-[#050A17] px-3 py-2 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 mb-1 font-medium">Preferred House Model</label>
-                  <select
-                    value={selectedHouseModelId}
-                    onChange={(e) => setSelectedHouseModelId(e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-[#050A17] px-3 py-2 text-white focus:border-[#C7A35A] focus:outline-none"
-                  >
-                    {HOUSE_MODELS.map((hm) => (
-                      <option key={hm.id} value={hm.id}>
-                        {hm.name} ({hm.bhk} - Est. ₹{(hm.estimatedCostInr / 100000).toFixed(1)} Lakh)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="rounded-lg bg-white/5 p-3 text-[11px] text-gray-400 space-y-1">
-                  <div className="flex items-center gap-1.5 font-semibold text-[#DFC382]">
-                    <ShieldCheck className="h-4 w-4" />
-                    <span>72-Hour Temporary Hold Guarantee</span>
-                  </div>
-                  <p>
-                    Upon submitting this booking request, a 72-hour hold is registered in your name. Payment proof (UPI / Bank Transfer) can be uploaded in the Buyer Portal for administrative verification.
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setBookingModalOpen(false)}
-                    className="rounded-lg px-4 py-2 text-gray-400 hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-2 font-bold text-[#0B1734] shadow hover:brightness-110"
-                  >
-                    Confirm Booking Request
-                  </button>
-                </div>
-
-                <div className="border-t border-white/10 pt-3 text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const text = `Namaste AKGV Infra City! I want to confirm my booking hold for Plot ${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}). Name: ${buyerName || 'Buyer'}, Phone: ${buyerPhone || '6306917991'}. Please send bank details.`;
-                      window.open(`https://wa.me/916306917991?text=${encodeURIComponent(text)}`, '_blank');
-                    }}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
-                  >
-                    <span>💬 Book Directly via WhatsApp (+91 6306917991)</span>
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Official 72-Hour Plot Hold Certificate Modal */}
+      <PlotHoldCertificateModal
+        plot={selectedPlot}
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        preferredHouseModelId={selectedHouseModelId}
+        onConfirmBooking={(name, phone, houseModelId) => {
+          if (selectedPlot) {
+            createBookingRequest(selectedPlot.id, name, phone, houseModelId);
+          }
+        }}
+      />
 
       {/* Blueprint Original Photograph Lightbox Modal */}
       {showBrochureModal && (
