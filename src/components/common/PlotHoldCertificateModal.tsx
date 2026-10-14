@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { Plot } from '@/types';
-import { COMPANY_DETAILS, HOUSE_MODELS } from '@/data/groundTruth';
+import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { useApp } from '@/context/AppContext';
 
 interface PlotHoldCertificateModalProps {
@@ -25,14 +25,13 @@ interface PlotHoldCertificateModalProps {
   isOpen: boolean;
   onClose: () => void;
   preferredHouseModelId?: string;
-  onConfirmBooking?: (buyerName: string, buyerPhone: string, houseModelId: string) => void;
+  onConfirmBooking?: (buyerName: string, buyerPhone: string, houseModelId?: string) => void;
 }
 
 export function PlotHoldCertificateModal({
   plot,
   isOpen,
   onClose,
-  preferredHouseModelId = 'model-royal-villa',
   onConfirmBooking
 }: PlotHoldCertificateModalProps) {
   const { t, language } = useApp();
@@ -40,17 +39,9 @@ export function PlotHoldCertificateModal({
 
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
-  const [selectedHouseId, setSelectedHouseId] = useState(preferredHouseModelId);
   const [isGenerated, setIsGenerated] = useState(false);
   const [certificateRef, setCertificateRef] = useState('');
   const [timeLeft, setTimeLeft] = useState({ hours: 71, minutes: 59, seconds: 59 });
-
-  // Update selected house model when preferred changes
-  useEffect(() => {
-    if (preferredHouseModelId) {
-      setSelectedHouseId(preferredHouseModelId);
-    }
-  }, [preferredHouseModelId]);
 
   // Live 72-Hour Timer Simulation
   useEffect(() => {
@@ -66,10 +57,6 @@ export function PlotHoldCertificateModal({
     return () => clearInterval(interval);
   }, [isGenerated]);
 
-  const selectedHouse = useMemo(
-    () => HOUSE_MODELS.find((h) => h.id === selectedHouseId) || HOUSE_MODELS[0],
-    [selectedHouseId]
-  );
   const plotPriceLakh = plot ? ((plot.basePriceInr || 1200000) / 100000).toFixed(2) : '0';
   const tokenAmount = 21000; // Standard 72h Token Hold amount
 
@@ -85,7 +72,6 @@ export function PlotHoldCertificateModal({
 *सड़क की चौड़ाई:* ${plot.roadWidth}
 *दिशा (वास्तु):* ${plot.roadFacing} (100% वास्तु अनुकूल)
 *प्लॉट मूल्य:* ₹${plotPriceLakh} लाख
-*सैंपल एलिवेशन मॉडल:* ${selectedHouse.name} (केवल संदर्भ हेतु)
 ━━━━━━━━━━━━━━━━━━━━
 *खरीदार का नाम:* ${buyerName}
 *मोबाइल नंबर:* ${buyerPhone}
@@ -104,7 +90,6 @@ _कृपया प्लॉट टोकन होल्ड सत्याप
 *Road Width:* ${plot.roadWidth}
 *Facing:* ${plot.roadFacing} Facing (100% Vastu Approved)
 *Plot Valuation:* ₹${plotPriceLakh} Lakh
-*Sample Elevation Reference:* ${selectedHouse.name} (Sirf Reference Ke Liye)
 ━━━━━━━━━━━━━━━━━━━━
 *Buyer Name:* ${buyerName}
 *Buyer Mobile:* ${buyerPhone}
@@ -122,7 +107,6 @@ _Please official bank account details aur UPI QR code send karein plot token hol
 *Road Width:* ${plot.roadWidth}
 *Facing:* ${plot.roadFacing} Facing (100% Vastu Approved)
 *Plot Valuation:* ₹${plotPriceLakh} Lakh
-*Sample Elevation Reference:* ${selectedHouse.name} (For Reference Only)
 ━━━━━━━━━━━━━━━━━━━━
 *Buyer Name:* ${buyerName}
 *Buyer Mobile:* ${buyerPhone}
@@ -130,7 +114,7 @@ _Please official bank account details aur UPI QR code send karein plot token hol
 *Token Payable:* ₹${tokenAmount.toLocaleString()}
 
 _Please share official bank account details & UPI QR for plot token hold verification._`;
-  }, [language, certificateRef, plot, plotPriceLakh, selectedHouse, buyerName, buyerPhone, tokenAmount]);
+  }, [language, certificateRef, plot, plotPriceLakh, buyerName, buyerPhone, tokenAmount]);
 
   if (!isOpen || !plot) return null;
 
@@ -148,7 +132,7 @@ _Please share official bank account details & UPI QR for plot token hold verific
     setIsGenerated(true);
 
     if (onConfirmBooking) {
-      onConfirmBooking(buyerName, buyerPhone, selectedHouseId);
+      onConfirmBooking(buyerName, buyerPhone);
     }
   };
 
@@ -236,25 +220,6 @@ _Please share official bank account details & UPI QR for plot token hold verific
               />
             </div>
 
-            <div>
-              <label className="block font-semibold text-gray-200 mb-1">
-                {c.sampleElevationIdea}
-              </label>
-              <select
-                value={selectedHouseId}
-                onChange={(e) => setSelectedHouseId(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none text-xs"
-              >
-                {HOUSE_MODELS.map((hm) => (
-                  <option key={hm.id} value={hm.id}>
-                    {hm.name} ({hm.bhk} • {hm.carpetAreaSqft} sqft • Est. ₹{(hm.estimatedCostInr / 100000).toFixed(1)}L)
-                  </option>
-                ))}
-              </select>
-              <span className="text-[10px] text-gray-400 mt-1 block">
-                {c.sampleElevationDisclaimer}
-              </span>
-            </div>
 
             {/* Hold Guarantee Note */}
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-[11px] text-emerald-300 space-y-1">

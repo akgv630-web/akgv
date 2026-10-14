@@ -247,79 +247,7 @@ export default function HomePage() {
         <MasterPlanViewer />
       </section>
 
-      {/* 4. ARCHITECTURAL GUIDANCE FOR YOUR PURCHASED PLOT (REPLACING 3D BUILDER ON HOME) */}
-      <section id="architectural-guidance" className="w-full max-w-7xl mx-auto px-4 sm:px-6 overflow-hidden">
-        <div className="rounded-3xl border border-[#C7A35A]/40 bg-gradient-to-br from-[#0B1734] via-[#050A17] to-[#0B1734] p-6 sm:p-10 shadow-2xl space-y-8">
-          {/* Section Header */}
-          <div className="text-center max-w-3xl mx-auto space-y-2">
-            <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
-              {t.architecturalGuidance.badge}
-            </span>
-            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-              {t.architecturalGuidance.title}
-            </h2>
-            <p className="text-xs text-gray-300">
-              {t.architecturalGuidance.subtitle}
-            </p>
-          </div>
 
-          {/* Mandatory Business Policy Notice Banner */}
-          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 backdrop-blur-md">
-            <div className="flex items-start gap-3">
-              <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-              <div className="space-y-1 text-xs">
-                <span className="font-bold text-amber-300 text-sm block">
-                  {t.architecturalGuidance.policyTitle}
-                </span>
-                <p className="text-gray-200 leading-relaxed">
-                  {t.architecturalGuidance.policyNotice}
-                </p>
-                <p className="text-gray-300 text-[11px] pt-1">
-                  {t.architecturalGuidance.visualizerIntro}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* 3 Sample Elevation Models for Plot Fitting */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {t.architecturalGuidance.models.map((model, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl border border-white/10 bg-[#0B1734]/90 p-5 space-y-3 flex flex-col justify-between hover:border-[#C7A35A]/50 transition"
-              >
-                <div className="space-y-2">
-                  <span className="rounded-full bg-[#C7A35A]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#DFC382] border border-[#C7A35A]/30">
-                    {model.suitablePlot}
-                  </span>
-                  <h3 className="font-serif text-base font-bold text-white">
-                    {model.name}
-                  </h3>
-                  <p className="text-xs text-gray-300 leading-relaxed">
-                    {model.desc}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-[#DFC382]">
-                  <span>{t.architecturalGuidance.sampleTag}</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Action to Launch Dedicated 3D Elevation Viewer */}
-          <div className="text-center pt-2">
-            <Link
-              href="/house-viewer-3d"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-8 py-3.5 text-sm font-bold text-[#0B1734] shadow-xl hover:brightness-110 transition active:scale-95"
-            >
-              <Building className="h-4 w-4" />
-              <span>{t.architecturalGuidance.exploreVisualizerBtn}</span>
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* 5. TRUST, LEGAL GUARANTEE & INFRASTRUCTURE STANDARDS */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 overflow-hidden">

@@ -97,11 +97,11 @@ export default function BuyerPortalPage() {
             <span>Browse Plots</span>
           </Link>
           <Link
-            href="/house-viewer-3d"
+            href="/site-visit"
             className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-xs font-semibold text-white hover:bg-white/10"
           >
-            <Building2 className="h-3.5 w-3.5 text-[#DFC382]" />
-            <span>3D House Viewer</span>
+            <Calendar className="h-3.5 w-3.5 text-[#1EA275]" />
+            <span>Book Site Visit</span>
           </Link>
         </div>
       </div>
@@ -235,10 +235,10 @@ export default function BuyerPortalPage() {
                     </button>
 
                     <Link
-                      href={`/house-viewer-3d?plot=${b.plotNumber}`}
+                      href="/master-plan"
                       className="text-xs text-[#DFC382] hover:underline"
                     >
-                      Inspect 3D Villa
+                      View on Master Plan
                     </Link>
                   </div>
                 </div>

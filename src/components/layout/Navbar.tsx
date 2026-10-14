@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Building2,
+  Calendar,
   ChevronDown,
   Globe,
   Home,
@@ -35,7 +36,7 @@ export function Navbar() {
     { href: '/', label: t.nav.home, icon: Home },
     { href: '/projects', label: t.nav.projects, icon: MapPin },
     { href: '/master-plan', label: t.nav.masterPlan, icon: Layers },
-    { href: '/house-viewer-3d', label: t.nav.houseViewer3d, icon: Building2 },
+    { href: '/site-visit', label: language === 'hi' ? 'साइट विजिट' : 'Site Visit', icon: Calendar },
     { href: '/rewards-plan', label: t.nav.rewards, icon: Trophy },
     { href: '/joining-kit', label: t.nav.joiningKit, icon: ShieldCheck },
   ];

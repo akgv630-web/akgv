@@ -85,8 +85,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/house-viewer-3d" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
-                  <span className="text-[#C7A35A]">▸</span> {c.houseViewerLink}
+                <Link href="/site-visit" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
+                  <span className="text-[#C7A35A]">▸</span> {language === 'hi' ? 'साइट विजिट बुक करें' : 'Schedule Site Visit'}
                 </Link>
               </li>
               <li>

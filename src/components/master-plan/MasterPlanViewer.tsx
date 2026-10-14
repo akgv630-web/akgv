@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Compass,
   Eye,
+  FileCheck,
   FileText,
   Filter,
   Flame,
@@ -31,7 +32,7 @@ import {
   Car
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { AREA_SCHEDULE, HOUSE_MODELS } from '@/data/groundTruth';
+import { AREA_SCHEDULE } from '@/data/groundTruth';
 import { Plot, PlotStatus } from '@/types';
 import { MiniVillaSvg } from './MiniVillaSvg';
 import { PlotHoldCertificateModal } from '@/components/common/PlotHoldCertificateModal';
@@ -44,8 +45,8 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(plots.find(p => p.plotNumber === 'A-04') || plots[0]);
   const [hoveredPlot, setHoveredPlot] = useState<Plot | null>(null);
 
-  // View modes: 'plots' (residential land plots - default), 'villas' (3D house simulation), 'cad' (technical engineering), 'landscape' (green satellite)
-  const [viewMode, setViewMode] = useState<'plots' | 'villas' | 'cad' | 'landscape'>('plots');
+  // View modes: 'plots' (residential land plots - default), 'cad' (technical engineering), 'landscape' (green satellite)
+  const [viewMode, setViewMode] = useState<'plots' | 'cad' | 'landscape'>('plots');
   const [showDimensions, setShowDimensions] = useState(true);
   const [showVehicles, setShowVehicles] = useState(true);
   const [showLandscaping, setShowLandscaping] = useState(true);
@@ -66,9 +67,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
-  const [selectedHouseModelId, setSelectedHouseModelId] = useState<string>('model-royal-villa');
   const [bookingSuccessMsg, setBookingSuccessMsg] = useState<string | null>(null);
-  const [showVillaSpotlightModal, setShowVillaSpotlightModal] = useState(false);
 
   // Filtered plots computation
   const filteredPlots = useMemo(() => {
@@ -154,8 +153,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
       const booking = createBookingRequest(
         selectedPlot.id,
         buyerName,
-        buyerPhone,
-        selectedHouseModelId
+        buyerPhone
       );
       setBookingSuccessMsg(
         `Booking request #${booking.bookingNumber} generated successfully! A hold has been placed for Plot ${selectedPlot.plotNumber}. Complete payment in the Buyer Portal.`
@@ -171,9 +169,6 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   };
 
   const currentStatusMeta = selectedPlot ? getStatusColor(selectedPlot.status) : null;
-  const suitableHouses = selectedPlot
-    ? HOUSE_MODELS.filter((hm) => selectedPlot.suitableHouseModelIds.includes(hm.id))
-    : [];
 
   // Vastu compliance logic
   const getVastuInfo = (facing: string) => {
@@ -248,17 +243,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               <Layers className="h-3.5 w-3.5" />
               <span>{c.viewModes.plots}</span>
             </button>
-            <button
-              onClick={() => setViewMode('villas')}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
-                viewMode === 'villas'
-                  ? 'bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] text-[#0B1734] shadow-md'
-                  : 'text-gray-300 hover:text-white'
-              }`}
-            >
-              <Home className="h-3.5 w-3.5" />
-              <span>{c.viewModes.villas}</span>
-            </button>
+
             <button
               onClick={() => setViewMode('cad')}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
@@ -480,15 +465,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 <span>💬 WhatsApp</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowVillaSpotlightModal(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A] bg-[#050A17] px-2.5 py-1.5 text-xs font-bold text-[#DFC382] shadow hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
-                title="Tap to view enlarged 3D villa elevation & blueprint details"
-              >
-                <Maximize2 className="h-3 w-3" />
-                <span>🔍 {c.spotlightModal.enlargeBtn}</span>
-              </button>
+
             </div>
           )}
 
@@ -897,63 +874,25 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               </div>
 
               {/* Sample House Elevations for Future Construction */}
-              <div className="space-y-2 border-t border-white/10 pt-4">
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                    <Building2 className="h-4 w-4 text-[#C7A35A]" />
-                    <span>{c.inspector.sampleElevationTitle}</span>
-                  </span>
-                  <p className="text-[10px] text-gray-400 mt-0.5">
-                    {c.inspector.sampleElevationNote}
-                  </p>
+              {/* Verified Plotted Land Guarantee Card */}
+              <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17] p-3.5 space-y-2.5 text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-[#DFC382]">
+                  <FileCheck className="h-4 w-4 text-[#1EA275]" />
+                  <span>100% Verified Plotted Land</span>
                 </div>
-
-                {/* Real Photorealistic 3D Villa Elevation Card */}
-                <div className="relative h-44 w-full overflow-hidden rounded-xl border border-white/10 bg-[#050A17] shadow-inner group">
-                  <Image
-                    src={suitableHouses[0]?.imageUrl || '/assets/villa_vertical_luxury.jpg'}
-                    alt={`Real Villa Design for Plot ${selectedPlot.plotNumber}`}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B1734] via-transparent to-transparent" />
-                  <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-white text-xs">{suitableHouses[0]?.name || 'Royal Villa 3BHK'}</div>
-                      <div className="text-[10px] text-gray-300">{suitableHouses[0]?.bhk} • {suitableHouses[0]?.carpetAreaSqft} sqft</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowVillaSpotlightModal(true)}
-                      className="flex items-center gap-1 rounded-lg bg-[#C7A35A] px-2.5 py-1 text-[11px] font-bold text-[#0B1734] shadow hover:brightness-110"
-                    >
-                      <Maximize2 className="h-3 w-3" />
-                      <span>{c.inspector.enlargeBtn}</span>
-                    </button>
+                <div className="space-y-1.5 text-[11px] text-gray-300">
+                  <div className="flex items-start gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#1EA275] shrink-0 mt-0.5" />
+                    <span>Demarcated boundary with concrete corner pillars</span>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  {suitableHouses.map((house) => (
-                    <div
-                      key={house.id}
-                      className="flex items-center justify-between rounded-xl border border-white/10 bg-[#050A17] p-3 text-xs transition hover:border-[#C7A35A]/50"
-                    >
-                      <div>
-                        <div className="font-bold text-white">{house.name}</div>
-                        <div className="text-[11px] text-gray-400">
-                          {house.bhk} • {house.carpetAreaSqft} sqft • {c.inspector.estimatedConstruction} ₹{(house.estimatedCostInr / 100000).toFixed(1)}L
-                        </div>
-                      </div>
-
-                      <Link
-                        href="/house-viewer-3d"
-                        className="rounded-lg border border-[#C7A35A] bg-[#0B1734] px-2.5 py-1 text-[11px] font-bold text-[#DFC382] transition hover:bg-[#C7A35A] hover:text-[#0B1734]"
-                      >
-                        {c.inspector.inspect3dBtn}
-                      </Link>
-                    </div>
-                  ))}
+                  <div className="flex items-start gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#1EA275] shrink-0 mt-0.5" />
+                    <span>Connected to {selectedPlot.roadWidth} asphalt road</span>
+                  </div>
+                  <div className="flex items-start gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#1EA275] shrink-0 mt-0.5" />
+                    <span>Immediate registry & possession readiness</span>
+                  </div>
                 </div>
               </div>
 
@@ -1030,10 +969,9 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         plot={selectedPlot}
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
-        preferredHouseModelId={selectedHouseModelId}
-        onConfirmBooking={(name, phone, houseModelId) => {
+        onConfirmBooking={(name, phone) => {
           if (selectedPlot) {
-            createBookingRequest(selectedPlot.id, name, phone, houseModelId);
+            createBookingRequest(selectedPlot.id, name, phone);
           }
         }}
       />
@@ -1130,131 +1068,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         </div>
       )}
 
-      {/* 3D Villa Architectural Spotlight & Elevation Magnifier Modal */}
-      {showVillaSpotlightModal && selectedPlot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md">
-          <div className="relative max-h-[92vh] max-w-3xl w-full overflow-hidden rounded-2xl border border-[#C7A35A] bg-[#070D1E] shadow-2xl flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-3.5 bg-[#0B1734]">
-              <div className="flex items-center gap-2.5">
-                <Building2 className="h-5 w-5 text-[#C7A35A]" />
-                <div>
-                  <h3 className="font-serif text-base font-bold text-white tracking-wide">
-                    Plot #{selectedPlot.plotNumber} — {c.spotlightModal.title}
-                  </h3>
-                  <span className="text-[11px] text-[#DFC382]">
-                    Block {selectedPlot.block} • {selectedPlot.areaSqft} sqft ({(selectedPlot.areaSqft / 9).toFixed(1)} Gaj) • {selectedPlot.dimensions}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowVillaSpotlightModal(false)}
-                className="rounded-lg p-1.5 text-gray-400 hover:text-white hover:bg-white/10 transition"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
 
-            {/* Modal Body */}
-            <div className="overflow-y-auto p-5 space-y-4">
-              {/* High-Definition Architectural Villa Render */}
-              <div className="relative h-64 sm:h-80 w-full overflow-hidden rounded-xl border border-white/10 bg-[#050A17] shadow-inner">
-                <Image
-                  src={suitableHouses[0]?.imageUrl || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'}
-                  alt={`Sample 3D Villa Elevation for Plot ${selectedPlot.plotNumber}`}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#070D1E] via-transparent to-transparent" />
-
-                {/* Overlaid Badges */}
-                <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-[#0B1734]/90 px-3 py-1 text-xs font-bold text-[#DFC382] border border-[#C7A35A]/50 backdrop-blur">
-                    {suitableHouses[0]?.name || 'Royal Villa 3BHK Duplex'}
-                  </span>
-                  <span className="rounded-full bg-emerald-950/80 px-2.5 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/40 backdrop-blur">
-                    {selectedPlot.roadFacing} Facing • {c.vastu.approved100}
-                  </span>
-                </div>
-
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
-                  <span className="font-semibold bg-[#0B1734]/90 px-2.5 py-1 rounded-lg backdrop-blur border border-white/10">
-                    {c.inspector.roadFrontage}: {selectedPlot.roadWidth}
-                  </span>
-                  <span className="font-bold text-[#DFC382] bg-[#0B1734]/90 px-2.5 py-1 rounded-lg backdrop-blur border border-[#C7A35A]/40">
-                    {c.spotlightModal.plotValue}: ₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)} Lakh
-                  </span>
-                </div>
-              </div>
-
-              {/* Technical Specifications Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
-                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.plotDimensions}</span>
-                  <div className="font-bold text-white text-sm">{selectedPlot.dimensions}</div>
-                  <span className="text-[10px] text-gray-400">{c.spotlightModal.lengthWidth}</span>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.totalArea}</span>
-                  <div className="font-bold text-[#DFC382] text-sm">{selectedPlot.areaSqft} sqft</div>
-                  <span className="text-[10px] text-[#DFC382]">{(selectedPlot.areaSqft / 9).toFixed(1)} {c.spotlightModal.squareYards}</span>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.proposedBoulevard}</span>
-                  <div className="font-bold text-white text-sm">{selectedPlot.roadWidth}</div>
-                  <span className="text-[10px] text-gray-400">{c.spotlightModal.drainageLights}</span>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.bookingStatus}</span>
-                  <div className={`font-bold text-sm ${selectedPlot.status === 'available_green' ? 'text-emerald-400' : selectedPlot.status === 'booked_yellow' ? 'text-amber-400' : 'text-red-400'}`}>
-                    {selectedPlot.status === 'available_green' ? `● ${c.statusLabels.available}` : selectedPlot.status === 'booked_yellow' ? `● ${c.statusLabels.booked}` : `● ${c.statusLabels.reserved}`}
-                  </div>
-                  <span className="text-[10px] text-gray-400">{c.spotlightModal.immediateRegistry}</span>
-                </div>
-              </div>
-
-              {/* Notice & Disclaimer */}
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] text-amber-200/90 leading-relaxed">
-                <span className="font-bold text-[#DFC382]">⚠️ {c.spotlightModal.importantNoticeTitle}</span>{' '}
-                {c.spotlightModal.importantNoticeText}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                {selectedPlot.status === 'available_green' && (
-                  <button
-                    onClick={() => {
-                      setShowVillaSpotlightModal(false);
-                      setBookingModalOpen(true);
-                    }}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-xs font-bold text-[#0B1734] shadow-lg transition hover:brightness-110 active:scale-[0.98]"
-                  >
-                    ⚡ {c.spotlightModal.holdBtn} #{selectedPlot.plotNumber}
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = `Namaste AKGV Infra City! I am inspecting Plot ${selectedPlot.plotNumber} (${selectedPlot.areaSqft} sqft, Block ${selectedPlot.block}) on the Master Plan. Please share full booking process and available payment options for token hold.`;
-                    window.open(`https://wa.me/916306917991?text=${encodeURIComponent(text)}`, '_blank');
-                  }}
-                  className="flex items-center justify-center gap-1.5 rounded-xl bg-[#25D366] px-4 py-3 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
-                >
-                  <span>💬 {c.spotlightModal.whatsAppBtn}</span>
-                </button>
-
-                <Link
-                  href="/house-viewer-3d"
-                  className="rounded-xl border border-[#C7A35A] bg-[#0B1734] px-4 py-3 text-xs font-bold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition text-center"
-                >
-                  🕶️ {c.spotlightModal.orbitViewerBtn}
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
