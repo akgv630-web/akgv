@@ -167,7 +167,7 @@ export function Footer() {
         </div>
 
         {/* Legal Disclaimer & Copyright */}
-        <div className="mt-12 border-t border-white/10 pt-6 text-center text-xs text-gray-400">
+        <div className="mt-12 border-t border-white/10 pt-6 pb-16 sm:pb-0 text-center text-xs text-gray-400">
           <p className="max-w-4xl mx-auto leading-relaxed">
             <strong className="text-gray-300">{language === 'hi' ? 'अस्वीकरण:' : language === 'hinglish' ? 'Disclaimer:' : 'Disclaimer:'}</strong> {c.disclaimer}
           </p>

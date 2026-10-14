@@ -75,10 +75,10 @@ export function MemberPortalPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex flex-wrap border-b border-white/10 text-xs sm:text-sm font-semibold gap-1">
+      <div className="flex overflow-x-auto no-scrollbar border-b border-white/10 text-xs sm:text-sm font-semibold gap-1 whitespace-nowrap pb-1">
         <button
           onClick={() => setActiveTab('id_card')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'id_card'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -90,7 +90,7 @@ export function MemberPortalPage() {
 
         <button
           onClick={() => setActiveTab('hierarchy')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'hierarchy'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -102,7 +102,7 @@ export function MemberPortalPage() {
 
         <button
           onClick={() => setActiveTab('commission')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'commission'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -114,7 +114,7 @@ export function MemberPortalPage() {
 
         <button
           onClick={() => setActiveTab('rewards')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'rewards'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -126,7 +126,7 @@ export function MemberPortalPage() {
 
         <button
           onClick={() => setActiveTab('field_gps')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'field_gps'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'

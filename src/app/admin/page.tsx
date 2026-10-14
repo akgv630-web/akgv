@@ -110,10 +110,10 @@ export default function SuperAdminPage() {
       </div>
 
       {/* Admin Module Tabs */}
-      <div className="flex flex-wrap border-b border-white/10 text-xs sm:text-sm font-semibold gap-1">
+      <div className="flex overflow-x-auto no-scrollbar border-b border-white/10 text-xs sm:text-sm font-semibold gap-1 whitespace-nowrap pb-1">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'overview'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -125,7 +125,7 @@ export default function SuperAdminPage() {
 
         <button
           onClick={() => setActiveTab('members')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'members'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -137,7 +137,7 @@ export default function SuperAdminPage() {
 
         <button
           onClick={() => setActiveTab('plots')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'plots'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -149,7 +149,7 @@ export default function SuperAdminPage() {
 
         <button
           onClick={() => setActiveTab('payments')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'payments'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -161,7 +161,7 @@ export default function SuperAdminPage() {
 
         <button
           onClick={() => setActiveTab('bookings')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'bookings'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -173,7 +173,7 @@ export default function SuperAdminPage() {
 
         <button
           onClick={() => setActiveTab('kits')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'kits'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'
@@ -185,7 +185,7 @@ export default function SuperAdminPage() {
 
         <button
           onClick={() => setActiveTab('support')}
-          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'support'
               ? 'border-[#C7A35A] text-[#DFC382]'
               : 'border-transparent text-gray-400 hover:text-white'

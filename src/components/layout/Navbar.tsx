@@ -242,7 +242,7 @@ export function Navbar() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="border-b border-white/10 bg-[#0B1734] px-4 py-4 lg:hidden">
+        <div className="border-b border-white/10 bg-[#0B1734] px-4 py-4 lg:hidden max-h-[85vh] overflow-y-auto shadow-2xl">
           <nav className="flex flex-col gap-2">
             {navLinks.map((link) => {
               const Icon = link.icon;

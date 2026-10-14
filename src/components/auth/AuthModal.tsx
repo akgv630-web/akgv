@@ -149,7 +149,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-lg rounded-3xl border border-[#C7A35A]/40 bg-[#0B1734] shadow-2xl overflow-hidden text-gray-200"
+        className="relative w-full max-w-lg max-h-[92vh] flex flex-col rounded-3xl border border-[#C7A35A]/40 bg-[#0B1734] shadow-2xl overflow-hidden text-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Banner */}
@@ -221,8 +221,10 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           </button>
         </div>
 
-        {/* Tab 1: Login */}
-        {activeTab === 'login' && (
+        {/* Scrollable Modal Body */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Tab 1: Login */}
+          {activeTab === 'login' && (
           <div className="p-6 space-y-5">
             {loginSuccess ? (
               <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/30 p-6 text-center space-y-2">
@@ -549,9 +551,10 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
             </div>
           </div>
         )}
+        </div>
 
         {/* Footer info */}
-        <div className="border-t border-white/10 bg-[#050A17] px-6 py-3 text-[11px] text-gray-400 flex items-center justify-between">
+        <div className="shrink-0 border-t border-white/10 bg-[#050A17] px-6 py-3 text-[11px] text-gray-400 flex items-center justify-between">
           <span>Official Helpline: {COMPANY_DETAILS.displayPhone}</span>
           <span className="text-[#DFC382]">Varanasi, UP</span>
         </div>

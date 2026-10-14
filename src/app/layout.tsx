@@ -43,6 +43,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -61,7 +62,7 @@ export default function RootLayout({
         <AppProvider>
           <PwaInstallPrompt />
           <Navbar />
-          <main className="flex-1 pb-16 sm:pb-0">{children}</main>
+          <main className="flex-1 pb-24 sm:pb-0 min-h-screen">{children}</main>
           <WhatsAppPopup />
           <MobileBottomNav />
           <Footer />

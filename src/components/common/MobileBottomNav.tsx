@@ -33,7 +33,7 @@ export function MobileBottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-[#C7A35A]/30 bg-[#070D1E]/95 px-2 py-2 backdrop-blur-xl shadow-2xl sm:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-[#C7A35A]/30 bg-[#070D1E]/95 px-2 pt-1.5 pb-safe backdrop-blur-xl shadow-2xl sm:hidden">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;

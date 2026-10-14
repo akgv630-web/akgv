@@ -236,7 +236,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         {/* 2. Interactive Control Bar: View Modes, Layers & Zoom */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
           {/* View Mode Switcher */}
-          <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#0B1734] p-1 text-xs">
+          <div className="flex overflow-x-auto no-scrollbar max-w-full items-center gap-1 rounded-xl border border-white/10 bg-[#0B1734] p-1 text-xs">
             <button
               onClick={() => setViewMode('plots')}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
@@ -364,13 +364,13 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         {/* 3. Block & Status Filter Badges */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-2 text-xs">
           {/* Block Selection Tabs */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-400 font-medium">Blocks:</span>
+          <div className="flex overflow-x-auto no-scrollbar max-w-full items-center gap-1.5 whitespace-nowrap py-0.5">
+            <span className="text-gray-400 font-medium shrink-0">Blocks:</span>
             {(['ALL', 'A', 'B', 'C'] as const).map((block) => (
               <button
                 key={block}
                 onClick={() => setFilterBlock(block)}
-                className={`rounded-md px-2.5 py-0.5 font-bold transition ${
+                className={`rounded-md px-2.5 py-1 sm:py-0.5 font-bold transition shrink-0 ${
                   filterBlock === block
                     ? 'bg-[#C7A35A] text-[#0B1734]'
                     : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
@@ -382,11 +382,11 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           </div>
 
           {/* Status Selection Tabs */}
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 font-medium">Status:</span>
+          <div className="flex overflow-x-auto no-scrollbar max-w-full items-center gap-2 whitespace-nowrap py-0.5">
+            <span className="text-gray-400 font-medium shrink-0">Status:</span>
             <button
               onClick={() => setFilterStatus('ALL')}
-              className={`rounded-md px-2.5 py-0.5 font-medium transition ${
+              className={`rounded-md px-2.5 py-1 sm:py-0.5 font-medium transition shrink-0 ${
                 filterStatus === 'ALL' ? 'bg-white/20 text-white font-bold' : 'text-gray-400 hover:text-white'
               }`}
             >
@@ -394,7 +394,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             </button>
             <button
               onClick={() => setFilterStatus('available_green')}
-              className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition ${
+              className={`flex items-center gap-1 rounded-md px-2 py-1 sm:py-0.5 font-medium transition shrink-0 ${
                 filterStatus === 'available_green' ? 'bg-emerald-500/30 text-emerald-300 font-bold' : 'text-emerald-400/70 hover:text-emerald-300'
               }`}
             >
@@ -403,7 +403,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             </button>
             <button
               onClick={() => setFilterStatus('booked_yellow')}
-              className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition ${
+              className={`flex items-center gap-1 rounded-md px-2 py-1 sm:py-0.5 font-medium transition shrink-0 ${
                 filterStatus === 'booked_yellow' ? 'bg-amber-500/30 text-amber-300 font-bold' : 'text-amber-400/70 hover:text-amber-300'
               }`}
             >
@@ -412,7 +412,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             </button>
             <button
               onClick={() => setFilterStatus('vacant_red')}
-              className={`flex items-center gap-1 rounded-md px-2 py-0.5 font-medium transition ${
+              className={`flex items-center gap-1 rounded-md px-2 py-1 sm:py-0.5 font-medium transition shrink-0 ${
                 filterStatus === 'vacant_red' ? 'bg-red-500/30 text-red-300 font-bold' : 'text-red-400/70 hover:text-red-300'
               }`}
             >
@@ -449,7 +449,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
 
           {/* Floating Plot Direct Booking Quick-Bar */}
           {selectedPlot && (
-            <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-[#C7A35A] bg-[#0B1734]/95 p-2 shadow-2xl backdrop-blur-md animate-in fade-in duration-150">
+            <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-[#C7A35A] bg-[#0B1734]/95 p-2 shadow-2xl backdrop-blur-md animate-in fade-in duration-150 max-w-[calc(100%-4.5rem)] sm:max-w-none">
               <div className="flex items-center gap-2 px-1">
                 <span className="font-serif text-sm font-bold text-white">Plot {selectedPlot.plotNumber}</span>
                 <span className="text-[11px] text-[#DFC382] font-semibold">{selectedPlot.areaSqft} sqft ({(selectedPlot.areaSqft / 9).toFixed(0)} Gaj)</span>
@@ -508,8 +508,14 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             </div>
           </div>
 
+          {/* Mobile Pan / Swipe Hint */}
+          <div className="sm:hidden mb-1 flex items-center justify-between rounded-lg border border-[#C7A35A]/20 bg-[#0B1734]/80 px-2.5 py-1 text-[10px] text-[#DFC382]">
+            <span>👆 Swipe horizontally to pan 55 plots | Tap any plot</span>
+            <span className="font-mono">{Math.round(zoomLevel * 100)}%</span>
+          </div>
+
           {/* SVG Vector Map Container with Smooth Scaling */}
-          <div className="w-full overflow-x-auto pb-4 pt-2">
+          <div className="w-full overflow-x-auto overflow-y-hidden pb-4 pt-2 touch-pan-x touch-pan-y overscroll-contain no-scrollbar">
             <div
               className="transition-transform duration-200 origin-top-left"
               style={{ transform: `scale(${zoomLevel})` }}

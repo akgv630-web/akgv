@@ -40,7 +40,7 @@ export function AssociateIdCard({
       {/* Printable ID Card Container */}
       <div
         id="associate-id-card"
-        className="relative overflow-hidden rounded-3xl border-2 border-[#C7A35A] bg-gradient-to-b from-[#0B1734] via-[#050A17] to-[#0B1734] p-6 shadow-2xl text-xs space-y-5"
+        className="relative overflow-hidden rounded-3xl border-2 border-[#C7A35A] bg-gradient-to-b from-[#0B1734] via-[#050A17] to-[#0B1734] p-4 sm:p-6 shadow-2xl text-xs space-y-4 sm:space-y-5"
       >
         {/* Subtle Watermark */}
         <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
