@@ -55,6 +55,9 @@ interface AppContextType {
   registerMember: (data: { fullName: string; email: string; phone: string; role?: UserRole; sponsorId?: string }) => Profile;
   loginUser: (identifier: string) => Profile | null;
   createSponsorMember: (data: { fullName: string; email: string; phone: string; role: UserRole; sponsorId: string }) => Profile;
+  updateMember: (id: string, data: Partial<Profile>) => void;
+  deleteMember: (id: string) => void;
+  toggleMemberStatus: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -219,6 +222,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     return newProfile;
+  };
+
+  const updateMember = (id: string, data: Partial<Profile>) => {
+    setAllProfiles((prev) => {
+      const next = prev.map((p) => (p.id === id ? { ...p, ...data } : p));
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+    if (currentUser.id === id) {
+      setCurrentUser((prev) => ({ ...prev, ...data }));
+    }
+  };
+
+  const deleteMember = (id: string) => {
+    setAllProfiles((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+  };
+
+  const toggleMemberStatus = (id: string) => {
+    setAllProfiles((prev) => {
+      const next = prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p));
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+    if (currentUser.id === id) {
+      setCurrentUser((prev) => ({ ...prev, isActive: !prev.isActive }));
+    }
   };
 
   const updatePlotStatus = (plotId: string, newStatus: PlotStatus, _reason: string) => {
@@ -507,6 +552,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         registerMember,
         loginUser,
         createSponsorMember,
+        updateMember,
+        deleteMember,
+        toggleMemberStatus,
       }}
     >
       {children}

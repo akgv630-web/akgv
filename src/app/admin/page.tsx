@@ -3,31 +3,41 @@
 import React, { useState } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   Building,
+  Check,
   CheckCircle2,
+  ChevronRight,
   Clock,
+  Copy,
   CreditCard,
   Edit,
+  ExternalLink,
   Eye,
   FileCheck,
   Filter,
   HelpCircle,
   Layers,
+  Mail,
   MapPin,
   Package,
+  Phone,
   Plus,
+  Power,
   Receipt,
   Search,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
   TrendingUp,
   UserCheck,
+  UserPlus,
   Users,
   X,
   XCircle
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { Plot, PlotStatus, UserRole } from '@/types';
+import { KycStatus, Plot, PlotStatus, Profile, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 
 export default function SuperAdminPage() {
@@ -45,6 +55,9 @@ export default function SuperAdminPage() {
     allProfiles,
     currentUser,
     createSponsorMember,
+    updateMember,
+    deleteMember,
+    toggleMemberStatus,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'plots' | 'payments' | 'bookings' | 'kits' | 'support'>('overview');
@@ -52,14 +65,33 @@ export default function SuperAdminPage() {
   const [plotFilterStatus, setPlotFilterStatus] = useState<'ALL' | PlotStatus>('ALL');
   const [paymentActionNotice, setPaymentActionNotice] = useState<string | null>(null);
 
-  // New Sponsor / Associate Creation Form
+  // Member Management State
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [memberRoleFilter, setMemberRoleFilter] = useState<'ALL' | UserRole>('ALL');
+  const [memberStatusFilter, setMemberStatusFilter] = useState<'ALL' | 'active' | 'inactive'>('ALL');
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [viewingMember, setViewingMember] = useState<Profile | null>(null);
+  const [editingMember, setEditingMember] = useState<Profile | null>(null);
+  const [deletingMember, setDeletingMember] = useState<Profile | null>(null);
+  const [copiedMemberCode, setCopiedMemberCode] = useState<string | null>(null);
+  const [memberActionNotice, setMemberActionNotice] = useState<string | null>(null);
+
+  // Add Member Form
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<UserRole>('senior_member');
   const [newMemberSponsorId, setNewMemberSponsorId] = useState('AKGV-3498');
   const [createdSponsorFeedback, setCreatedSponsorFeedback] = useState<{ code: string; name: string } | null>(null);
-  const [memberRoleFilter, setMemberRoleFilter] = useState<'ALL' | UserRole>('ALL');
+
+  // Edit Member Form State
+  const [editFullName, setEditFullName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<UserRole>('junior_member');
+  const [editSponsorId, setEditSponsorId] = useState('');
+  const [editKycStatus, setEditKycStatus] = useState<KycStatus>('verified');
+  const [editIsActive, setEditIsActive] = useState<boolean>(true);
 
   // Database-Derived Metrics
   const totalPlots = plots.length;
@@ -78,6 +110,107 @@ export default function SuperAdminPage() {
     if (plotFilterStatus !== 'ALL' && p.status !== plotFilterStatus) return false;
     return true;
   });
+
+  // Member Analytics & Governance
+  const totalMembers = allProfiles.length;
+  const activeMembers = allProfiles.filter((p) => p.isActive).length;
+  const suspendedMembers = allProfiles.filter((p) => !p.isActive).length;
+  const workingAssociates = allProfiles.filter(
+    (p) => p.role === 'senior_member' || p.role === 'junior_member' || p.role === 'sub_admin'
+  ).length;
+  const totalBuyers = allProfiles.filter((p) => p.role === 'buyer').length;
+
+  const filteredMembers = allProfiles.filter((p) => {
+    if (memberRoleFilter !== 'ALL' && p.role !== memberRoleFilter) return false;
+    if (memberStatusFilter === 'active' && !p.isActive) return false;
+    if (memberStatusFilter === 'inactive' && p.isActive) return false;
+    if (memberSearchQuery.trim()) {
+      const q = memberSearchQuery.toLowerCase().trim();
+      const matchName = p.fullName.toLowerCase().includes(q);
+      const matchPhone = p.phone.toLowerCase().includes(q);
+      const matchEmail = p.email.toLowerCase().includes(q);
+      const matchCode = (p.memberId || '').toLowerCase().includes(q);
+      const matchSponsor = (p.sponsorId || '').toLowerCase().includes(q);
+      return matchName || matchPhone || matchEmail || matchCode || matchSponsor;
+    }
+    return true;
+  });
+
+  const handleOpenEditMember = (member: Profile) => {
+    setEditingMember(member);
+    setEditFullName(member.fullName);
+    setEditPhone(member.phone);
+    setEditEmail(member.email);
+    setEditRole(member.role);
+    setEditSponsorId(member.sponsorId || '');
+    setEditKycStatus(member.kycStatus || 'verified');
+    setEditIsActive(member.isActive);
+  };
+
+  const handleSaveEditMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    if (!editFullName.trim() || !editPhone.trim()) {
+      alert('Please fill in member name and phone number.');
+      return;
+    }
+    updateMember(editingMember.id, {
+      fullName: editFullName.trim(),
+      phone: editPhone.trim(),
+      email: editEmail.trim(),
+      role: editRole,
+      sponsorId: editSponsorId.trim() || undefined,
+      kycStatus: editKycStatus,
+      isActive: editIsActive,
+    });
+    setMemberActionNotice(`Member "${editFullName.trim()}" has been updated successfully.`);
+    setEditingMember(null);
+    setTimeout(() => setMemberActionNotice(null), 4000);
+  };
+
+  const handleToggleStatus = (member: Profile) => {
+    toggleMemberStatus(member.id);
+    const updatedStatus = member.isActive ? 'suspended' : 'activated';
+    setMemberActionNotice(`Member "${member.fullName}" has been ${updatedStatus}.`);
+    setTimeout(() => setMemberActionNotice(null), 4000);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingMember) return;
+    if (deletingMember.id === currentUser.id) {
+      alert('Security Protection: You cannot delete your own logged-in administrator account.');
+      setDeletingMember(null);
+      return;
+    }
+    deleteMember(deletingMember.id);
+    setMemberActionNotice(`Member "${deletingMember.fullName}" was removed from the roster.`);
+    setDeletingMember(null);
+    setTimeout(() => setMemberActionNotice(null), 4000);
+  };
+
+  const handleCopyCode = (code: string) => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopiedMemberCode(code);
+    setTimeout(() => setCopiedMemberCode(null), 2500);
+  };
+
+  const getRoleBadge = (role: UserRole) => {
+    switch (role) {
+      case 'super_admin':
+        return { label: 'SUPER ADMIN', bg: 'bg-red-500/20 text-red-300 border-red-500/40' };
+      case 'sub_admin':
+        return { label: 'SUB-ADMIN', bg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' };
+      case 'senior_member':
+        return { label: 'SENIOR MANAGER', bg: 'bg-[#C7A35A]/20 text-[#DFC382] border-[#C7A35A]/40' };
+      case 'junior_member':
+        return { label: 'FIELD ASSOCIATE', bg: 'bg-blue-500/20 text-blue-300 border-blue-500/40' };
+      case 'buyer':
+        return { label: 'PLOT BUYER', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' };
+      default:
+        return { label: role, bg: 'bg-gray-500/20 text-gray-300 border-gray-500/40' };
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
@@ -274,252 +407,904 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* Tab: Members & Sponsor Code Generator */}
+      {/* Tab: Members & Team Management (Admin Controls) */}
       {activeTab === 'members' && (
         <div className="space-y-6">
-          {/* Header & Notice */}
-          <div className="rounded-2xl border border-[#C7A35A]/40 bg-[#0B1734] p-5 space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-serif text-lg font-bold text-white flex items-center gap-2">
-                <Users className="h-5 w-5 text-[#C7A35A]" />
-                Associate & Sponsor Code Administration
-              </h2>
-              <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/30">
-                Live Downline Architecture
-              </span>
+          {/* Action Notification Alert */}
+          {memberActionNotice && (
+            <div className="flex items-center justify-between rounded-2xl border border-emerald-500/40 bg-emerald-950/40 px-5 py-3 text-xs text-emerald-300 shadow-lg animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <span>{memberActionNotice}</span>
+              </div>
+              <button
+                onClick={() => setMemberActionNotice(null)}
+                className="text-emerald-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <p className="text-xs text-gray-300 leading-relaxed">
-              Super Admin and Sub-Admins create unique member codes (such as <strong className="text-[#DFC382]">AKGV-3498</strong>). Field partners use these codes during public registration to connect under their authorized team leader.
-            </p>
+          )}
+
+          {/* Header & Quick Action */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#C7A35A]/40 bg-[#0B1734] p-5 shadow-xl">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-[#C7A35A]" />
+                <h2 className="font-serif text-lg font-bold text-white">
+                  Team & Associates Governance (सदस्य एवं टीम नियंत्रण)
+                </h2>
+              </div>
+              <p className="text-xs text-gray-300">
+                View every associate, manager, sub-admin, and buyer working on the platform. Add new members, edit profile details, toggle active access, or remove accounts.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setIsAddMemberModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-2.5 text-xs font-bold text-[#0B1734] shadow-lg transition hover:brightness-110 active:scale-95"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Enroll New Member (नया सदस्य जोड़ें)</span>
+            </button>
           </div>
 
-          {/* Creation Form: Generate New Sponsor Code */}
-          <div className="rounded-2xl border border-white/10 bg-[#050A17] p-6 space-y-4 shadow-xl">
-            <h3 className="font-serif text-sm font-bold text-[#DFC382] uppercase tracking-wider flex items-center gap-2">
-              <Plus className="h-4 w-4 text-[#C7A35A]" />
-              Generate New Sponsor Code & Enroll Associate
-            </h3>
+          {/* Member KPIs Summary Grid */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+            <div className="rounded-2xl border border-white/10 bg-[#050A17] p-4 space-y-1">
+              <span className="text-gray-400 text-[11px] block">Total Registered</span>
+              <div className="font-serif text-2xl font-bold text-white">{totalMembers}</div>
+              <span className="text-[10px] text-gray-400">All system profiles</span>
+            </div>
 
-            {createdSponsorFeedback && (
-              <div className="rounded-xl border border-emerald-500/50 bg-emerald-950/30 p-4 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Sponsor Code Generated Successfully!</span>
-                </div>
-                <p className="text-gray-200">
-                  Member <strong>{createdSponsorFeedback.name}</strong> has been enrolled with Unique Sponsor ID:{' '}
-                  <span className="font-mono text-base font-bold text-[#DFC382] bg-black/40 px-2 py-0.5 rounded border border-[#C7A35A]/40">
-                    {createdSponsorFeedback.code}
-                  </span>
-                </p>
-                <div className="flex gap-2 pt-1">
+            <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#050A17] p-4 space-y-1">
+              <span className="text-gray-400 text-[11px] block">Working Associates</span>
+              <div className="font-serif text-2xl font-bold text-[#DFC382]">{workingAssociates}</div>
+              <span className="text-[10px] text-emerald-400">Sponsors & Field staff</span>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-500/20 bg-[#050A17] p-4 space-y-1">
+              <span className="text-gray-400 text-[11px] block">Verified Buyers</span>
+              <div className="font-serif text-2xl font-bold text-emerald-400">{totalBuyers}</div>
+              <span className="text-[10px] text-gray-400">Plot investors</span>
+            </div>
+
+            <div className="rounded-2xl border border-red-500/20 bg-[#050A17] p-4 space-y-1">
+              <span className="text-gray-400 text-[11px] block">Suspended / Inactive</span>
+              <div className="font-serif text-2xl font-bold text-red-400">{suspendedMembers}</div>
+              <span className="text-[10px] text-gray-400">Blocked accounts</span>
+            </div>
+          </div>
+
+          {/* Search & Filtering Toolbar */}
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-[#0B1734] p-4 text-xs">
+            {/* Search Input Bar */}
+            <div className="relative w-full">
+              <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={memberSearchQuery}
+                onChange={(e) => setMemberSearchQuery(e.target.value)}
+                placeholder="Search member by Name, Phone, Email, Member Code (AKGV-...) or Reporting Sponsor..."
+                className="w-full rounded-xl border border-white/10 bg-[#050A17] pl-10 pr-10 py-2.5 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+              />
+              {memberSearchQuery && (
+                <button
+                  onClick={() => setMemberSearchQuery('')}
+                  className="absolute right-3 top-2.5 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3">
+              {/* Role Filters */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-gray-400 font-semibold mr-1 flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5 text-[#C7A35A]" /> Role:
+                </span>
+                {(['ALL', 'super_admin', 'sub_admin', 'senior_member', 'junior_member', 'buyer'] as const).map((r) => (
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(createdSponsorFeedback.code);
-                      alert(`Copied Sponsor Code: ${createdSponsorFeedback.code}`);
-                    }}
-                    className="rounded-lg bg-[#C7A35A] px-3 py-1 font-bold text-[#0B1734] text-[11px]"
+                    key={r}
+                    onClick={() => setMemberRoleFilter(r)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                      memberRoleFilter === r
+                        ? 'bg-[#C7A35A] text-[#0B1734]'
+                        : 'bg-[#050A17] text-gray-400 hover:text-white'
+                    }`}
                   >
-                    Copy Sponsor Code
+                    {r === 'ALL'
+                      ? `All (${allProfiles.length})`
+                      : r === 'super_admin'
+                      ? 'Admin'
+                      : r === 'sub_admin'
+                      ? 'Sub-Admin'
+                      : r === 'senior_member'
+                      ? 'Senior'
+                      : r === 'junior_member'
+                      ? 'Associate'
+                      : 'Buyer'}
                   </button>
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `Namaste! Your official AKGV Infra City Sponsor ID is ${createdSponsorFeedback.code}. Use this to register on the platform.`
-                    )}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-lg bg-[#25D366] px-3 py-1 font-bold text-white text-[11px] flex items-center gap-1"
+                ))}
+              </div>
+
+              {/* Status Filters */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-400 font-semibold mr-1">Status:</span>
+                {(['ALL', 'active', 'inactive'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setMemberStatusFilter(st)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${
+                      memberStatusFilter === st
+                        ? 'bg-white/20 text-white font-bold'
+                        : 'bg-[#050A17] text-gray-400 hover:text-white'
+                    }`}
                   >
-                    Share via WhatsApp
-                  </a>
-                </div>
+                    {st === 'ALL'
+                      ? 'All'
+                      : st === 'active'
+                      ? `Active (${activeMembers})`
+                      : `Suspended (${suspendedMembers})`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Members Roster List / Grid */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs text-gray-400 px-1">
+              <span>
+                Showing <strong className="text-white">{filteredMembers.length}</strong> of{' '}
+                <strong className="text-white">{allProfiles.length}</strong> members
+              </span>
+              {memberSearchQuery && (
+                <button
+                  onClick={() => {
+                    setMemberSearchQuery('');
+                    setMemberRoleFilter('ALL');
+                    setMemberStatusFilter('ALL');
+                  }}
+                  className="text-[#DFC382] hover:underline"
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+
+            {filteredMembers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-[#050A17] p-12 text-center text-xs space-y-3">
+                <Users className="h-10 w-10 text-gray-500" />
+                <p className="text-gray-300 font-semibold">No members match your criteria</p>
+                <p className="text-gray-500 max-w-sm">
+                  Try adjusting the role filter or search query, or enroll a new associate into the team.
+                </p>
+                <button
+                  onClick={() => {
+                    setMemberSearchQuery('');
+                    setMemberRoleFilter('ALL');
+                    setMemberStatusFilter('ALL');
+                  }}
+                  className="rounded-xl bg-[#C7A35A] px-4 py-2 font-bold text-[#0B1734]"
+                >
+                  Reset Search
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredMembers.map((profile) => {
+                  const directDownlines = allProfiles.filter(
+                    (child) => child.sponsorId === profile.id || child.sponsorId === profile.memberId
+                  );
+                  const roleBadge = getRoleBadge(profile.role);
+                  const isCurrentLoggedAdmin = profile.id === currentUser.id;
+
+                  return (
+                    <div
+                      key={profile.id}
+                      className={`relative flex flex-col justify-between rounded-2xl border p-5 text-xs shadow-md transition hover:border-[#C7A35A]/50 ${
+                        profile.isActive
+                          ? 'border-white/10 bg-[#0B1734]'
+                          : 'border-red-500/20 bg-[#12080E] opacity-80'
+                      }`}
+                    >
+                      {/* Top Header with Avatar, Role & Status Dot */}
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-3">
+                            {/* Avatar */}
+                            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-[#050A17] border border-[#C7A35A]/40 text-[#DFC382] font-bold text-sm shadow">
+                              {profile.fullName.slice(0, 2).toUpperCase()}
+                              {/* Online / Active Pulse */}
+                              <span
+                                className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#0B1734] ${
+                                  profile.isActive ? 'bg-emerald-400' : 'bg-red-500'
+                                }`}
+                                title={profile.isActive ? 'Active Working Account' : 'Account Suspended'}
+                              />
+                            </div>
+
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-white text-sm line-clamp-1">
+                                  {profile.fullName}
+                                </h4>
+                                {isCurrentLoggedAdmin && (
+                                  <span className="rounded bg-[#C7A35A]/20 px-1 py-0.2 text-[9px] font-bold text-[#DFC382]">
+                                    YOU
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-gray-400 text-[11px] block">{profile.phone}</span>
+                            </div>
+                          </div>
+
+                          {/* Role Badge */}
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold border shrink-0 ${roleBadge.bg}`}
+                          >
+                            {roleBadge.label}
+                          </span>
+                        </div>
+
+                        {/* Member Details Matrix */}
+                        <div className="rounded-xl bg-[#050A17] p-3 space-y-2 border border-white/5 font-mono text-[11px]">
+                          {/* Member ID with Copy */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400 font-sans text-[10px]">Member ID:</span>
+                            <div className="flex items-center gap-1.5">
+                              <strong className="text-[#DFC382] font-mono">
+                                {profile.memberId || 'N/A'}
+                              </strong>
+                              {profile.memberId && (
+                                <button
+                                  onClick={() => handleCopyCode(profile.memberId!)}
+                                  className="text-gray-400 hover:text-white p-0.5"
+                                  title="Copy Member Code"
+                                >
+                                  {copiedMemberCode === profile.memberId ? (
+                                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Reporting Sponsor */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400 font-sans text-[10px]">Sponsor:</span>
+                            <span className="text-white text-[11px] truncate max-w-[150px]">
+                              {profile.sponsorId || 'Company HQ (Head Office)'}
+                            </span>
+                          </div>
+
+                          {/* Direct Team Downlines */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-400 font-sans text-[10px]">Team Size:</span>
+                            <span className="font-bold text-emerald-400 font-sans text-[11px]">
+                              {directDownlines.length} Direct Partners
+                            </span>
+                          </div>
+
+                          {/* KYC Status & Active State */}
+                          <div className="flex items-center justify-between border-t border-white/5 pt-1.5 text-[10px] font-sans">
+                            <span
+                              className={`flex items-center gap-1 font-semibold ${
+                                profile.kycStatus === 'verified'
+                                  ? 'text-emerald-400'
+                                  : profile.kycStatus === 'rejected'
+                                  ? 'text-red-400'
+                                  : 'text-amber-400'
+                              }`}
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              KYC {profile.kycStatus?.toUpperCase() || 'VERIFIED'}
+                            </span>
+
+                            <span
+                              className={`rounded px-1.5 py-0.2 font-bold ${
+                                profile.isActive
+                                  ? 'bg-emerald-500/10 text-emerald-400'
+                                  : 'bg-red-500/10 text-red-400'
+                              }`}
+                            >
+                              {profile.isActive ? 'Active Access' : 'Suspended'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Toolbar */}
+                      <div className="border-t border-white/10 pt-3 mt-3 flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1">
+                          {/* View Details Button */}
+                          <button
+                            onClick={() => setViewingMember(profile)}
+                            className="flex items-center gap-1 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-gray-200 transition"
+                            title="View Complete Profile & Downlines"
+                          >
+                            <Eye className="h-3.5 w-3.5 text-[#C7A35A]" />
+                            <span>View</span>
+                          </button>
+
+                          {/* Edit Member Button */}
+                          <button
+                            onClick={() => handleOpenEditMember(profile)}
+                            className="flex items-center gap-1 rounded-lg bg-white/5 hover:bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-gray-200 transition"
+                            title="Edit Member Information"
+                          >
+                            <Edit className="h-3.5 w-3.5 text-blue-400" />
+                            <span>Edit</span>
+                          </button>
+
+                          {/* Toggle Active / Suspended Button */}
+                          <button
+                            onClick={() => handleToggleStatus(profile)}
+                            disabled={isCurrentLoggedAdmin}
+                            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                              isCurrentLoggedAdmin
+                                ? 'opacity-40 cursor-not-allowed text-gray-500'
+                                : profile.isActive
+                                ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300'
+                                : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'
+                            }`}
+                            title={
+                              isCurrentLoggedAdmin
+                                ? 'Cannot suspend self'
+                                : profile.isActive
+                                ? 'Suspend Member Access'
+                                : 'Reactivate Member Access'
+                            }
+                          >
+                            <Power className="h-3.5 w-3.5" />
+                            <span>{profile.isActive ? 'Suspend' : 'Activate'}</span>
+                          </button>
+                        </div>
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => setDeletingMember(profile)}
+                          disabled={isCurrentLoggedAdmin}
+                          className={`rounded-lg p-1.5 transition ${
+                            isCurrentLoggedAdmin
+                              ? 'text-gray-600 cursor-not-allowed'
+                              : 'text-red-400 hover:bg-red-500/20 hover:text-red-300'
+                          }`}
+                          title={isCurrentLoggedAdmin ? 'Cannot delete self' : 'Delete Member from System'}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!newMemberName.trim() || !newMemberPhone.trim()) {
-                  alert('Please enter member name and phone number.');
-                  return;
-                }
-                const profile = createSponsorMember({
-                  fullName: newMemberName.trim(),
-                  phone: newMemberPhone.trim(),
-                  email: newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`,
-                  role: newMemberRole,
-                  sponsorId: newMemberSponsorId,
-                });
-                setCreatedSponsorFeedback({
-                  code: profile.memberId || 'AKGV-NEW',
-                  name: profile.fullName,
-                });
-                setNewMemberName('');
-                setNewMemberPhone('');
-                setNewMemberEmail('');
-              }}
-              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 text-xs"
-            >
-              <div>
-                <label className="block text-gray-400 mb-1 font-medium">Associate Full Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ramesh Patel"
-                  value={newMemberName}
-                  onChange={(e) => setNewMemberName(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-400 mb-1 font-medium">Mobile Number</label>
-                <input
-                  type="tel"
-                  placeholder="e.g. 9839XXXXXX"
-                  value={newMemberPhone}
-                  onChange={(e) => setNewMemberPhone(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-400 mb-1 font-medium">Role Assignment</label>
-                <select
-                  value={newMemberRole}
-                  onChange={(e) => setNewMemberRole(e.target.value as UserRole)}
-                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white focus:border-[#C7A35A] focus:outline-none"
-                >
-                  <option value="sub_admin">Sub-Admin (Area Coordinator)</option>
-                  <option value="senior_member">Senior Manager / Sponsor</option>
-                  <option value="junior_member">Field Associate / Partner</option>
-                  <option value="buyer">Client / Plot Buyer</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-gray-400 mb-1 font-medium">Reporting Sponsor</label>
-                <select
-                  value={newMemberSponsorId}
-                  onChange={(e) => setNewMemberSponsorId(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white focus:border-[#C7A35A] focus:outline-none"
-                >
-                  <option value="AKGV-HQ-001">Super Admin (AKGV-HQ-001)</option>
-                  <option value="AKGV-3498">Vikram Singh (AKGV-3498)</option>
-                  <option value="AKGV-SUB-101">Suresh Yadav Sub-Admin (AKGV-SUB-101)</option>
-                  {allProfiles
-                    .filter((p) => p.role === 'senior_member' && p.memberId !== 'AKGV-3498')
-                    .map((p) => (
-                      <option key={p.id} value={p.memberId || p.id}>
-                        {p.fullName} ({p.memberId})
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
-                >
-                  Generate Code & Save
-                </button>
-              </div>
-            </form>
           </div>
 
-          {/* Filter Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B1734] p-4 rounded-2xl border border-white/10 text-xs">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-[#C7A35A]" />
-              <span className="text-gray-300 font-semibold">Filter Members by Role:</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(['ALL', 'sub_admin', 'senior_member', 'junior_member', 'buyer'] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setMemberRoleFilter(r)}
-                  className={`rounded-lg px-3 py-1 font-semibold transition ${
-                    memberRoleFilter === r
-                      ? 'bg-[#C7A35A] text-[#0B1734]'
-                      : 'bg-[#050A17] text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {r === 'ALL'
-                    ? `All (${allProfiles.length})`
-                    : r === 'sub_admin'
-                    ? 'Sub-Admin'
-                    : r === 'senior_member'
-                    ? 'Senior Sponsors'
-                    : r === 'junior_member'
-                    ? 'Field Associates'
-                    : 'Buyers'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Members Roster Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {allProfiles
-              .filter((p) => (memberRoleFilter === 'ALL' ? true : p.role === memberRoleFilter))
-              .map((profile) => {
-                const directDownlines = allProfiles.filter(
-                  (child) => child.sponsorId === profile.id || child.sponsorId === profile.memberId
-                );
-                return (
-                  <div
-                    key={profile.id}
-                    className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-3 text-xs shadow-md"
+          {/* ================= MODAL 1: ADD NEW MEMBER ================= */}
+          {isAddMemberModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md overflow-y-auto">
+              <div className="relative my-auto w-full max-w-lg rounded-2xl border border-[#C7A35A] bg-[#070D1E] shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between border-b border-white/10 bg-[#0B1734] px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-[#C7A35A]" />
+                    <h3 className="font-serif text-sm font-bold text-white">
+                      Enroll New Team Member (नया सदस्य जोड़ें)
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsAddMemberModalOpen(false);
+                      setCreatedSponsorFeedback(null);
+                    }}
+                    className="rounded-lg p-1 text-gray-400 hover:bg-white/10 hover:text-white"
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-bold text-white text-sm">{profile.fullName}</h4>
-                        <span className="text-gray-400 text-[11px]">{profile.phone}</span>
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Form */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newMemberName.trim() || !newMemberPhone.trim()) {
+                      alert('Please provide member name and phone number.');
+                      return;
+                    }
+                    const profile = createSponsorMember({
+                      fullName: newMemberName.trim(),
+                      phone: newMemberPhone.trim(),
+                      email: newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`,
+                      role: newMemberRole,
+                      sponsorId: newMemberSponsorId,
+                    });
+                    setCreatedSponsorFeedback({
+                      code: profile.memberId || 'AKGV-NEW',
+                      name: profile.fullName,
+                    });
+                    setMemberActionNotice(`New member "${profile.fullName}" enrolled successfully! Code: ${profile.memberId}`);
+                    setNewMemberName('');
+                    setNewMemberPhone('');
+                    setNewMemberEmail('');
+                    setTimeout(() => setMemberActionNotice(null), 5000);
+                  }}
+                  className="p-5 space-y-4 text-xs"
+                >
+                  {/* Feedback Banner on Generation */}
+                  {createdSponsorFeedback && (
+                    <div className="rounded-xl border border-emerald-500/50 bg-emerald-950/40 p-4 space-y-2 text-xs">
+                      <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Member Enrolled & Code Generated!</span>
                       </div>
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
-                          profile.role === 'super_admin'
-                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                            : profile.role === 'sub_admin'
-                            ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
-                            : profile.role === 'senior_member'
-                            ? 'bg-[#C7A35A]/20 text-[#DFC382] border-[#C7A35A]/30'
-                            : profile.role === 'buyer'
-                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                            : 'bg-white/10 text-gray-300 border-white/20'
-                        }`}
-                      >
-                        {profile.role.replace('_', ' ').toUpperCase()}
-                      </span>
+                      <p className="text-gray-200">
+                        Associate <strong>{createdSponsorFeedback.name}</strong> created with Code:{' '}
+                        <strong className="font-mono text-[#DFC382] text-sm bg-black/40 px-2 py-0.5 rounded border border-[#C7A35A]/40">
+                          {createdSponsorFeedback.code}
+                        </strong>
+                      </p>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(createdSponsorFeedback.code)}
+                          className="rounded-lg bg-[#C7A35A] px-3 py-1 font-bold text-[#0B1734] text-[11px]"
+                        >
+                          Copy Code
+                        </button>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(
+                            `Namaste! Your official AKGV Infra City Associate ID is ${createdSponsorFeedback.code}. Please use this to login and work on the portal.`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-lg bg-[#25D366] px-3 py-1 font-bold text-white text-[11px] flex items-center gap-1"
+                        >
+                          Share on WhatsApp
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">
+                      Full Name (पूरा नाम) <span className="text-[#C7A35A]">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Chandra Patel"
+                      value={newMemberName}
+                      onChange={(e) => setNewMemberName(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Mobile Number (मोबाइल नंबर) <span className="text-[#C7A35A]">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        placeholder="e.g. 9839012345"
+                        value={newMemberPhone}
+                        onChange={(e) => setNewMemberPhone(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                      />
                     </div>
 
-                    <div className="rounded-xl bg-[#050A17] p-3 space-y-1.5 border border-white/5 font-mono text-[11px]">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Sponsor / Member Code:</span>
-                        <strong className="text-[#DFC382]">{profile.memberId || 'N/A'}</strong>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Reporting Sponsor:</span>
-                        <span className="text-white">{profile.sponsorId || 'Company HQ'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Direct Downlines:</span>
-                        <strong className="text-emerald-400 font-bold">{directDownlines.length} Members</strong>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] text-gray-400 border-t border-white/5 pt-2">
-                      <span className="flex items-center gap-1 text-emerald-400">
-                        <CheckCircle2 className="h-3 w-3" /> KYC Verified
-                      </span>
-                      <span>Joined {profile.createdAt.slice(0, 10)}</span>
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Email Address (वैकल्पिक)
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="e.g. ramesh@gmail.com"
+                        value={newMemberEmail}
+                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                      />
                     </div>
                   </div>
-                );
-              })}
-          </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Role Assignment (पद)
+                      </label>
+                      <select
+                        value={newMemberRole}
+                        onChange={(e) => setNewMemberRole(e.target.value as UserRole)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
+                      >
+                        <option value="sub_admin">Sub-Admin (Branch Coordinator)</option>
+                        <option value="senior_member">Senior Manager / Sponsor</option>
+                        <option value="junior_member">Field Associate / Agent</option>
+                        <option value="buyer">Client / Plot Buyer</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Reporting Sponsor (सीनियर स्पॉन्सर)
+                      </label>
+                      <select
+                        value={newMemberSponsorId}
+                        onChange={(e) => setNewMemberSponsorId(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
+                      >
+                        <option value="AKGV-HQ-001">Super Admin (AKGV-HQ-001)</option>
+                        <option value="AKGV-3498">Vikram Singh (AKGV-3498)</option>
+                        <option value="AKGV-SUB-101">Suresh Yadav Sub-Admin (AKGV-SUB-101)</option>
+                        {allProfiles
+                          .filter((p) => p.role === 'senior_member' && p.memberId !== 'AKGV-3498')
+                          .map((p) => (
+                            <option key={p.id} value={p.memberId || p.id}>
+                              {p.fullName} ({p.memberId})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddMemberModalOpen(false)}
+                      className="rounded-xl px-4 py-2.5 text-gray-400 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-2.5 font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
+                    >
+                      Save & Issue Member Code
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ================= MODAL 2: EDIT MEMBER ================= */}
+          {editingMember && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md overflow-y-auto">
+              <div className="relative my-auto w-full max-w-lg rounded-2xl border border-blue-500/40 bg-[#070D1E] shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between border-b border-white/10 bg-[#0B1734] px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    <Edit className="h-5 w-5 text-blue-400" />
+                    <h3 className="font-serif text-sm font-bold text-white">
+                      Edit Member Details — {editingMember.fullName}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setEditingMember(null)}
+                    className="rounded-lg p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveEditMember} className="p-5 space-y-4 text-xs">
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFullName}
+                      onChange={(e) => setEditFullName(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">Phone Number</label>
+                      <input
+                        type="tel"
+                        required
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">Role</label>
+                      <select
+                        value={editRole}
+                        onChange={(e) => setEditRole(e.target.value as UserRole)}
+                        disabled={editingMember.id === currentUser.id}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none disabled:opacity-50"
+                      >
+                        <option value="super_admin">Super Admin</option>
+                        <option value="sub_admin">Sub-Admin (Coordinator)</option>
+                        <option value="senior_member">Senior Manager</option>
+                        <option value="junior_member">Field Associate</option>
+                        <option value="buyer">Plot Buyer</option>
+                      </select>
+                      {editingMember.id === currentUser.id && (
+                        <span className="text-[10px] text-gray-400 mt-0.5 block">
+                          Cannot change own admin role
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">Reporting Sponsor ID</label>
+                      <input
+                        type="text"
+                        value={editSponsorId}
+                        onChange={(e) => setEditSponsorId(e.target.value)}
+                        placeholder="e.g. AKGV-3498"
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">KYC Status</label>
+                      <select
+                        value={editKycStatus}
+                        onChange={(e) => setEditKycStatus(e.target.value as KycStatus)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      >
+                        <option value="verified">Verified (सत्यापित)</option>
+                        <option value="pending">Pending Review</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">Account Access</label>
+                      <select
+                        value={editIsActive ? 'active' : 'suspended'}
+                        onChange={(e) => setEditIsActive(e.target.value === 'active')}
+                        disabled={editingMember.id === currentUser.id}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none disabled:opacity-50"
+                      >
+                        <option value="active">Active Access (सक्रिय)</option>
+                        <option value="suspended">Suspended / Blocked (निलंबित)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setEditingMember(null)}
+                      className="rounded-xl px-4 py-2.5 text-gray-400 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-blue-600 px-6 py-2.5 font-bold text-white shadow-md hover:bg-blue-500 active:scale-95 transition"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ================= MODAL 3: VIEW MEMBER DETAILS ================= */}
+          {viewingMember && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md overflow-y-auto">
+              <div className="relative my-auto w-full max-w-xl rounded-2xl border border-[#C7A35A] bg-[#070D1E] shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-between border-b border-white/10 bg-[#0B1734] px-5 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-[#C7A35A]" />
+                    <h3 className="font-serif text-sm sm:text-base font-bold text-white">
+                      Associate Profile & Network Dossier
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setViewingMember(null)}
+                    className="rounded-lg p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="p-5 space-y-4 text-xs">
+                  {/* Top Profile Card */}
+                  <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0B1734] p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#C7A35A] bg-[#050A17] font-serif text-lg font-bold text-[#DFC382]">
+                        {viewingMember.fullName.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="font-serif text-base font-bold text-white">
+                          {viewingMember.fullName}
+                        </h4>
+                        <span className="text-gray-400 text-xs block">{viewingMember.email}</span>
+                        <span className="text-[#DFC382] font-mono text-xs">+91 {viewingMember.phone}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-right space-y-1">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold border ${getRoleBadge(viewingMember.role).bg}`}>
+                        {getRoleBadge(viewingMember.role).label}
+                      </span>
+                      <div className="text-[10px] text-gray-400">
+                        Status:{' '}
+                        <strong className={viewingMember.isActive ? 'text-emerald-400' : 'text-red-400'}>
+                          {viewingMember.isActive ? 'ACTIVE' : 'SUSPENDED'}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Metadata Matrix */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 space-y-1">
+                      <span className="text-gray-400 text-[10px] block">Member Code</span>
+                      <div className="flex items-center gap-1 font-mono font-bold text-[#DFC382]">
+                        <span>{viewingMember.memberId || 'N/A'}</span>
+                        {viewingMember.memberId && (
+                          <button onClick={() => handleCopyCode(viewingMember.memberId!)}>
+                            <Copy className="h-3 w-3 text-gray-400 hover:text-white" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 space-y-1">
+                      <span className="text-gray-400 text-[10px] block">Reporting Senior</span>
+                      <span className="font-bold text-white block truncate">
+                        {viewingMember.sponsorId || 'Company HQ'}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 space-y-1">
+                      <span className="text-gray-400 text-[10px] block">KYC Verification</span>
+                      <span className="font-bold text-emerald-400 block uppercase">
+                        {viewingMember.kycStatus || 'VERIFIED'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Direct Downlines Team List */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-200">
+                        Direct Network Associates ({allProfiles.filter((p) => p.sponsorId === viewingMember.id || p.sponsorId === viewingMember.memberId).length})
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        Members recruited by this associate
+                      </span>
+                    </div>
+
+                    {allProfiles.filter((p) => p.sponsorId === viewingMember.id || p.sponsorId === viewingMember.memberId).length === 0 ? (
+                      <div className="rounded-xl border border-white/5 bg-[#050A17] p-4 text-center text-gray-400 text-[11px]">
+                        No direct downlines enrolled under this member code yet.
+                      </div>
+                    ) : (
+                      <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                        {allProfiles
+                          .filter((p) => p.sponsorId === viewingMember.id || p.sponsorId === viewingMember.memberId)
+                          .map((downline) => (
+                            <div
+                              key={downline.id}
+                              className="flex items-center justify-between rounded-lg border border-white/5 bg-[#050A17] px-3 py-2 text-[11px]"
+                            >
+                              <div>
+                                <span className="font-bold text-white block">{downline.fullName}</span>
+                                <span className="text-gray-400 text-[10px]">{downline.phone}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-mono text-[#DFC382] font-semibold text-[10px] block">
+                                  {downline.memberId || 'N/A'}
+                                </span>
+                                <span className="text-[9px] text-gray-400 uppercase">
+                                  {downline.role.replace('_', ' ')}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contact Buttons */}
+                  <div className="flex items-center justify-between border-t border-white/10 pt-4">
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`https://wa.me/91${viewingMember.phone.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 rounded-xl bg-[#25D366] px-3.5 py-2 font-bold text-white text-[11px]"
+                      >
+                        <span>WhatsApp Chat</span>
+                      </a>
+                      <a
+                        href={`tel:${viewingMember.phone}`}
+                        className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-white text-[11px] hover:bg-white/10"
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                        <span>Call</span>
+                      </a>
+                    </div>
+
+                    <button
+                      onClick={() => setViewingMember(null)}
+                      className="rounded-xl border border-white/10 px-4 py-2 text-gray-300 hover:text-white"
+                    >
+                      Close Dossier
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= MODAL 4: DELETE MEMBER CONFIRMATION ================= */}
+          {deletingMember && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
+              <div className="relative my-auto w-full max-w-md rounded-2xl border border-red-500/60 bg-[#070D1E] p-6 shadow-2xl space-y-4 text-xs">
+                <div className="flex items-center gap-3 text-red-400">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/20 border border-red-500/30">
+                    <AlertTriangle className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-base font-bold text-white">
+                      Confirm Member Removal (सदस्य हटाएं)
+                    </h3>
+                    <span className="text-[11px] text-gray-400">Permanent System Action</span>
+                  </div>
+                </div>
+
+                <p className="text-gray-300 leading-relaxed">
+                  Are you sure you want to remove <strong className="text-white">{deletingMember.fullName}</strong> (
+                  <span className="font-mono text-[#DFC382]">{deletingMember.memberId || deletingMember.phone}</span>
+                  )? This will revoke their platform access and remove them from the active associate directory.
+                </p>
+
+                <div className="rounded-xl border border-red-500/20 bg-red-950/20 p-3 text-[11px] text-red-300">
+                  Note: Reporting downlines and existing booking logs will be preserved under corporate archive.
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    onClick={() => setDeletingMember(null)}
+                    className="rounded-xl px-4 py-2 text-gray-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmDelete}
+                    className="rounded-xl bg-red-600 px-5 py-2 font-bold text-white shadow-lg hover:bg-red-500 active:scale-95 transition"
+                  >
+                    Yes, Remove Member
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
