@@ -45,12 +45,14 @@ export const DICTIONARY = {
       "watch3d": "Launch 3D Elevation Viewer"
     },
     "locations": {
-      "badge": "Prime Growth Corridors",
-      "title": "Township Locations in Uttar Pradesh",
-      "subtitle": "Selected for high capital appreciation, rapid infrastructural expansion, and pristine residential living.",
-      "plotsAvailable": "Plots Available",
-      "bookPlotIn": "Book Plot in",
-      "viewInventory": "View Location Inventory & Map"
+      "badge": "Regional Branch Network",
+      "title": "Our Branch Offices & Helpdesks in Varanasi",
+      "subtitle": "Visit our nearest branch office for authenticated plot documentation, registry consultation, and site visit departures.",
+      "branchOffice": "Branch Office",
+      "callBranch": "Call Branch Office",
+      "visitBranch": "Book Site Visit from this Branch",
+      "officeHours": "Office Hours: 9:30 AM – 6:30 PM (Mon – Sat)",
+      "servicesTitle": "Branch Services & Consultation"
     },
     "masterPlan": {
       "badge": "55 Approved Plots",
@@ -578,12 +580,14 @@ export const DICTIONARY = {
       "watch3d": "3D मकान डिज़ाइन देखें"
     },
     "locations": {
-      "badge": "प्रमुख विकास क्षेत्र",
-      "title": "उत्तर प्रदेश में टाउनशिप लोकेशन्स",
-      "subtitle": "तेज़ पूंजीगत लाभ, बेहतरीन बुनियादी ढांचे और शांत आवासीय जीवन के लिए चयनित प्राइम लोकेशन्स।",
-      "plotsAvailable": "प्लॉट उपलब्ध",
-      "bookPlotIn": "प्लॉट बुक करें:",
-      "viewInventory": "इन्वेंट्री एवं लोकेशन मैप देखें"
+      "badge": "शाखा नेटवर्क",
+      "title": "वाराणसी में हमारे शाखा कार्यालय एवं सहायता केंद्र",
+      "subtitle": "प्लॉट रजिस्ट्री परामर्श, मूल दस्तावेज़ सत्यापन एवं साइट विजिट प्रस्थान के लिए हमारे नजदीकी शाखा कार्यालय पर संपर्क करें।",
+      "branchOffice": "शाखा कार्यालय",
+      "callBranch": "शाखा पर कॉल करें",
+      "visitBranch": "इस शाखा से साइट विजिट बुक करें",
+      "officeHours": "कार्यालय समय: प्रातः 9:30 से सायं 6:30 (सोम – शनि)",
+      "servicesTitle": "शाखा सेवाएं एवं परामर्श"
     },
     "masterPlan": {
       "badge": "55 स्वीकृत प्लॉट्स",
@@ -1111,12 +1115,14 @@ export const DICTIONARY = {
       "watch3d": "Launch 3D Elevation Viewer"
     },
     "locations": {
-      "badge": "Prime Growth Corridors",
-      "title": "Township Locations in Uttar Pradesh",
-      "subtitle": "High appreciation, rapid road connectivity aur peaceful family living ke liye prime locations.",
-      "plotsAvailable": "Plots Available",
-      "bookPlotIn": "Book Plot in",
-      "viewInventory": "View Inventory & Location Map"
+      "badge": "Regional Branch Network",
+      "title": "Hamare Branch Offices & Helpdesks (Varanasi)",
+      "subtitle": "Plot registry consultation, genuine document verification aur site visit ke liye nearest branch office visit karein.",
+      "branchOffice": "Branch Office",
+      "callBranch": "Branch ko Call Karein",
+      "visitBranch": "Is Branch se Site Visit Book Karein",
+      "officeHours": "Office Hours: 9:30 AM – 6:30 PM (Mon – Sat)",
+      "servicesTitle": "Branch Services & Consultation"
     },
     "masterPlan": {
       "badge": "55 Approved Plots",

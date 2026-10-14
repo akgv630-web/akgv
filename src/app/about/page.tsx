@@ -6,6 +6,7 @@ import {
   Award,
   Building,
   CheckCircle2,
+  Clock,
   Compass,
   FileCheck,
   Layers,
@@ -148,16 +149,20 @@ export default function AboutPage() {
         </div>
       </div>
 
-      {/* Flagship Locations */}
+      {/* Regional Branch Offices */}
       <div className="space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#C7A35A]/40 bg-[#0B1734] px-3 py-1 text-xs font-semibold text-[#DFC382]">
+            <Building className="h-3.5 w-3.5 text-[#C7A35A]" />
+            <span>{language === 'hi' ? 'शाखा कार्यालय नेटवर्क' : 'Branch Office Network'}</span>
+          </div>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            {language === 'hi' ? 'हमारे प्रमुख टाउनशिप स्थल' : 'Our Flagship Township Locations'}
+            {language === 'hi' ? 'वाराणसी में हमारे 3 शाखा कार्यालय' : 'Our 3 Regional Branch Offices in Varanasi'}
           </h2>
           <p className="text-xs sm:text-sm text-gray-400">
             {language === 'hi'
-              ? 'वाराणसी के सबसे तेजी से विकसित हो रहे तीनों प्रमुख आर्थिक गलियारों में स्थित'
-              : 'Strategically located across Varanasi’s highest capital appreciation corridors'}
+              ? 'प्लॉट बुकिंग परामर्श, मूल दस्तावेज़ जांच और साइट विजिट सुविधा के लिए हमारी निकटतम शाखा पर पधारें।'
+              : 'Visit our nearest branch office for authenticated plot documentation, registry consultation, and site visit departures.'}
           </p>
         </div>
 
@@ -165,28 +170,49 @@ export default function AboutPage() {
           {PROJECT_LOCATIONS.map((loc) => (
             <div
               key={loc.id}
-              className="rounded-3xl border border-white/10 bg-[#0B1734] overflow-hidden shadow-xl flex flex-col justify-between"
+              className="rounded-3xl border border-[#C7A35A]/30 bg-[#0B1734] overflow-hidden shadow-xl flex flex-col justify-between"
             >
-              <div className="p-6 space-y-3">
-                <div className="flex items-center gap-2 text-[#DFC382] font-semibold text-xs">
-                  <MapPin className="h-4 w-4 text-[#C7A35A]" />
-                  <span>{loc.city}, {loc.state}</span>
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[#DFC382] font-semibold text-xs">
+                    <MapPin className="h-4 w-4 text-[#C7A35A]" />
+                    <span>{loc.city}, {loc.state}</span>
+                  </div>
+                  <span className="rounded-full bg-[#146B4D]/30 border border-[#146B4D]/60 px-2.5 py-0.5 text-[10px] font-bold text-[#1EA275]">
+                    {language === 'hi' ? 'शाखा कार्यालय' : 'Branch Office'}
+                  </span>
                 </div>
-                <h3 className="font-serif text-lg font-bold text-white">{loc.name}</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">{loc.description}</p>
-                <div className="pt-2 text-xs text-gray-300 space-y-1">
-                  <div>• Total Plots: <strong>{loc.totalPlots}</strong></div>
-                  <div>• Available: <strong className="text-emerald-400">{loc.availablePlots}</strong></div>
-                  <div>• Road Connectivity: {loc.roadConnectivity}</div>
+
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-white">{loc.name}</h3>
+                  <p className="text-xs text-[#DFC382] font-medium mt-0.5">{loc.headline}</p>
+                  <p className="text-xs text-gray-400 leading-relaxed mt-2">{loc.description}</p>
+                </div>
+
+                <div className="space-y-1.5 pt-2 border-t border-white/10 text-xs text-gray-300">
+                  <div className="flex items-start gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#1EA275] shrink-0 mt-0.5" />
+                    <span>{loc.address || loc.roadConnectivity}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                    <Clock className="h-3.5 w-3.5 text-[#C7A35A] shrink-0" />
+                    <span>{loc.workingHours || '9:30 AM – 6:30 PM (Mon – Sat)'}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t border-white/10 p-4 bg-[#050A17]">
-                <Link
-                  href={`/projects#${loc.slug}`}
-                  className="w-full block text-center rounded-xl bg-white/5 py-2 font-bold text-xs text-[#DFC382] hover:bg-white/10 transition"
+              <div className="border-t border-white/10 p-4 bg-[#050A17] flex items-center justify-between gap-3">
+                <a
+                  href={`tel:${COMPANY_DETAILS.phone}`}
+                  className="flex-1 text-center rounded-xl bg-white/5 py-2 font-bold text-xs text-[#DFC382] hover:bg-white/10 transition"
                 >
-                  {language === 'hi' ? 'प्लॉट्स देखें' : 'View Location Details'}
+                  {COMPANY_DETAILS.displayPhone}
+                </a>
+                <Link
+                  href={`/site-visit?location=${encodeURIComponent(loc.name)}`}
+                  className="flex-1 text-center rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 font-bold text-xs text-[#0B1734] hover:brightness-110 transition"
+                >
+                  {language === 'hi' ? 'विजिट बुक करें' : 'Book Visit'}
                 </Link>
               </div>
             </div>

@@ -8,6 +8,7 @@ import {
   Building,
   Calendar,
   CheckCircle2,
+  Clock,
   Compass,
   FileCheck,
   Gift,
@@ -81,11 +82,11 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="#locations"
+              href="#branches"
               className="flex items-center justify-center gap-1.5 rounded-xl border border-[#C7A35A]/50 bg-[#0B1734]/80 px-3.5 py-2.5 sm:px-6 sm:py-3.5 text-xs sm:text-sm font-semibold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
             >
-              <MapPin className="h-4 w-4 shrink-0" />
-              <span>{t.hero.townshipLocations}</span>
+              <Building className="h-4 w-4 shrink-0" />
+              <span>{language === 'hi' ? 'शाखा कार्यालय' : 'Branch Offices'}</span>
             </Link>
 
             <a
@@ -102,7 +103,7 @@ export default function HomePage() {
           <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2 sm:pt-4 max-w-2xl mx-auto">
             <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17]/80 p-2 sm:p-3 text-center">
               <span className="font-serif text-xs sm:text-base font-bold text-[#DFC382] block">55 Plots</span>
-              <span className="text-[9px] sm:text-xs text-gray-400">Rampur Blueprint</span>
+              <span className="text-[9px] sm:text-xs text-gray-400">Varanasi Blueprint</span>
             </div>
             <div className="rounded-xl border border-white/10 bg-[#050A17]/80 p-2 sm:p-3 text-center">
               <span className="font-serif text-xs sm:text-base font-bold text-white block">30ft / 25ft</span>
@@ -129,12 +130,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. THREE FLAGSHIP PROJECT LOCATIONS */}
-      <section id="locations" className="mx-auto max-w-7xl px-4 sm:px-6 w-full max-w-full overflow-hidden">
+      {/* 2. REGIONAL BRANCH OFFICES (OFFICIAL HELPDESKS - NO FAKE IMAGES) */}
+      <section id="branches" className="mx-auto max-w-7xl px-4 sm:px-6 w-full max-w-full overflow-hidden">
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-          <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
-            {t.locations.badge}
-          </span>
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#C7A35A]/40 bg-[#0B1734] px-3 py-1 text-xs font-semibold text-[#DFC382]">
+            <Building className="h-3.5 w-3.5 text-[#C7A35A]" />
+            <span>{t.locations.badge}</span>
+          </div>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
             {t.locations.title}
           </h2>
@@ -145,67 +147,81 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {PROJECT_LOCATIONS.map((loc) => {
-            const localizedCityName = language === 'hi'
-              ? (loc.slug === 'rampur' ? 'रामपुर (वाराणसी)' : loc.slug === 'lahartara' ? 'लहरतारा (वाराणसी)' : 'मिर्ज़ा मुराद (वाराणसी)')
+            const localizedBranchName = language === 'hi'
+              ? (loc.slug === 'rampur' ? 'एकेजीवी इन्फ्रा सिटी — रामपुर शाखा' : loc.slug === 'lahartara' ? 'एकेजीवी इन्फ्रा सिटी — लहरतारा शाखा' : 'एकेजीवी इन्फ्रा सिटी — मिर्ज़ा मुराद शाखा')
               : loc.name;
-            const localizedCityShort = language === 'hi'
-              ? (loc.slug === 'rampur' ? 'रामपुर' : loc.slug === 'lahartara' ? 'लहरतारा' : 'मिर्ज़ा मुराद')
-              : loc.city;
             const localizedHeadline = language === 'hi'
-              ? (loc.slug === 'rampur' ? '30 फीट चौड़े मुख्य मार्ग के साथ गेटेड टाउनशिप' : loc.slug === 'lahartara' ? 'कैंट रेलवे स्टेशन के पास प्राइम आवासीय प्लॉट्स' : 'NH-19 एक्सप्रेसवे कॉरिडोर पर विकसित प्लॉट्स')
+              ? (loc.slug === 'rampur' ? 'आधिकारिक शाखा कार्यालय एवं सहायता केंद्र' : loc.slug === 'lahartara' ? 'सेंट्रल सिटी शाखा कार्यालय (कैंट के पास)' : 'हाईवे कॉरिडोर शाखा कार्यालय (NH-19)')
               : loc.headline;
 
             return (
               <div
                 key={loc.id}
-                className="group overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734] transition hover:border-[#C7A35A] hover:shadow-2xl flex flex-col"
+                className="group rounded-2xl border border-[#C7A35A]/30 bg-gradient-to-b from-[#0B1734] to-[#050A17] p-5 sm:p-6 transition hover:border-[#C7A35A] hover:shadow-2xl flex flex-col justify-between space-y-5"
               >
-                <div className="relative h-48 w-full overflow-hidden">
-                  <Image
-                    src={loc.imageUrl}
-                    alt={localizedCityName}
-                    fill
-                    className="object-cover group-hover:scale-105 transition duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B1734] via-transparent to-transparent" />
-                  <span className="absolute top-3 right-3 rounded-full bg-[#050A17]/80 px-3 py-1 text-[11px] font-bold text-[#DFC382] border border-[#C7A35A]/40 backdrop-blur">
-                    {loc.availablePlots} {t.locations.plotsAvailable}
-                  </span>
-                </div>
+                {/* Branch Header Badge & Icon */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0B1734] border border-[#C7A35A]/50 text-[#C7A35A] shadow-inner group-hover:border-[#DFC382] group-hover:scale-105 transition">
+                      <Building className="h-6 w-6" />
+                    </div>
+                    <span className="rounded-full bg-[#146B4D]/30 border border-[#146B4D]/60 px-3 py-1 text-[11px] font-bold text-[#1EA275]">
+                      {t.locations.branchOffice}
+                    </span>
+                  </div>
 
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                   <div>
                     <h3 className="font-serif text-lg font-bold text-white group-hover:text-[#DFC382] transition">
-                      {localizedCityName}
+                      {localizedBranchName}
                     </h3>
                     <p className="text-xs text-[#DFC382] font-medium mt-0.5">{localizedHeadline}</p>
-                    <p className="text-xs text-gray-300 mt-2 line-clamp-3 leading-relaxed">
+                    <p className="text-xs text-gray-300 mt-2 leading-relaxed">
                       {loc.description}
                     </p>
                   </div>
 
-                  <div className="border-t border-white/10 pt-3 space-y-2">
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
-                      <MapPin className="h-3.5 w-3.5 text-[#C7A35A] shrink-0" />
-                      <span className="truncate">{loc.roadConnectivity}</span>
-                    </div>
+                  {/* Branch Services Provided */}
+                  <div className="space-y-2 pt-3 border-t border-white/10">
+                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                      {t.locations.servicesTitle}
+                    </span>
+                    {loc.features.map((feat, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-gray-300">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#1EA275] shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-                    <div className="pt-2 flex flex-col gap-2">
-                      <Link
-                        href="/master-plan"
-                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition active:scale-95"
-                      >
-                        <span>⚡ {t.locations.bookPlotIn} {localizedCityShort}</span>
-                      </Link>
+                {/* Address, Hours & Action CTAs */}
+                <div className="space-y-3 border-t border-white/10 pt-3">
+                  <div className="flex items-start gap-2 text-xs text-gray-400">
+                    <MapPin className="h-3.5 w-3.5 text-[#C7A35A] shrink-0 mt-0.5" />
+                    <span className="text-[11px] leading-snug">{loc.address || loc.roadConnectivity}</span>
+                  </div>
 
-                      <Link
-                        href={`/projects#${loc.slug}`}
-                        className="flex items-center justify-between text-xs font-semibold text-[#DFC382] hover:underline pt-0.5"
-                      >
-                        <span>{t.locations.viewInventory}</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                    <Clock className="h-3.5 w-3.5 text-[#C7A35A] shrink-0" />
+                    <span>{loc.workingHours || t.locations.officeHours}</span>
+                  </div>
+
+                  <div className="pt-2 flex flex-col gap-2">
+                    <a
+                      href={`tel:${COMPANY_DETAILS.phone}`}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition active:scale-95"
+                    >
+                      <PhoneCall className="h-3.5 w-3.5" />
+                      <span>{t.locations.callBranch} ({COMPANY_DETAILS.displayPhone})</span>
+                    </a>
+
+                    <Link
+                      href={`/site-visit?location=${encodeURIComponent(loc.name)}`}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/5 py-2 text-xs font-semibold text-white hover:bg-white/10 transition"
+                    >
+                      <Calendar className="h-3.5 w-3.5 text-[#1EA275]" />
+                      <span>{t.locations.visitBranch}</span>
+                    </Link>
                   </div>
                 </div>
               </div>

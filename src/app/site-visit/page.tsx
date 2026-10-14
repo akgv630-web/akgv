@@ -50,7 +50,7 @@ export default function SiteVisitPage() {
           Schedule an Official Site Visit
         </h1>
         <p className="text-xs sm:text-sm text-gray-300">
-          Inspect ground-level roads, electricity transformer points, and plot pillars in Rampur, Lahartara or Mirza Murad with our senior coordinators.
+          Inspect ground-level roads, electricity transformer points, and demarcated plots in Varanasi with guided departure from our Rampur, Lahartara or Mirza Murad branch offices.
         </p>
       </div>
 
@@ -104,7 +104,7 @@ export default function SiteVisitPage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-gray-300 mb-1 font-medium">Select Township Location *</label>
+                <label className="block text-gray-300 mb-1 font-medium">Nearest Departure Branch / Meeting Point *</label>
                 <select
                   value={selectedLocationId}
                   onChange={(e) => setSelectedLocationId(e.target.value)}

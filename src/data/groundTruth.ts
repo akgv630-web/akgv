@@ -20,67 +20,90 @@ export const COMPANY_DETAILS = {
 export const PROJECT_LOCATIONS: ProjectLocation[] = [
   {
     id: 'loc-rampur',
-    name: 'AKGV Infra City — Rampur',
+    name: 'AKGV Infra City — Rampur Branch',
     slug: 'rampur',
     city: 'Varanasi',
     state: 'Uttar Pradesh',
-    headline: 'Gated Township with 30ft Wide Main Entrance Roads',
-    description: 'Premier residential layout located in the tranquil, rapidly appreciating zone of Rampur, Varanasi. Equipped with full drainage, electrification, water pipeline network, and lush green boundaries.',
-    totalPlots: 56,
-    availablePlots: 32,
+    branchType: 'Branch Office',
+    headline: 'Official Branch Office & Customer Helpdesk',
+    description: 'Official regional branch office for plot booking consultation, legal document verification, and site visit coordination across Varanasi.',
+    address: 'Near Ring Road Phase-2, Rampur, Varanasi, Uttar Pradesh - 221008',
+    phone: '6306917991',
+    workingHours: '9:30 AM – 6:30 PM (Mon – Sat)',
     roadConnectivity: 'Direct connectivity to Ring Road Phase-2 and Babatpur Airport corridor',
     coordinates: { lat: 25.3218, lng: 82.9872 },
     features: [
-      '30-0" & 25-0" Wide Asphalt Roads',
-      'Underground Drainage & Sewage Lines',
-      '24x7 Electric Transformers & Street Lighting',
-      'Potable Water Supply Lines to Each Plot',
-      'Immediate Registry & Possession Readiness',
-      'Bank Loan Assistance Available'
-    ],
-    imageUrl: '/assets/villa_horizontal_block_c.jpg'
+      'Customer Consultation & Plot Booking Desk',
+      'Legal Registry & Blueprint Verification',
+      'Guided Site Visit Departure Hub',
+      'Associate Support & Joining Kit Distribution'
+    ]
   },
   {
     id: 'loc-lahartara',
-    name: 'AKGV Infra City — Lahartara',
+    name: 'AKGV Infra City — Lahartara Branch',
     slug: 'lahartara',
     city: 'Varanasi',
     state: 'Uttar Pradesh',
-    headline: 'Central Urban Living near Varanasi Cantt & Heritage Hubs',
-    description: 'Prime urban development nestled near the railway junction and cultural heart of Varanasi. Ideal for residential duplexes and luxury multi-floor villas.',
-    totalPlots: 42,
-    availablePlots: 18,
+    branchType: 'Branch Office',
+    headline: 'Central City Branch Office (Near Cantt)',
+    description: 'Central urban branch office nestled near Varanasi Cantt for buyer consultation, associate registrations, and official registry assistance.',
+    address: 'Near Varanasi Junction (Cantt), GT Road Corridor, Lahartara, Varanasi, Uttar Pradesh - 221002',
+    phone: '6306917991',
+    workingHours: '9:30 AM – 6:30 PM (Mon – Sat)',
     roadConnectivity: '5 mins from Varanasi Junction (Cantt), connecting to GT Road',
     coordinates: { lat: 25.3176, lng: 82.9739 },
     features: [
-      'High-Density Prime Urban Connectivity',
-      'Walking Distance to Reputed Schools & Hospitals',
-      'Commercial Frontage & Residential Enclaves',
-      'Complete Municipal Infrastructure'
-    ],
-    imageUrl: '/assets/villa_vertical_luxury.jpg'
+      'Prime Urban Location for Investor Consultations',
+      'Direct Site Visit Vehicle Arrangements',
+      'Immediate Document Check & Payment Counter',
+      'Associate Training & Support Desk'
+    ]
   },
   {
     id: 'loc-mirza-murad',
-    name: 'AKGV Infra City — Mirza Murad',
+    name: 'AKGV Infra City — Mirza Murad Branch',
     slug: 'mirza-murad',
     city: 'Varanasi',
     state: 'Uttar Pradesh',
-    headline: 'Varanasi-Prayagraj National Highway Growth Corridor',
-    description: 'Vast master-planned township strategically situated along NH-19 (Mirza Murad), experiencing unprecedented industrial and commercial expansion.',
-    totalPlots: 85,
-    availablePlots: 49,
+    branchType: 'Branch Office',
+    headline: 'Highway Corridor Branch Office (NH-19)',
+    description: 'Highway corridor branch office situated along NH-19 for on-ground site visit departures, plot inquiries, and customer assistance.',
+    address: 'NH-19 (Grand Trunk Road Expressway corridor), Mirza Murad, Varanasi, Uttar Pradesh - 221307',
+    phone: '6306917991',
+    workingHours: '9:30 AM – 6:30 PM (Mon – Sat)',
     roadConnectivity: 'Zero km frontage on NH-19 (Grand Trunk Road Expressway corridor)',
     coordinates: { lat: 25.2635, lng: 82.8021 },
     features: [
-      'National Highway Direct Access',
-      'Wide Internal Boulevards (30ft & 25ft)',
-      'High Investment Appreciation Zone',
-      'Integrated Commercial Plaza & Parks'
-    ],
-    imageUrl: '/assets/villa_vertical_standard.jpg'
+      'Highway Corridor Customer Support Point',
+      'On-Ground Plot Visit Assistance & Escort',
+      'Registry & Possession Consultation Desk',
+      'Direct Highway Accessibility & Parking'
+    ]
   }
 ];
+
+export const MAIN_TOWNSHIP_PROJECT = {
+  id: 'township-varanasi-55',
+  name: 'A.K.G.V. Infra City Varanasi — Plotted Township',
+  headline: 'Approved Residential Plotted Township with 30ft & 25ft Wide Roads',
+  location: 'Varanasi, Uttar Pradesh',
+  totalAreaSqft: 77550,
+  netPlotAreaSqft: 55970,
+  internalRoadAreaSqft: 21580,
+  roadRatioPercent: 27.82,
+  totalApprovedPlots: 55,
+  architect: 'Er. Rajesh Kumar Patel (R.P. Home Design)',
+  blueprintScale: '1:500',
+  features: [
+    'Proposed Main Entrance Boulevard - 30\'-0" Wide',
+    'Internal Connected Sector Roads - 25\'-0" Wide',
+    'Demarcated Blocks: Block A (10 plots), Block B (10 plots), Block C (35 plots)',
+    'Underground Drainage, Water Network & Electric Transformer',
+    '100% Vastu Aligned Plots with Immediate Registry & Possession',
+    'Serviced by Rampur, Lahartara & Mirza Murad Branch Offices'
+  ]
+};
 
 export const COMMISSION_LEVELS_GROUND_TRUTH: CommissionLevelRule[] = [
   {

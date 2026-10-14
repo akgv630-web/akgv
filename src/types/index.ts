@@ -30,17 +30,21 @@ export interface ProjectLocation {
   slug: string;
   city: string;
   state: string;
+  branchType?: string;
   headline: string;
   description: string;
-  totalPlots: number;
-  availablePlots: number;
+  address?: string;
+  phone?: string;
+  workingHours?: string;
+  totalPlots?: number;
+  availablePlots?: number;
   roadConnectivity: string;
   coordinates: {
     lat: number;
     lng: number;
   };
   features: string[];
-  imageUrl: string;
+  imageUrl?: string;
 }
 
 export interface Plot {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
+import { Building, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
 import { COMPANY_DETAILS, PROJECT_LOCATIONS } from '@/data/groundTruth';
 import { useApp } from '@/context/AppContext';
 
@@ -43,19 +43,20 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Column 2: Flagship Project Locations */}
+          {/* Column 2: Regional Branch Offices */}
           <div>
-            <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-white border-b border-[#C7A35A]/30 pb-2">
-              {c.locationsTitle}
+            <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-white border-b border-[#C7A35A]/30 pb-2 flex items-center gap-1.5">
+              <Building className="h-4 w-4 text-[#C7A35A]" />
+              <span>{language === 'hi' ? 'शाखा कार्यालय' : 'Branch Offices'}</span>
             </h3>
             <ul className="mt-4 space-y-3 text-xs">
               {PROJECT_LOCATIONS.map((loc) => {
                 const localizedCity = language === 'hi' 
-                  ? (loc.slug === 'rampur' ? 'रामपुर (वाराणसी)' : loc.slug === 'lahartara' ? 'लहरतारा (वाराणसी)' : 'मिर्ज़ा मुराद (वाराणसी)')
+                  ? (loc.slug === 'rampur' ? 'रामपुर शाखा कार्यालय' : loc.slug === 'lahartara' ? 'लहरतारा शाखा कार्यालय' : 'मिर्ज़ा मुराद शाखा कार्यालय')
                   : loc.name;
                 const localizedHeadline = language === 'hi'
-                  ? (loc.slug === 'rampur' ? '30 फीट चौड़े मुख्य मार्ग के साथ गेटेड टाउनशिप' : loc.slug === 'lahartara' ? 'कैंट रेलवे स्टेशन के पास प्राइम आवासीय प्लॉट्स' : 'NH-19 एक्सप्रेसवे कॉरिडोर पर विकसित प्लॉट्स')
-                  : loc.headline;
+                  ? (loc.slug === 'rampur' ? 'रिंग रोड फेज-2, रामपुर' : loc.slug === 'lahartara' ? 'कैंट जंक्शन के पास, लहरतारा' : 'NH-19 एक्सप्रेसवे, मिर्ज़ा मुराद')
+                  : (loc.address || loc.roadConnectivity);
 
                 return (
                   <li key={loc.id} className="group">
