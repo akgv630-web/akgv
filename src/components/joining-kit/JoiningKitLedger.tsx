@@ -21,7 +21,8 @@ import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { JoiningKitIssue } from '@/types';
 
 export function JoiningKitLedger() {
-  const { kitIssues, recordKitIssue, currentUser } = useApp();
+  const { kitIssues, recordKitIssue, currentUser, t, language } = useApp();
+  const c = t.joiningKit;
   const [searchTerm, setSearchTerm] = useState('');
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<JoiningKitIssue | null>(null);
@@ -95,11 +96,11 @@ export function JoiningKitLedger() {
           <div className="flex items-center gap-2">
             <Package className="h-5 w-5 text-[#C7A35A]" />
             <h2 className="font-serif text-xl font-bold text-white tracking-wide">
-              Joining Kit — Offline Cash Ledger (₹999)
+              {c.title}
             </h2>
           </div>
           <p className="text-xs text-gray-400 mt-1">
-            Physical Welcome Kit: 1 Bag, 1 Pen, 1 Diary, 1 Document File | Offline Cash Tracking
+            {c.subtitle}
           </p>
         </div>
 
@@ -108,33 +109,33 @@ export function JoiningKitLedger() {
           className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-4 py-2.5 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition active:scale-95"
         >
           <Plus className="h-4 w-4" />
-          <span>Record New ₹999 Cash Kit</span>
+          <span>{c.recordKitBtn}</span>
         </button>
       </div>
 
       {/* Cash Reconciliation Summary KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4">
-          <span className="text-xs text-gray-400 block">Total Offline Cash Collected</span>
+          <span className="text-xs text-gray-400 block">{c.kpiTotalCash}</span>
           <span className="font-serif text-2xl font-bold text-emerald-400">
             ₹{totalCashCollected.toLocaleString('en-IN')}
           </span>
-          <span className="text-[10px] text-gray-400 block mt-1">Verified offline treasury</span>
+          <span className="text-[10px] text-gray-400 block mt-1">{c.kpiTreasurySub}</span>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4">
-          <span className="text-xs text-gray-400 block">Total Physical Kits Issued</span>
-          <span className="font-serif text-2xl font-bold text-white">{totalKitsIssued} Kits</span>
-          <span className="text-[10px] text-gray-400 block mt-1">Acknowledged by members</span>
+          <span className="text-xs text-gray-400 block">{c.kpiTotalKits}</span>
+          <span className="font-serif text-2xl font-bold text-white">{totalKitsIssued} {language === 'hi' ? 'किट' : 'Kits'}</span>
+          <span className="text-[10px] text-gray-400 block mt-1">{c.kpiAcknowledgedSub}</span>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4">
-          <span className="text-xs text-gray-400 block">Standard Kit Amount</span>
-          <span className="font-serif text-2xl font-bold text-[#DFC382]">₹999 / Kit</span>
-          <span className="text-[10px] text-gray-400 block mt-1">Non-commissionable</span>
+          <span className="text-xs text-gray-400 block">{c.kpiStandardAmount}</span>
+          <span className="font-serif text-2xl font-bold text-[#DFC382]">₹999 / {language === 'hi' ? 'किट' : 'Kit'}</span>
+          <span className="text-[10px] text-gray-400 block mt-1">{c.kpiNonCommissionable}</span>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4">
-          <span className="text-xs text-gray-400 block">Kit Physical Inventory</span>
-          <span className="font-serif text-2xl font-bold text-sky-400">184 in Stock</span>
-          <span className="text-[10px] text-gray-400 block mt-1">Central office warehouse</span>
+          <span className="text-xs text-gray-400 block">{c.kpiInventory}</span>
+          <span className="font-serif text-2xl font-bold text-sky-400">184 {c.kpiInStock}</span>
+          <span className="text-[10px] text-gray-400 block mt-1">{c.kpiCentralWarehouse}</span>
         </div>
       </div>
 
@@ -143,39 +144,39 @@ export function JoiningKitLedger() {
         <div className="flex items-center justify-between mb-3">
           <span className="font-serif font-bold text-white flex items-center gap-1.5">
             <Archive className="h-4 w-4 text-[#C7A35A]" />
-            Official Member Joining Kit Mandatory Contents
+            {c.mandatoryContentsTitle}
           </span>
           <span className="rounded bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-400">
-            ₹999 Cash Offline
+            {c.cashTag}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-white/5 bg-white/5 p-3 flex items-center gap-2">
             <span className="text-[#C7A35A] font-bold text-lg">01</span>
             <div>
-              <strong className="text-white block">Executive Bag</strong>
-              <span className="text-[10px] text-gray-400">AKGV Embossed Logo</span>
+              <strong className="text-white block">{c.bagTitle}</strong>
+              <span className="text-[10px] text-gray-400">AKGV Logo</span>
             </div>
           </div>
           <div className="rounded-xl border border-white/5 bg-white/5 p-3 flex items-center gap-2">
             <span className="text-[#C7A35A] font-bold text-lg">01</span>
             <div>
-              <strong className="text-white block">Metallic Pen</strong>
-              <span className="text-[10px] text-gray-400">Gold Plated Finish</span>
+              <strong className="text-white block">{c.penTitle}</strong>
+              <span className="text-[10px] text-gray-400">Gold Plated</span>
             </div>
           </div>
           <div className="rounded-xl border border-white/5 bg-white/5 p-3 flex items-center gap-2">
             <span className="text-[#C7A35A] font-bold text-lg">01</span>
             <div>
-              <strong className="text-white block">Executive Diary</strong>
-              <span className="text-[10px] text-gray-400">Leatherette Hardbound</span>
+              <strong className="text-white block">{c.diaryTitle}</strong>
+              <span className="text-[10px] text-gray-400">Hardbound</span>
             </div>
           </div>
           <div className="rounded-xl border border-white/5 bg-white/5 p-3 flex items-center gap-2">
             <span className="text-[#C7A35A] font-bold text-lg">01</span>
             <div>
-              <strong className="text-white block">Portfolio Folder / File</strong>
-              <span className="text-[10px] text-gray-400">Project Blueprint Slots</span>
+              <strong className="text-white block">{c.fileTitle}</strong>
+              <span className="text-[10px] text-gray-400">Blueprint Slots</span>
             </div>
           </div>
         </div>

@@ -5,17 +5,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowRight,
-  Award,
   Building,
   Calendar,
-  CheckCircle,
+  CheckCircle2,
   Compass,
   FileCheck,
   Gift,
   HelpCircle,
+  Info,
   Layers,
   MapPin,
   PhoneCall,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   Trophy,
@@ -24,7 +25,6 @@ import {
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS, PROJECT_LOCATIONS } from '@/data/groundTruth';
 import { MasterPlanViewer } from '@/components/master-plan/MasterPlanViewer';
-import { HouseViewer3D } from '@/components/3d/HouseViewer3D';
 import { CommissionRewardsView } from '@/components/rewards/CommissionRewardsView';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { TrustAndLegalSection } from '@/components/home/TrustAndLegalSection';
@@ -38,7 +38,7 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-16 pb-20">
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO SECTION - 100% PLOTTED TOWNSHIP FOCUS */}
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden border-b border-[#C7A35A]/30 bg-gradient-to-b from-[#050A17] via-[#0B1734] to-[#050A17] px-4 py-20">
         {/* Subtle Luxury Architectural Backdrop */}
         <div className="absolute inset-0 z-0 opacity-20">
@@ -54,22 +54,8 @@ export default function HomePage() {
 
           {/* Main Headline */}
           <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-            {language === 'hi' ? (
-              <>
-                अपने सपनों का प्लॉट खरीदें <br />
-                <span className="gold-gradient-text">सुव्यवस्थित सुविधाओं के साथ</span>
-              </>
-            ) : language === 'hinglish' ? (
-              <>
-                Apne Sapno Ka Plot Kharidein <br />
-                <span className="gold-gradient-text">Full Amenities & 30ft Wide Roads Ke Sath</span>
-              </>
-            ) : (
-              <>
-                Build Your Future on Verified Land <br />
-                <span className="gold-gradient-text">AKGV Infra City Private Limited</span>
-              </>
-            )}
+            {t.hero.title} <br />
+            <span className="gold-gradient-text">{t.hero.titleHighlight}</span>
           </h1>
 
           {/* Subtitle */}
@@ -88,11 +74,11 @@ export default function HomePage() {
             </Link>
 
             <Link
-              href="#house-viewer-3d"
+              href="#locations"
               className="flex items-center gap-2 rounded-xl border border-[#C7A35A]/50 bg-[#0B1734]/80 px-6 py-3.5 text-sm font-semibold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
             >
-              <Building className="h-4 w-4" />
-              <span>{t.hero.watch3d}</span>
+              <MapPin className="h-4 w-4" />
+              <span>{t.hero.townshipLocations}</span>
             </Link>
 
             <Link
@@ -104,12 +90,12 @@ export default function HomePage() {
             </Link>
 
             <a
-              href="https://wa.me/916306917991?text=Namaste%20AKGV%20Infra%20City!%20I%20am%20interested%20in%20booking%20a%20plot%20in%20Varanasi.%20Please%20share%20details."
+              href="https://wa.me/916306917991?text=Namaste%20AKGV%20Infra%20City!%20I%20am%20interested%20in%20purchasing%20a%20residential%20plot%20in%20Varanasi.%20Please%20share%20details."
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-sm font-bold text-white shadow-xl hover:bg-emerald-600 transition active:scale-95"
             >
-              <span>💬 WhatsApp (6306917991)</span>
+              <span>💬 {t.hero.whatsappDesk} (6306917991)</span>
             </a>
           </div>
 
@@ -129,7 +115,7 @@ export default function HomePage() {
       </section>
 
       {/* 2. THREE FLAGSHIP PROJECT LOCATIONS */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6">
+      <section id="locations" className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
           <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
             {t.locations.badge}
@@ -143,61 +129,73 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {PROJECT_LOCATIONS.map((loc) => (
-            <div
-              key={loc.id}
-              className="group overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734] transition hover:border-[#C7A35A] hover:shadow-2xl flex flex-col"
-            >
-              <div className="relative h-48 w-full overflow-hidden">
-                <Image
-                  src={loc.imageUrl}
-                  alt={loc.name}
-                  fill
-                  className="object-cover group-hover:scale-105 transition duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B1734] via-transparent to-transparent" />
-                <span className="absolute top-3 right-3 rounded-full bg-[#050A17]/80 px-3 py-1 text-[11px] font-bold text-[#DFC382] border border-[#C7A35A]/40 backdrop-blur">
-                  {loc.availablePlots} {t.locations.plotsAvailable}
-                </span>
-              </div>
+          {PROJECT_LOCATIONS.map((loc) => {
+            const localizedCityName = language === 'hi'
+              ? (loc.slug === 'rampur' ? 'रामपुर (वाराणसी)' : loc.slug === 'lahartara' ? 'लहरतारा (वाराणसी)' : 'मिर्ज़ा मुराद (वाराणसी)')
+              : loc.name;
+            const localizedCityShort = language === 'hi'
+              ? (loc.slug === 'rampur' ? 'रामपुर' : loc.slug === 'lahartara' ? 'लहरतारा' : 'मिर्ज़ा मुराद')
+              : loc.city;
+            const localizedHeadline = language === 'hi'
+              ? (loc.slug === 'rampur' ? '30 फीट चौड़े मुख्य मार्ग के साथ गेटेड टाउनशिप' : loc.slug === 'lahartara' ? 'कैंट रेलवे स्टेशन के पास प्राइम आवासीय प्लॉट्स' : 'NH-19 एक्सप्रेसवे कॉरिडोर पर विकसित प्लॉट्स')
+              : loc.headline;
 
-              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-white group-hover:text-[#DFC382] transition">
-                    {loc.name}
-                  </h3>
-                  <p className="text-xs text-[#DFC382] font-medium mt-0.5">{loc.headline}</p>
-                  <p className="text-xs text-gray-300 mt-2 line-clamp-3 leading-relaxed">
-                    {loc.description}
-                  </p>
+            return (
+              <div
+                key={loc.id}
+                className="group overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734] transition hover:border-[#C7A35A] hover:shadow-2xl flex flex-col"
+              >
+                <div className="relative h-48 w-full overflow-hidden">
+                  <Image
+                    src={loc.imageUrl}
+                    alt={localizedCityName}
+                    fill
+                    className="object-cover group-hover:scale-105 transition duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B1734] via-transparent to-transparent" />
+                  <span className="absolute top-3 right-3 rounded-full bg-[#050A17]/80 px-3 py-1 text-[11px] font-bold text-[#DFC382] border border-[#C7A35A]/40 backdrop-blur">
+                    {loc.availablePlots} {t.locations.plotsAvailable}
+                  </span>
                 </div>
 
-                <div className="border-t border-white/10 pt-3 space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <MapPin className="h-3.5 w-3.5 text-[#C7A35A] shrink-0" />
-                    <span className="truncate">{loc.roadConnectivity}</span>
+                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-white group-hover:text-[#DFC382] transition">
+                      {localizedCityName}
+                    </h3>
+                    <p className="text-xs text-[#DFC382] font-medium mt-0.5">{localizedHeadline}</p>
+                    <p className="text-xs text-gray-300 mt-2 line-clamp-3 leading-relaxed">
+                      {loc.description}
+                    </p>
                   </div>
 
-                  <div className="pt-2 flex flex-col gap-2">
-                    <Link
-                      href="/master-plan"
-                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition active:scale-95"
-                    >
-                      <span>⚡ {t.locations.bookPlotIn} {loc.city}</span>
-                    </Link>
+                  <div className="border-t border-white/10 pt-3 space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <MapPin className="h-3.5 w-3.5 text-[#C7A35A] shrink-0" />
+                      <span className="truncate">{loc.roadConnectivity}</span>
+                    </div>
 
-                    <Link
-                      href={`/projects#${loc.slug}`}
-                      className="flex items-center justify-between text-xs font-semibold text-[#DFC382] hover:underline pt-0.5"
-                    >
-                      <span>{t.locations.viewInventory}</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
+                    <div className="pt-2 flex flex-col gap-2">
+                      <Link
+                        href="/master-plan"
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 transition active:scale-95"
+                      >
+                        <span>⚡ {t.locations.bookPlotIn} {localizedCityShort}</span>
+                      </Link>
+
+                      <Link
+                        href={`/projects#${loc.slug}`}
+                        className="flex items-center justify-between text-xs font-semibold text-[#DFC382] hover:underline pt-0.5"
+                      >
+                        <span>{t.locations.viewInventory}</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -205,11 +203,7 @@ export default function HomePage() {
       <section id="master-plan" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#1EA275] uppercase tracking-wider">
-            {language === 'hi'
-              ? 'ब्लूप्रिंट-आधारित डिजिटल मास्टर प्लान'
-              : language === 'hinglish'
-              ? 'Blueprint-Accurate Digital Map'
-              : 'Blueprint-Accurate Digital Map'}
+            {t.masterPlan.badge}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
             {t.masterPlan.title}
@@ -222,21 +216,78 @@ export default function HomePage() {
         <MasterPlanViewer />
       </section>
 
-      {/* 4. 3D HOUSE VIEWER (EMBEDDED) */}
-      <section id="house-viewer-3d" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
-        <div className="text-center max-w-2xl mx-auto space-y-2">
-          <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
-            {t.houseViewer.badge}
-          </span>
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            {t.houseViewer.title}
-          </h2>
-          <p className="text-xs text-gray-400">
-            {t.houseViewer.noticeText}
-          </p>
-        </div>
+      {/* 4. ARCHITECTURAL GUIDANCE FOR YOUR PURCHASED PLOT (REPLACING 3D BUILDER ON HOME) */}
+      <section id="architectural-guidance" className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="rounded-3xl border border-[#C7A35A]/40 bg-gradient-to-br from-[#0B1734] via-[#050A17] to-[#0B1734] p-6 sm:p-10 shadow-2xl space-y-8">
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto space-y-2">
+            <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
+              {t.architecturalGuidance.badge}
+            </span>
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
+              {t.architecturalGuidance.title}
+            </h2>
+            <p className="text-xs text-gray-300">
+              {t.architecturalGuidance.subtitle}
+            </p>
+          </div>
 
-        <HouseViewer3D />
+          {/* Mandatory Business Policy Notice Banner */}
+          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 backdrop-blur-md">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1 text-xs">
+                <span className="font-bold text-amber-300 text-sm block">
+                  {t.architecturalGuidance.policyTitle}
+                </span>
+                <p className="text-gray-200 leading-relaxed">
+                  {t.architecturalGuidance.policyNotice}
+                </p>
+                <p className="text-gray-300 text-[11px] pt-1">
+                  {t.architecturalGuidance.visualizerIntro}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Sample Elevation Models for Plot Fitting */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {t.architecturalGuidance.models.map((model, idx) => (
+              <div
+                key={idx}
+                className="rounded-2xl border border-white/10 bg-[#0B1734]/90 p-5 space-y-3 flex flex-col justify-between hover:border-[#C7A35A]/50 transition"
+              >
+                <div className="space-y-2">
+                  <span className="rounded-full bg-[#C7A35A]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#DFC382] border border-[#C7A35A]/30">
+                    {model.suitablePlot}
+                  </span>
+                  <h3 className="font-serif text-base font-bold text-white">
+                    {model.name}
+                  </h3>
+                  <p className="text-xs text-gray-300 leading-relaxed">
+                    {model.desc}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-[#DFC382]">
+                  <span>{t.architecturalGuidance.sampleTag}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Action to Launch Dedicated 3D Elevation Viewer */}
+          <div className="text-center pt-2">
+            <Link
+              href="/house-viewer-3d"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-8 py-3.5 text-sm font-bold text-[#0B1734] shadow-xl hover:brightness-110 transition active:scale-95"
+            >
+              <Building className="h-4 w-4" />
+              <span>{t.architecturalGuidance.exploreVisualizerBtn}</span>
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* 5. TRUST, LEGAL GUARANTEE & INFRASTRUCTURE STANDARDS */}
@@ -248,11 +299,7 @@ export default function HomePage() {
       <section id="rewards" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#DFC382] uppercase tracking-wider">
-            {language === 'hi'
-              ? 'प्रोत्साहन एवं विकास'
-              : language === 'hinglish'
-              ? 'Growth & Recognition'
-              : 'Growth & Recognition'}
+            {language === 'hi' ? 'प्रोत्साहन एवं पुरस्कार' : language === 'hinglish' ? 'Growth & Rewards' : 'Performance Recognition'}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
             {t.rewards.title}
@@ -291,18 +338,10 @@ export default function HomePage() {
       <section className="mx-auto max-w-4xl px-4 sm:px-6 space-y-6">
         <div className="text-center space-y-2">
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-            {language === 'hi'
-              ? 'अक्सर पूछे जाने वाले प्रश्न'
-              : language === 'hinglish'
-              ? 'Aksar Puche Jane Wale Sawal (FAQs)'
-              : 'Frequently Asked Questions'}
+            {t.faqSection.title}
           </h2>
           <p className="text-xs text-gray-400">
-            {language === 'hi'
-              ? 'प्लॉट बुकिंग, रजिस्ट्री प्रक्रिया और टाउनशिप सुविधाओं से जुड़े स्पष्ट उत्तर।'
-              : language === 'hinglish'
-              ? 'Plot booking, registry process aur township facilities se jude clear answers.'
-              : 'Clear answers regarding plot bookings, registry process, and company operations.'}
+            {t.faqSection.subtitle}
           </p>
         </div>
 
@@ -334,7 +373,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 8. BOTTOM BOOKING CTA BANNER */}
+      {/* 10. BOTTOM BOOKING CTA BANNER */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="relative overflow-hidden rounded-3xl border border-[#C7A35A] bg-gradient-to-r from-[#0B1734] via-[#050A17] to-[#0B1734] p-8 sm:p-12 text-center shadow-2xl">
           <div className="mx-auto max-w-2xl space-y-4">

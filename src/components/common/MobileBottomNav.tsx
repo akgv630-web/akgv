@@ -6,18 +6,17 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   Layers,
-  Building2,
-  Trophy,
-  User,
-  ShieldCheck,
-  MapPin
+  MapPin,
+  Calculator,
+  User
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { UserRole } from '@/types';
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { currentUser } = useApp();
+  const { currentUser, t } = useApp();
+  const c = t.mobileNav;
 
   const getDashboardPath = (role: UserRole) => {
     if (role === 'super_admin' || role === 'sub_admin') return '/admin';
@@ -26,11 +25,11 @@ export function MobileBottomNav() {
   };
 
   const navItems = [
-    { href: '/', label: 'Home', icon: Home },
-    { href: '/master-plan', label: 'Plots', icon: Layers },
-    { href: '/house-viewer-3d', label: '3D Design', icon: Building2 },
-    { href: '/rewards-plan', label: 'Rewards', icon: Trophy },
-    { href: getDashboardPath(currentUser.role), label: 'Portal', icon: User },
+    { href: '/', label: c.home, icon: Home },
+    { href: '/master-plan', label: c.plots, icon: Layers },
+    { href: '/projects', label: c.projects, icon: MapPin },
+    { href: '/#loan-calculator', label: c.emiCalc, icon: Calculator },
+    { href: getDashboardPath(currentUser.role), label: c.portal, icon: User },
   ];
 
   return (

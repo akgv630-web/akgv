@@ -26,7 +26,7 @@ import { FieldGpsCameraCapture } from '@/components/gps-camera/FieldGpsCameraCap
 import { AssociateIdCard } from '@/components/member/AssociateIdCard';
 
 export function MemberPortalPage() {
-  const { currentUser, kitIssues } = useApp();
+  const { currentUser, kitIssues, language } = useApp();
   const [activeTab, setActiveTab] = useState<'id_card' | 'hierarchy' | 'commission' | 'rewards' | 'field_gps'>('id_card');
 
   // Member Business Volume (Simulated/Calculated)
@@ -278,29 +278,47 @@ export function MemberPortalPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-emerald-500/40 bg-[#0B1734] p-5 space-y-3">
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                Level 1 Achieved
+                {language === 'hi' ? 'लेवल 1 प्राप्त' : 'Level 1 Achieved'}
               </span>
-              <h3 className="font-serif text-lg font-bold text-white">स्मार्टफोन (Smartphone)</h3>
-              <p className="text-xs text-gray-400">Business Target: ₹1L - ₹20L achieved.</p>
-              <span className="block text-xs font-semibold text-emerald-400">✓ Fulfilled & Handed Over</span>
+              <h3 className="font-serif text-lg font-bold text-white">
+                {language === 'hi' ? 'स्मार्टफोन' : 'Smartphone'}
+              </h3>
+              <p className="text-xs text-gray-400">
+                {language === 'hi' ? 'बिजनेस टारगेट: ₹1L - ₹20L पूर्ण' : 'Business Target: ₹1L - ₹20L achieved.'}
+              </p>
+              <span className="block text-xs font-semibold text-emerald-400">
+                {language === 'hi' ? '✓ सफलतापूर्वक वितरित' : '✓ Fulfilled & Handed Over'}
+              </span>
             </div>
 
             <div className="rounded-2xl border border-emerald-500/40 bg-[#0B1734] p-5 space-y-3">
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                Level 2 Achieved
+                {language === 'hi' ? 'लेवल 2 प्राप्त' : 'Level 2 Achieved'}
               </span>
-              <h3 className="font-serif text-lg font-bold text-white">गोवा ट्रिप (Goa Trip)</h3>
-              <p className="text-xs text-gray-400">Business Target: ₹21L - ₹80L achieved.</p>
-              <span className="block text-xs font-semibold text-emerald-400">✓ Fulfilled & Handed Over</span>
+              <h3 className="font-serif text-lg font-bold text-white">
+                {language === 'hi' ? 'गोवा यात्रा (ट्रिप)' : 'Goa Trip'}
+              </h3>
+              <p className="text-xs text-gray-400">
+                {language === 'hi' ? 'बिजनेस टारगेट: ₹21L - ₹80L पूर्ण' : 'Business Target: ₹21L - ₹80L achieved.'}
+              </p>
+              <span className="block text-xs font-semibold text-emerald-400">
+                {language === 'hi' ? '✓ सफलतापूर्वक वितरित' : '✓ Fulfilled & Handed Over'}
+              </span>
             </div>
 
             <div className="rounded-2xl border border-[#C7A35A] bg-[#050A17] p-5 space-y-3">
               <span className="rounded-full bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382]">
-                Level 3 (Current Milestone)
+                {language === 'hi' ? 'लेवल 3 (वर्तमान लक्ष्य)' : 'Level 3 (Current Milestone)'}
               </span>
-              <h3 className="font-serif text-lg font-bold text-white">स्पोर्ट्स बाइक (Sports Bike)</h3>
-              <p className="text-xs text-gray-400">Business Target: ₹81L - ₹1.5 Cr in progress.</p>
-              <span className="block text-xs font-semibold text-[#DFC382]">Eligible — Claim under review</span>
+              <h3 className="font-serif text-lg font-bold text-white">
+                {language === 'hi' ? 'स्पोर्ट्स बाइक' : 'Sports Bike'}
+              </h3>
+              <p className="text-xs text-gray-400">
+                {language === 'hi' ? 'बिजनेस टारगेट: ₹81L - ₹1.5 Cr प्रगति पर' : 'Business Target: ₹81L - ₹1.5 Cr in progress.'}
+              </p>
+              <span className="block text-xs font-semibold text-[#DFC382]">
+                {language === 'hi' ? 'पात्र — दावा समीक्षाधीन' : 'Eligible — Claim under review'}
+              </span>
             </div>
           </div>
         </div>

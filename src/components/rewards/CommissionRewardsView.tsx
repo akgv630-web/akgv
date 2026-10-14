@@ -6,7 +6,6 @@ import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import {
   Bike,
-  Building,
   Car,
   CircleDollarSign,
   Coins,
@@ -16,9 +15,7 @@ import {
   FileText,
   Gem,
   Gift,
-  HelpCircle,
   Home,
-  Info,
   Layers,
   MapPin,
   MessageCircle,
@@ -31,12 +28,14 @@ import {
   ExternalLink,
   ArrowRight
 } from 'lucide-react';
-import { COMMISSION_LEVELS_GROUND_TRUTH, COMPANY_DETAILS } from '@/data/groundTruth';
+import { COMMISSION_LEVELS_GROUND_TRUTH } from '@/data/groundTruth';
 import { CommissionLevelRule } from '@/types';
 import { useApp } from '@/context/AppContext';
 
 export function CommissionRewardsView() {
-  const { language } = useApp();
+  const { language, t } = useApp();
+  const c = t.rewards;
+
   const [testVolumeInr, setTestVolumeInr] = useState<number>(8500000); // 85 Lakh (Gold Star)
   const [showBrochureModal, setShowBrochureModal] = useState(false);
   const [selectedLevelForAction, setSelectedLevelForAction] = useState<CommissionLevelRule | null>(null);
@@ -104,14 +103,28 @@ export function CommissionRewardsView() {
   };
 
   const formatLakhCrore = (val: number) => {
+    const croreUnit = language === 'hi' ? 'करोड़' : language === 'hinglish' ? 'Cr' : 'Crore';
+    const lakhUnit = language === 'hi' ? 'लाख' : 'Lakh';
     if (val >= 10000000) {
-      return `₹${(val / 10000000).toFixed(val % 10000000 === 0 ? 0 : 2)} करोड़`;
+      return `₹${(val / 10000000).toFixed(val % 10000000 === 0 ? 0 : 2)} ${croreUnit}`;
     }
-    return `₹${(val / 100000).toFixed(0)} लाख`;
+    return `₹${(val / 100000).toFixed(0)} ${lakhUnit}`;
+  };
+
+  const getRankTitle = (lvl: CommissionLevelRule) => {
+    return language === 'hi' ? lvl.rankTitleHi : lvl.rankTitleEn;
+  };
+
+  const getRewardName = (lvl: CommissionLevelRule) => {
+    return language === 'hi' ? lvl.rewardNameHi : lvl.rewardNameEn;
   };
 
   const handleWhatsAppInquiryForLevel = (level: CommissionLevelRule) => {
-    const text = `Namaste AKGV Infra City! I am interested in achieving Level ${level.levelNumber} (${level.rankTitleEn} / ${level.rankTitleHi}) with ${level.commissionPercent}% commission and qualifying for the ${level.rewardNameEn} (${level.rewardNameHi}). Please share plot booking details and target milestones.`;
+    const text = language === 'hi'
+      ? `नमस्ते एकेजीवी इन्फ्रा सिटी! मैं लेवल ${level.levelNumber} (${level.rankTitleHi}) के लिए ${level.commissionPercent}% कमीशन और ${level.rewardNameHi} रिवार्ड के साथ प्लॉट बिक्री एवं बुकिंग की जानकारी लेना चाहता/चाहती हूं। कृपया आवश्यक जानकारी साझा करें।`
+      : language === 'hinglish'
+      ? `Namaste AKGV Infra City! Main Level ${level.levelNumber} (${level.rankTitleEn}) me ${level.commissionPercent}% commission aur ${level.rewardNameEn} reward ke liye plot booking aur business targets ki detail chahta/chahti hoon.`
+      : `Hello AKGV Infra City! I am interested in qualifying for Level ${level.levelNumber} (${level.rankTitleEn}) with ${level.commissionPercent}% commission and ${level.rewardNameEn}. Please share plot booking details and target milestones.`;
     const encoded = encodeURIComponent(text);
     window.open(`https://wa.me/916306917991?text=${encoded}`, '_blank', 'noopener,noreferrer');
   };
@@ -124,11 +137,11 @@ export function CommissionRewardsView() {
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-[#C7A35A]" />
             <h2 className="font-serif text-xl font-bold text-white tracking-wide">
-              लेवल — कमीशन एवं रिवार्ड प्लान (Level, Commission & Reward Plan)
+              {c.title}
             </h2>
           </div>
           <p className="text-xs text-gray-300 mt-1 italic">
-            &ldquo;मेहनत कीजिए, लेवल बढ़ाइए और अपने सपनों का रिवार्ड पाइए!&rdquo;
+            &ldquo;{c.headerTagline}&rdquo;
           </p>
         </div>
 
@@ -137,7 +150,7 @@ export function CommissionRewardsView() {
           className="flex items-center gap-2 rounded-xl border border-[#C7A35A] bg-[#0B1734] px-4 py-2 text-xs font-bold text-[#DFC382] shadow hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
         >
           <Eye className="h-4 w-4" />
-          <span>View Original Brochure Chart</span>
+          <span>{c.viewOriginalBrochureBtn}</span>
         </button>
       </div>
 
@@ -146,10 +159,10 @@ export function CommissionRewardsView() {
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#DFC382]">
-              Interactive Performance Simulator
+              {c.simulatorTitle}
             </span>
             <h3 className="font-serif text-lg font-bold text-white">
-              Simulate Your Eligible Commission & Unlocked Reward
+              {c.simulatorSubtitle}
             </h3>
           </div>
           <button
@@ -157,7 +170,7 @@ export function CommissionRewardsView() {
             className="flex items-center gap-1.5 rounded-lg bg-[#C7A35A]/20 px-3 py-1.5 text-xs font-semibold text-[#DFC382] border border-[#C7A35A]/40 hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Celebrate Level</span>
+            <span>{c.celebrateBtn}</span>
           </button>
         </div>
 
@@ -165,13 +178,13 @@ export function CommissionRewardsView() {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs">
             <label className="text-gray-300">
-              Total Verified Business Volume:{' '}
+              {c.verifiedVolumeLabel}{' '}
               <strong className="text-lg text-emerald-400 font-serif">
-                ₹{(testVolumeInr / 100000).toFixed(1)} Lakh (₹{testVolumeInr.toLocaleString('en-IN')})
+                ₹{(testVolumeInr / 100000).toFixed(1)} {language === 'hi' ? 'लाख' : 'Lakh'} (₹{testVolumeInr.toLocaleString('en-IN')})
               </strong>
             </label>
             <span className="text-[#DFC382] font-semibold">
-              Current Tier: Level {activeLevel.levelNumber} ({activeLevel.rankTitleHi} / {activeLevel.rankTitleEn})
+              {c.currentTierLabel} {c.level} {activeLevel.levelNumber} ({getRankTitle(activeLevel)})
             </span>
           </div>
 
@@ -186,15 +199,15 @@ export function CommissionRewardsView() {
           />
 
           <div className="flex flex-wrap gap-2 pt-1 text-xs">
-            <span className="text-gray-400 text-[11px] self-center">Quick Presets:</span>
+            <span className="text-gray-400 text-[11px] self-center">{c.quickPresetsLabel}</span>
             {[
-              { label: '₹15L (Sales Asst)', val: 1500000 },
-              { label: '₹50L (Star)', val: 5000000 },
-              { label: '₹1.2 Cr (Gold Star)', val: 12000000 },
-              { label: '₹3 Cr (Asst Mgr)', val: 30000000 },
-              { label: '₹6 Cr (Manager)', val: 60000000 },
-              { label: '₹10 Cr (Sr Mgr)', val: 100000000 },
-              { label: '₹15 Cr (Diamond)', val: 150000000 },
+              { label: language === 'hi' ? '₹15 लाख (सहायक)' : '₹15L (Sales Asst)', val: 1500000 },
+              { label: language === 'hi' ? '₹50 लाख (स्टार)' : '₹50L (Star)', val: 5000000 },
+              { label: language === 'hi' ? '₹1.2 करोड़ (गोल्ड स्टार)' : '₹1.2 Cr (Gold Star)', val: 12000000 },
+              { label: language === 'hi' ? '₹3 करोड़ (सहायक प्रबंधक)' : '₹3 Cr (Asst Mgr)', val: 30000000 },
+              { label: language === 'hi' ? '₹6 करोड़ (प्रबंधक)' : '₹6 Cr (Manager)', val: 60000000 },
+              { label: language === 'hi' ? '₹10 करोड़ (वरिष्ठ प्रबंधक)' : '₹10 Cr (Sr Mgr)', val: 100000000 },
+              { label: language === 'hi' ? '₹15 करोड़ (डायमंड)' : '₹15 Cr (Diamond)', val: 150000000 },
             ].map((preset) => (
               <button
                 key={preset.label}
@@ -215,37 +228,40 @@ export function CommissionRewardsView() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {/* Commission Rate */}
           <div className="rounded-xl border border-white/10 bg-[#050A17] p-4 text-center">
-            <span className="text-xs text-gray-400 block">Commission Rate</span>
+            <span className="text-xs text-gray-400 block">{c.commissionRateLabel}</span>
             <span className="font-serif text-3xl font-bold text-[#DFC382]">
               {activeLevel.commissionPercent}%
             </span>
             <span className="text-[11px] text-gray-400 block mt-1">
-              Brochure level {activeLevel.levelNumber}
+              {c.brochureLevelLabel} {activeLevel.levelNumber}
             </span>
           </div>
 
           {/* Total Earnings */}
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
-            <span className="text-xs text-emerald-300 block">Calculated Commission</span>
+            <span className="text-xs text-emerald-300 block">{c.calculatedCommissionLabel}</span>
             <span className="font-serif text-3xl font-bold text-emerald-400">
               ₹{calculatedCommission.toLocaleString('en-IN')}
             </span>
             <span className="text-[11px] text-emerald-300/80 block mt-1">
-              On ₹{testVolumeInr.toLocaleString('en-IN')} business
+              {c.onBusinessOf} ₹{testVolumeInr.toLocaleString('en-IN')}
             </span>
           </div>
 
           {/* Unlocked Reward */}
-          <div className="rounded-xl border border-[#C7A35A]/50 bg-[#0B1734] p-4 text-center cursor-pointer hover:border-[#C7A35A] transition" onClick={() => setSelectedLevelForAction(activeLevel)}>
-            <span className="text-xs text-[#DFC382] block">Brochure Reward (Click to Book)</span>
+          <div 
+            className="rounded-xl border border-[#C7A35A]/50 bg-[#0B1734] p-4 text-center cursor-pointer hover:border-[#C7A35A] transition" 
+            onClick={() => setSelectedLevelForAction(activeLevel)}
+          >
+            <span className="text-xs text-[#DFC382] block">{c.brochureRewardCardTitle}</span>
             <div className="flex items-center justify-center gap-2 mt-1">
               {getRewardIcon(activeLevel.badgeIcon)}
               <span className="font-serif text-lg font-bold text-white">
-                {activeLevel.rewardNameHi}
+                {getRewardName(activeLevel)}
               </span>
             </div>
             <span className="text-[11px] text-gray-400 block mt-1">
-              ({activeLevel.rewardNameEn}) • Click to Enquire
+              {c.clickToEnquire}
             </span>
           </div>
         </div>
@@ -255,10 +271,10 @@ export function CommissionRewardsView() {
           <div className="rounded-xl bg-white/5 p-4 border border-white/10 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-300">
-                Next Milestone: Level {nextLevel.levelNumber} ({nextLevel.rankTitleHi} — {nextLevel.rewardNameHi})
+                {c.nextMilestone} {c.level} {nextLevel.levelNumber} ({getRankTitle(nextLevel)} — {getRewardName(nextLevel)})
               </span>
               <span className="text-[#DFC382] font-semibold">
-                Needs {formatLakhCrore(remainingForNext)} more
+                {c.needsMore} {formatLakhCrore(remainingForNext)} {c.more}
               </span>
             </div>
             <div className="h-2 w-full rounded-full bg-gray-800 overflow-hidden">
@@ -276,14 +292,14 @@ export function CommissionRewardsView() {
         <div className="bg-[#0B1734] px-4 py-4 sm:px-6 border-b border-white/10 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-serif text-base font-bold text-white">
-              Official 11-Tier Commission & Rewards Chart
+              {c.officialChartTitle}
             </h3>
             <p className="text-xs text-gray-400">
-              Click on any level to book plots, target that rank, or contact on WhatsApp
+              {c.officialChartSubtitle}
             </p>
           </div>
           <span className="rounded bg-[#C7A35A]/20 px-3 py-1 text-xs font-bold text-[#DFC382]">
-            11 Approved Ranks • Click Any to Book
+            {c.approvedRanksBadge}
           </span>
         </div>
 
@@ -305,27 +321,27 @@ export function CommissionRewardsView() {
                       #{level.levelNumber}
                     </span>
                     <div>
-                      <h4 className="font-bold text-sm text-white">{level.rankTitleHi}</h4>
-                      <p className="text-[10px] text-gray-400">{level.rankTitleEn}</p>
+                      <h4 className="font-bold text-sm text-white">{getRankTitle(level)}</h4>
+                      <p className="text-[10px] text-gray-400">{c.level} {level.levelNumber}</p>
                     </div>
                   </div>
 
                   <span className="rounded-lg bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-400">
-                    {level.commissionPercent}% Commission
+                    {level.commissionPercent}% {c.commission}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs bg-[#0B1734] p-2.5 rounded-xl border border-white/5">
                   <div>
-                    <span className="text-[10px] text-gray-400 block">बिजनेस टारगेट:</span>
+                    <span className="text-[10px] text-gray-400 block">{c.target}:</span>
                     <span className="font-semibold text-gray-200">
                       {formatLakhCrore(level.minBusinessInr)} — {formatLakhCrore(level.maxBusinessInr)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-gray-400 block">रिवार्ड उपहार:</span>
+                    <span className="text-[10px] text-gray-400 block">{c.reward}:</span>
                     <span className="font-bold text-[#DFC382] flex items-center gap-1">
-                      {level.rewardNameHi}
+                      {getRewardName(level)}
                     </span>
                   </div>
                 </div>
@@ -334,7 +350,7 @@ export function CommissionRewardsView() {
                   type="button"
                   className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734] shadow"
                 >
-                  <span>🎯 इस लेवल पर प्लॉट बुक करें / विवरण</span>
+                  <span>⚡ {c.bookAtLevelBtn}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -347,12 +363,12 @@ export function CommissionRewardsView() {
           <table className="w-full text-left text-xs">
             <thead className="border-b border-white/10 bg-[#0B1734]/80 text-[#DFC382] uppercase text-[10px] tracking-wider">
               <tr>
-                <th className="px-4 py-3 text-center">लेवल</th>
-                <th className="px-4 py-3">पद / रैंक (Rank)</th>
-                <th className="px-4 py-3">बिजनेस टारगेट (Target)</th>
-                <th className="px-4 py-3 text-center">कमीशन</th>
-                <th className="px-4 py-3">रिवार्ड उपहार (Reward)</th>
-                <th className="px-4 py-3 text-center">कार्रवाई / एक्शन</th>
+                <th className="px-4 py-3 text-center">{c.level}</th>
+                <th className="px-4 py-3">{c.rank}</th>
+                <th className="px-4 py-3">{c.target}</th>
+                <th className="px-4 py-3 text-center">{c.commission}</th>
+                <th className="px-4 py-3">{c.reward}</th>
+                <th className="px-4 py-3 text-center">{c.actionHeader}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 text-gray-200">
@@ -373,8 +389,7 @@ export function CommissionRewardsView() {
                       <div className="flex items-center gap-2">
                         {getRewardIcon(level.badgeIcon)}
                         <div>
-                          <span className="font-bold text-white block">{level.rankTitleHi}</span>
-                          <span className="text-[11px] text-gray-400">{level.rankTitleEn}</span>
+                          <span className="font-bold text-white block">{getRankTitle(level)}</span>
                         </div>
                       </div>
                     </td>
@@ -387,10 +402,7 @@ export function CommissionRewardsView() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 text-[#DFC382] font-semibold">
                         <Gift className="h-4 w-4 text-[#C7A35A] shrink-0" />
-                        <span>{level.rewardNameHi}</span>
-                        <span className="text-[10px] text-gray-400 font-normal">
-                          ({level.rewardNameEn})
-                        </span>
+                        <span>{getRewardName(level)}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -401,7 +413,7 @@ export function CommissionRewardsView() {
                         }}
                         className="rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3 py-1.5 text-[11px] font-bold text-[#0B1734] shadow hover:brightness-110 active:scale-95 transition"
                       >
-                        🎯 बुक / लक्ष्य चुनें
+                        ⚡ {c.actionHeader}
                       </button>
                     </td>
                   </tr>
@@ -425,14 +437,14 @@ export function CommissionRewardsView() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-serif text-xl font-bold text-white">
-                      Level {selectedLevelForAction.levelNumber}: {selectedLevelForAction.rankTitleHi}
+                      {c.level} {selectedLevelForAction.levelNumber}: {getRankTitle(selectedLevelForAction)}
                     </span>
                     <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400">
-                      {selectedLevelForAction.commissionPercent}% Commission
+                      {selectedLevelForAction.commissionPercent}% {c.commission}
                     </span>
                   </div>
                   <p className="text-xs text-[#DFC382]">
-                    {selectedLevelForAction.rankTitleEn} • Official Brochure Rank
+                    {getRewardName(selectedLevelForAction)} • AKGV Infra City
                   </p>
                 </div>
               </div>
@@ -448,24 +460,23 @@ export function CommissionRewardsView() {
             {/* Level Milestone Overview */}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="rounded-xl bg-[#050A17] p-3 border border-white/10">
-                <span className="text-gray-400 block">Business Target</span>
+                <span className="text-gray-400 block">{c.target}</span>
                 <span className="text-base font-bold text-white block mt-0.5">
                   {formatLakhCrore(selectedLevelForAction.minBusinessInr)} — {formatLakhCrore(selectedLevelForAction.maxBusinessInr)}
                 </span>
               </div>
               <div className="rounded-xl bg-[#050A17] p-3 border border-white/10">
-                <span className="text-gray-400 block">Reward Gift</span>
+                <span className="text-gray-400 block">{c.reward}</span>
                 <span className="text-base font-bold text-[#DFC382] block mt-0.5">
-                  {selectedLevelForAction.rewardNameHi}
+                  {getRewardName(selectedLevelForAction)}
                 </span>
-                <span className="text-[10px] text-gray-400">({selectedLevelForAction.rewardNameEn})</span>
               </div>
             </div>
 
             {/* Direct Booking & Action Options */}
             <div className="space-y-2.5 pt-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">
-                Choose Action for this Level:
+                {language === 'hi' ? 'इस स्तर के लिए विकल्प चुनें:' : language === 'hinglish' ? 'Is level ke liye action choose karein:' : 'Choose Action for this Level:'}
               </span>
 
               {/* Action 1: Book Plots to Qualify */}
@@ -476,7 +487,7 @@ export function CommissionRewardsView() {
               >
                 <div className="flex items-center gap-2">
                   <Layers className="h-4 w-4" />
-                  <span>🏡 इस लेवल के लिए प्लॉट बुक करें (Master Layout Plan)</span>
+                  <span>🏡 {c.modalMasterPlanBtn}</span>
                 </div>
                 <ArrowRight className="h-4 w-4" />
               </Link>
@@ -492,7 +503,7 @@ export function CommissionRewardsView() {
               >
                 <div className="flex items-center gap-2">
                   <MessageCircle className="h-4 w-4" />
-                  <span>💬 WhatsApp पर इस लेवल के लिए सीधा मेसेज भेजें</span>
+                  <span>💬 {c.modalPlotBookingBtn}</span>
                 </div>
                 <ExternalLink className="h-4 w-4" />
               </button>
@@ -505,7 +516,7 @@ export function CommissionRewardsView() {
               >
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-[#DFC382]" />
-                  <span>🚗 फ्री साइट विजिट बुक करें (Schedule Free Site Visit)</span>
+                  <span>🚗 {t.trust.scheduleVisitBtn}</span>
                 </div>
                 <ArrowRight className="h-4 w-4 text-gray-400" />
               </Link>
@@ -518,10 +529,10 @@ export function CommissionRewardsView() {
       <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 text-xs text-gray-300 space-y-3">
         <div className="flex items-center gap-2 text-[#DFC382] font-semibold">
           <ShieldAlert className="h-4 w-4" />
-          <span>Statutory Compliance & Business Policy Clarification</span>
+          <span>{language === 'hi' ? 'वैधानिक अनुपालन एवं कंपनी नीति' : language === 'hinglish' ? 'Statutory Compliance & Policy' : 'Statutory Compliance & Business Policy'}</span>
         </div>
         <p className="leading-relaxed text-gray-400">
-          Commission is payable exclusively on verified, legally executed, and administrative-approved property transactions. Enrollment of new members or joining-kit distribution does NOT qualify for commission. All rewards are subject to applicable taxation (TDS), terms of service, and company fulfilment timelines.
+          {c.offlineKitNotice}
         </p>
       </div>
 
@@ -533,7 +544,7 @@ export function CommissionRewardsView() {
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-[#C7A35A]" />
                 <span className="font-serif text-sm font-bold text-white">
-                  Original Brochure — लेवल - कमीशन एवं रिवार्ड प्लान
+                  {c.viewOriginalBrochureBtn} — {c.title}
                 </span>
               </div>
               <button
