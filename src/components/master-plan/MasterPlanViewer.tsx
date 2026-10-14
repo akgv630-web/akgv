@@ -44,8 +44,8 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const [selectedPlot, setSelectedPlot] = useState<Plot | null>(plots.find(p => p.plotNumber === 'A-04') || plots[0]);
   const [hoveredPlot, setHoveredPlot] = useState<Plot | null>(null);
 
-  // View modes: 'villas' (mini houses), 'cad' (technical engineering), 'landscape' (green satellite)
-  const [viewMode, setViewMode] = useState<'villas' | 'cad' | 'landscape'>('villas');
+  // View modes: 'plots' (residential land plots - default), 'villas' (3D house simulation), 'cad' (technical engineering), 'landscape' (green satellite)
+  const [viewMode, setViewMode] = useState<'plots' | 'villas' | 'cad' | 'landscape'>('plots');
   const [showDimensions, setShowDimensions] = useState(true);
   const [showVehicles, setShowVehicles] = useState(true);
   const [showLandscaping, setShowLandscaping] = useState(true);
@@ -88,7 +88,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
     });
   }, [plots, filterBlock, filterStatus, filterSize, searchQuery]);
 
-  // Layer order: Render selected plot LAST in SVG DOM so that scaled miniature house floats smoothly above neighbors
+  // Layer order: Render selected plot LAST in SVG DOM so that scaled plot floats smoothly above neighbors
   const orderedPlots = useMemo(() => {
     if (!selectedPlot) return filteredPlots;
     const others = filteredPlots.filter((p) => p.id !== selectedPlot.id);
@@ -105,7 +105,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           stroke: '#22C55E',
           text: 'text-emerald-400',
           bg: 'bg-emerald-500/10 border-emerald-500/30',
-          label: language === 'hi' ? 'बुकिंग हेतु उपलब्ध' : language === 'hinglish' ? 'Booking Ke Liye Available' : 'Available for Booking',
+          label: c.statusLabels.available,
         };
       case 'booked_yellow':
         return {
@@ -113,7 +113,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           stroke: '#EAB308',
           text: 'text-amber-400',
           bg: 'bg-amber-500/10 border-amber-500/30',
-          label: language === 'hi' ? 'बुक किया जा चुका है' : language === 'hinglish' ? 'Book Ho Chuka Hai' : 'Confirmed Booked',
+          label: c.statusLabels.booked,
         };
       case 'vacant_red':
       default:
@@ -122,7 +122,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           stroke: '#EF4444',
           text: 'text-red-400',
           bg: 'bg-red-500/10 border-red-500/30',
-          label: language === 'hi' ? 'आरक्षित / रिक्त' : language === 'hinglish' ? 'Reserved / Vacant' : 'Vacant / Reserved',
+          label: c.statusLabels.reserved,
         };
     }
   };
@@ -179,13 +179,13 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const getVastuInfo = (facing: string) => {
     switch (facing) {
       case 'East':
-        return { score: '100% Vastu Approved', note: 'East facing: Promotes health, solar warmth, and financial prosperity.' };
+        return { score: c.vastu.approved100, note: c.vastu.eastNote };
       case 'North':
-        return { score: '100% Vastu Approved', note: 'North facing: Governed by Kuber; ideal for abundance and career growth.' };
+        return { score: c.vastu.approved100, note: c.vastu.northNote };
       case 'South':
-        return { score: 'Vastu Compliant with Portico', note: 'South facing: Elevated entry design recommended; high energy and vitality.' };
+        return { score: c.vastu.approved100, note: c.vastu.southNote };
       default:
-        return { score: 'Vastu Approved', note: 'Balanced energy alignment with wide frontage.' };
+        return { score: c.vastu.approved100, note: c.vastu.generalNote };
     }
   };
 
@@ -200,7 +200,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-[#1EA275] animate-ping" />
               <h2 className="font-serif text-lg font-bold text-white tracking-wide">
-                A.K.G.V. INFRAA CITY VARANASI — COMPLETE MASTER LAYOUT PLAN
+                A.K.G.V. INFRA CITY VARANASI — COMPLETE MASTER LAYOUT PLAN
               </h2>
               <span className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382] uppercase tracking-wider">
                 55 Approved Plots
@@ -219,7 +219,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A] bg-[#0B1734] px-3 py-1.5 text-xs font-semibold text-[#DFC382] shadow-sm transition hover:bg-[#C7A35A] hover:text-[#0B1734]"
             >
               <Eye className="h-3.5 w-3.5" />
-              <span>Original Brochure Photo</span>
+              <span>{c.viewOriginalPhoto}</span>
             </button>
 
             {/* Fullscreen Toggle */}
@@ -228,7 +228,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               className="flex items-center gap-1 rounded-lg border border-white/10 bg-[#0B1734] px-3 py-1.5 text-xs text-gray-300 hover:text-white"
             >
               {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-              <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+              <span>{isFullscreen ? c.exitFullscreen : c.fullscreen}</span>
             </button>
           </div>
         </div>
@@ -237,6 +237,17 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
           {/* View Mode Switcher */}
           <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#0B1734] p-1 text-xs">
+            <button
+              onClick={() => setViewMode('plots')}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
+                viewMode === 'plots'
+                  ? 'bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] text-[#0B1734] shadow-md'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              <span>{c.viewModes.plots}</span>
+            </button>
             <button
               onClick={() => setViewMode('villas')}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-bold transition ${
@@ -388,7 +399,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span>{language === 'hi' ? 'उपलब्ध' : language === 'hinglish' ? 'Available' : 'Available'} ({plots.filter(p => p.status === 'available_green').length})</span>
+              <span>{c.filters.availableOnly} ({plots.filter(p => p.status === 'available_green').length})</span>
             </button>
             <button
               onClick={() => setFilterStatus('booked_yellow')}
@@ -397,7 +408,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span>{language === 'hi' ? 'बुक' : language === 'hinglish' ? 'Booked' : 'Booked'} ({plots.filter(p => p.status === 'booked_yellow').length})</span>
+              <span>{c.filters.bookedOnly} ({plots.filter(p => p.status === 'booked_yellow').length})</span>
             </button>
             <button
               onClick={() => setFilterStatus('vacant_red')}
@@ -406,7 +417,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               }`}
             >
               <span className="h-2 w-2 rounded-full bg-red-400" />
-              <span>{language === 'hi' ? 'आरक्षित' : language === 'hinglish' ? 'Reserved' : 'Reserved'} ({plots.filter(p => p.status === 'vacant_red').length})</span>
+              <span>{c.filters.vacantOnly} ({plots.filter(p => p.status === 'vacant_red').length})</span>
             </button>
           </div>
         </div>
@@ -421,15 +432,11 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             <div className="flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-[#C7A35A] animate-pulse" />
               <span className="font-semibold">
-                {language === 'hi' 
-                  ? '💡 किसी भी प्लॉट पर टैप/क्लिक करें — वह 3D विला डिज़ाइन और विवरण के साथ बड़ा (Enlarge) हो जाएगा।' 
-                  : language === 'hinglish' 
-                  ? '💡 Kisi bhi plot par tap/click karein — woh 3D villa design aur details ke saath bada (Enlarge) ho jayega.' 
-                  : '💡 Tap or click any plot — it will smoothly enlarge with miniature 3D architectural villa details & booking options.'}
+                {c.plotTapInstruction}
               </span>
             </div>
             <span className="text-[10px] text-gray-400 hidden sm:inline">
-              {language === 'hi' ? 'केवल ज़मीन/प्लॉट्स की बिक्री' : language === 'hinglish' ? 'Sirf Plots Ki Bikri' : 'Residential Plots Only'}
+              {c.plotsSalesOnlyNotice}
             </span>
           </div>
 
@@ -445,9 +452,9 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-[#C7A35A] bg-[#0B1734]/95 p-2 shadow-2xl backdrop-blur-md animate-in fade-in duration-150">
               <div className="flex items-center gap-2 px-1">
                 <span className="font-serif text-sm font-bold text-white">Plot {selectedPlot.plotNumber}</span>
-                <span className="text-[11px] text-[#DFC382] font-semibold">{selectedPlot.areaSqft} sqft</span>
+                <span className="text-[11px] text-[#DFC382] font-semibold">{selectedPlot.areaSqft} sqft ({(selectedPlot.areaSqft / 9).toFixed(0)} Gaj)</span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${selectedPlot.status === 'available_green' ? 'bg-emerald-500/20 text-emerald-400' : selectedPlot.status === 'booked_yellow' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {selectedPlot.status === 'available_green' ? '● Available' : selectedPlot.status === 'booked_yellow' ? '● Booked' : '● Reserved'}
+                  {selectedPlot.status === 'available_green' ? `● ${c.statusLabels.available}` : selectedPlot.status === 'booked_yellow' ? `● ${c.statusLabels.booked}` : `● ${c.statusLabels.reserved}`}
                 </span>
               </div>
 
@@ -457,7 +464,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   onClick={() => setBookingModalOpen(true)}
                   className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3 py-1.5 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 active:scale-95 transition"
                 >
-                  <span>⚡ Book Plot #{selectedPlot.plotNumber}</span>
+                  <span>⚡ {c.inspector.holdPlotBtn}</span>
                 </button>
               )}
 
@@ -480,7 +487,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 title="Tap to view enlarged 3D villa elevation & blueprint details"
               >
                 <Maximize2 className="h-3 w-3" />
-                <span>🔍 {language === 'hi' ? '3D विला बड़ा करें' : language === 'hinglish' ? '3D Villa Enlarge Karein' : 'Enlarge 3D Villa'}</span>
+                <span>🔍 {c.spotlightModal.enlargeBtn}</span>
               </button>
             </div>
           )}
@@ -489,15 +496,15 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           <div className="absolute bottom-4 left-4 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-[#0B1734]/95 px-3.5 py-2 text-xs shadow-xl backdrop-blur">
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-[#16A34A]" />
-              <span className="text-gray-300 text-[11px] font-medium">Green: Available</span>
+              <span className="text-gray-300 text-[11px] font-medium">{c.legend.available}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-[#CA8A04]" />
-              <span className="text-gray-300 text-[11px] font-medium">Yellow: Booked</span>
+              <span className="text-gray-300 text-[11px] font-medium">{c.legend.booked}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-[#DC2626]" />
-              <span className="text-gray-300 text-[11px] font-medium">Red: Vacant/Reserved</span>
+              <span className="text-gray-300 text-[11px] font-medium">{c.legend.reserved}</span>
             </div>
           </div>
 
@@ -915,7 +922,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                       className="flex items-center gap-1 rounded-lg bg-[#C7A35A] px-2.5 py-1 text-[11px] font-bold text-[#0B1734] shadow hover:brightness-110"
                     >
                       <Maximize2 className="h-3 w-3" />
-                      <span>{language === 'hi' ? 'बड़ा करें' : language === 'hinglish' ? 'Enlarge' : 'Enlarge'}</span>
+                      <span>{c.inspector.enlargeBtn}</span>
                     </button>
                   </div>
                 </div>
@@ -969,7 +976,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             </div>
           ) : (
             <div className="flex h-64 items-center justify-center rounded-2xl border border-white/10 bg-[#0B1734] p-6 text-center text-gray-400 text-xs">
-              Select any plot on the master plan to inspect dimensions, road width, and suitable 3D house designs.
+              {c.inspector.emptyPrompt}
             </div>
           )}
 
@@ -1033,7 +1040,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               <div className="flex items-center gap-3">
                 <FileText className="h-4 w-4 text-[#C7A35A]" />
                 <span className="font-serif text-sm font-bold text-white">
-                  Original Approved Brochure Photographs — AKGV Infra City
+                  {c.brochureModal.modalTitle}
                 </span>
               </div>
               <button
@@ -1054,7 +1061,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     : 'border-transparent text-gray-400 hover:text-white'
                 }`}
               >
-                Blueprint Layout Plan
+                {c.brochureModal.tabLayout}
               </button>
               <button
                 onClick={() => setActiveBrochureTab('photo')}
@@ -1064,7 +1071,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     : 'border-transparent text-gray-400 hover:text-white'
                 }`}
               >
-                Physical Yellow Brochure Photo
+                {c.brochureModal.tabPhoto}
               </button>
               <button
                 onClick={() => setActiveBrochureTab('rewards')}
@@ -1074,7 +1081,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     : 'border-transparent text-gray-400 hover:text-white'
                 }`}
               >
-                11-Tier Rewards & Commission Plan
+                {c.brochureModal.tabRewards}
               </button>
             </div>
 
@@ -1110,8 +1117,8 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
             </div>
 
             <div className="border-t border-white/10 bg-[#0B1734] px-4 py-2 text-[11px] text-gray-400 flex items-center justify-between">
-              <span>Authentic documents provided by AKGV Infra City Private Limited.</span>
-              <span className="text-[#DFC382]">Scale 1:500 | Area: 77,550 sqft</span>
+              <span>{c.brochureModal.footerNotice}</span>
+              <span className="text-[#DFC382]">{c.brochureModal.scaleArea}</span>
             </div>
           </div>
         </div>
@@ -1127,7 +1134,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                 <Building2 className="h-5 w-5 text-[#C7A35A]" />
                 <div>
                   <h3 className="font-serif text-base font-bold text-white tracking-wide">
-                    Plot #{selectedPlot.plotNumber} — 3D Villa Architectural Elevation Spotlight
+                    Plot #{selectedPlot.plotNumber} — {c.spotlightModal.title}
                   </h3>
                   <span className="text-[11px] text-[#DFC382]">
                     Block {selectedPlot.block} • {selectedPlot.areaSqft} sqft ({(selectedPlot.areaSqft / 9).toFixed(1)} Gaj) • {selectedPlot.dimensions}
@@ -1160,16 +1167,16 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     {suitableHouses[0]?.name || 'Royal Villa 3BHK Duplex'}
                   </span>
                   <span className="rounded-full bg-emerald-950/80 px-2.5 py-1 text-xs font-bold text-emerald-300 border border-emerald-500/40 backdrop-blur">
-                    {selectedPlot.roadFacing} Facing • 100% Vastu Approved
+                    {selectedPlot.roadFacing} Facing • {c.vastu.approved100}
                   </span>
                 </div>
 
                 <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
                   <span className="font-semibold bg-[#0B1734]/90 px-2.5 py-1 rounded-lg backdrop-blur border border-white/10">
-                    Road Frontage: {selectedPlot.roadWidth}
+                    {c.inspector.roadFrontage}: {selectedPlot.roadWidth}
                   </span>
                   <span className="font-bold text-[#DFC382] bg-[#0B1734]/90 px-2.5 py-1 rounded-lg backdrop-blur border border-[#C7A35A]/40">
-                    Plot Value: ₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)} Lakh
+                    {c.spotlightModal.plotValue}: ₹{((selectedPlot.basePriceInr || 1200000) / 100000).toFixed(2)} Lakh
                   </span>
                 </div>
               </div>
@@ -1177,37 +1184,33 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
               {/* Technical Specifications Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                 <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">Plot Dimensions</span>
+                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.plotDimensions}</span>
                   <div className="font-bold text-white text-sm">{selectedPlot.dimensions}</div>
-                  <span className="text-[10px] text-gray-400">Length x Width</span>
+                  <span className="text-[10px] text-gray-400">{c.spotlightModal.lengthWidth}</span>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">Total Area</span>
+                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.totalArea}</span>
                   <div className="font-bold text-[#DFC382] text-sm">{selectedPlot.areaSqft} sqft</div>
-                  <span className="text-[10px] text-[#DFC382]">{(selectedPlot.areaSqft / 9).toFixed(1)} Square Yards</span>
+                  <span className="text-[10px] text-[#DFC382]">{(selectedPlot.areaSqft / 9).toFixed(1)} {c.spotlightModal.squareYards}</span>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">Proposed Boulevard</span>
+                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.proposedBoulevard}</span>
                   <div className="font-bold text-white text-sm">{selectedPlot.roadWidth}</div>
-                  <span className="text-[10px] text-gray-400">Drainage & Lights</span>
+                  <span className="text-[10px] text-gray-400">{c.spotlightModal.drainageLights}</span>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-[#0B1734] p-3 space-y-0.5">
-                  <span className="text-gray-400 text-[11px]">Booking Status</span>
+                  <span className="text-gray-400 text-[11px]">{c.spotlightModal.bookingStatus}</span>
                   <div className={`font-bold text-sm ${selectedPlot.status === 'available_green' ? 'text-emerald-400' : selectedPlot.status === 'booked_yellow' ? 'text-amber-400' : 'text-red-400'}`}>
-                    {selectedPlot.status === 'available_green' ? '● Available' : selectedPlot.status === 'booked_yellow' ? '● Booked' : '● Reserved'}
+                    {selectedPlot.status === 'available_green' ? `● ${c.statusLabels.available}` : selectedPlot.status === 'booked_yellow' ? `● ${c.statusLabels.booked}` : `● ${c.statusLabels.reserved}`}
                   </div>
-                  <span className="text-[10px] text-gray-400">Immediate Registry</span>
+                  <span className="text-[10px] text-gray-400">{c.spotlightModal.immediateRegistry}</span>
                 </div>
               </div>
 
               {/* Notice & Disclaimer */}
               <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] text-amber-200/90 leading-relaxed">
-                <span className="font-bold text-[#DFC382]">⚠️ {language === 'hi' ? 'महत्वपूर्ण सूचना:' : language === 'hinglish' ? 'Important Notice:' : 'Important Notice:'}</span>{' '}
-                {language === 'hi'
-                  ? 'एकेजीवी इन्फ्रा सिटी केवल स्वीकृत आवासीय प्लॉट्स (ज़मीन) की बिक्री करती है। ऊपर दिखाया गया 3D विला आपकी भावी निर्माण योजना एवं वास्तु अनुकूलन को समझने हेतु एक वास्तुशिल्प सिमुलेशन (Sample Architectural Elevation) है।'
-                  : language === 'hinglish'
-                  ? 'AKGV Infra City strictly approved residential plots (zameen) sell karti hai. Upar dikhaya gaya 3D villa aapke future home construction aur Vastu fit ko samajhne ke liye ek architectural sample simulation hai.'
-                  : 'AKGV Infra City Private Limited exclusively develops and sells approved residential plots with full infrastructure. The 3D villa shown above is a sample architectural elevation provided for future construction reference and visualization.'}
+                <span className="font-bold text-[#DFC382]">⚠️ {c.spotlightModal.importantNoticeTitle}</span>{' '}
+                {c.spotlightModal.importantNoticeText}
               </div>
 
               {/* Action Buttons */}
@@ -1220,7 +1223,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                     }}
                     className="flex-1 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-xs font-bold text-[#0B1734] shadow-lg transition hover:brightness-110 active:scale-[0.98]"
                   >
-                    ⚡ Hold Plot #{selectedPlot.plotNumber} (72h Token Hold)
+                    ⚡ {c.spotlightModal.holdBtn} #{selectedPlot.plotNumber}
                   </button>
                 )}
 
@@ -1232,14 +1235,14 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
                   }}
                   className="flex items-center justify-center gap-1.5 rounded-xl bg-[#25D366] px-4 py-3 text-xs font-bold text-white shadow hover:bg-emerald-600 transition"
                 >
-                  <span>💬 WhatsApp Inquiry</span>
+                  <span>💬 {c.spotlightModal.whatsAppBtn}</span>
                 </button>
 
                 <Link
                   href="/house-viewer-3d"
                   className="rounded-xl border border-[#C7A35A] bg-[#0B1734] px-4 py-3 text-xs font-bold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition text-center"
                 >
-                  🕶️ 360° 3D Orbit Viewer
+                  🕶️ {c.spotlightModal.orbitViewerBtn}
                 </Link>
               </div>
             </div>
