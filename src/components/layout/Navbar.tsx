@@ -128,11 +128,11 @@ export function Navbar() {
             </div>
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-serif text-lg font-bold tracking-wider text-white">AKGV</span>
-              <span className="text-sm font-semibold tracking-wider text-[#C7A35A]">INFRA CITY</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className="font-serif text-base sm:text-lg font-bold tracking-wider text-white">AKGV</span>
+              <span className="text-xs sm:text-sm font-semibold tracking-wider text-[#C7A35A]">INFRA CITY</span>
             </div>
-            <p className="text-[10px] text-gray-400 tracking-wider">PRIVATE LIMITED</p>
+            <p className="text-[9px] sm:text-[10px] text-gray-400 tracking-wider hidden xs:block">PRIVATE LIMITED</p>
           </div>
         </Link>
 
@@ -217,25 +217,27 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile Hamburger Button */}
-        <div className="flex items-center gap-2 lg:hidden">
+        {/* Mobile Action Buttons */}
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
           <button
             onClick={() => setAuthModalOpen(true)}
-            className="rounded-lg border border-[#C7A35A]/50 bg-white/5 px-2 py-1.5 text-xs font-semibold text-[#DFC382]"
+            className="flex items-center gap-1 rounded-lg border border-[#C7A35A]/50 bg-white/5 px-2 py-1 text-xs font-semibold text-[#DFC382]"
           >
-            {language === 'hi' ? 'लॉगिन' : 'Sign In'}
+            <Lock className="h-3 w-3 text-[#C7A35A]" />
+            <span>{language === 'hi' ? 'लॉगिन' : 'Sign In'}</span>
           </button>
           <Link
             href={getDashboardPath(currentUser.role)}
-            className="rounded-lg bg-[#C7A35A] px-2.5 py-1.5 text-xs font-bold text-[#0B1734]"
+            className="hidden sm:flex rounded-lg bg-[#C7A35A] px-2.5 py-1 text-xs font-bold text-[#0B1734]"
           >
             {language === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="rounded-lg border border-white/10 p-2 text-gray-300 hover:text-white"
+            className="rounded-lg border border-white/10 p-1.5 text-gray-300 hover:text-white"
+            aria-label="Toggle Navigation Menu"
           >
-            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>

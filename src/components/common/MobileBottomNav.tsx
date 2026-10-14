@@ -7,7 +7,7 @@ import {
   Home,
   Layers,
   MapPin,
-  Calculator,
+  Calendar,
   User
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
@@ -28,7 +28,7 @@ export function MobileBottomNav() {
     { href: '/', label: c.home, icon: Home },
     { href: '/master-plan', label: c.plots, icon: Layers },
     { href: '/projects', label: c.projects, icon: MapPin },
-    { href: '/#loan-calculator', label: c.emiCalc, icon: Calculator },
+    { href: '/site-visit', label: c.siteVisit || 'Site Visit', icon: Calendar },
     { href: getDashboardPath(currentUser.role), label: c.portal, icon: User },
   ];
 

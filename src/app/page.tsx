@@ -28,7 +28,6 @@ import { MasterPlanViewer } from '@/components/master-plan/MasterPlanViewer';
 import { CommissionRewardsView } from '@/components/rewards/CommissionRewardsView';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { TrustAndLegalSection } from '@/components/home/TrustAndLegalSection';
-import { LoanEmiCalculator } from '@/components/calculator/LoanEmiCalculator';
 
 export default function HomePage() {
   const { t, language } = useApp();
@@ -37,72 +36,72 @@ export default function HomePage() {
   const faqs = t.faqs;
 
   return (
-    <div className="flex flex-col gap-16 pb-20">
+    <div className="flex flex-col gap-8 sm:gap-14 lg:gap-16 pb-16">
       {/* 1. HERO SECTION - 100% PLOTTED TOWNSHIP FOCUS */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden border-b border-[#C7A35A]/30 bg-gradient-to-b from-[#050A17] via-[#0B1734] to-[#050A17] px-4 py-20">
+      <section className="relative min-h-0 sm:min-h-[70vh] flex items-center justify-center overflow-hidden border-b border-[#C7A35A]/30 bg-gradient-to-b from-[#050A17] via-[#0B1734] to-[#050A17] px-3 sm:px-4 py-8 sm:py-14 lg:py-20">
         {/* Subtle Luxury Architectural Backdrop */}
         <div className="absolute inset-0 z-0 opacity-20">
           <div className="absolute inset-0 bg-[radial-gradient(#C7A35A_1px,transparent_1px)] [background-size:24px_24px]" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-5xl text-center space-y-6">
+        <div className="relative z-10 mx-auto max-w-5xl text-center space-y-3.5 sm:space-y-6">
           {/* Top Badge */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#C7A35A]/50 bg-[#0B1734]/90 px-4 py-1.5 text-xs font-semibold text-[#DFC382] shadow-lg backdrop-blur">
-            <Sparkles className="h-4 w-4 text-[#C7A35A]" />
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#C7A35A]/50 bg-[#0B1734]/90 px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-[#DFC382] shadow-lg backdrop-blur">
+            <Sparkles className="h-3.5 w-3.5 text-[#C7A35A]" />
             <span>{t.hero.badge}</span>
           </div>
 
           {/* Main Headline */}
-          <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-            {t.hero.title} <br />
-            <span className="gold-gradient-text">{t.hero.titleHighlight}</span>
+          <h1 className="font-serif text-xl sm:text-3xl md:text-5xl font-extrabold tracking-tight text-white leading-snug sm:leading-tight">
+            {t.hero.title} <br className="hidden sm:inline" />
+            <span className="gold-gradient-text block sm:inline mt-1 sm:mt-0">{t.hero.titleHighlight}</span>
           </h1>
 
           {/* Subtitle */}
-          <p className="mx-auto max-w-2xl text-sm sm:text-base text-gray-300 leading-relaxed">
+          <p className="mx-auto max-w-2xl text-xs sm:text-sm md:text-base text-gray-300 leading-relaxed px-1 sm:px-0">
             {t.hero.subtitle}
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+          <div className="grid grid-cols-2 gap-2.5 w-full max-w-md mx-auto sm:max-w-none sm:flex sm:flex-wrap sm:justify-center sm:gap-3.5 pt-2 sm:pt-4">
             <Link
               href="#master-plan"
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-3.5 text-sm font-bold text-[#0B1734] shadow-xl hover:brightness-110 transition active:scale-95"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-3.5 py-2.5 sm:px-6 sm:py-3.5 text-xs sm:text-sm font-bold text-[#0B1734] shadow-xl hover:brightness-110 transition active:scale-95"
             >
-              <Layers className="h-4 w-4" />
+              <Layers className="h-4 w-4 shrink-0" />
               <span>{t.hero.explorePlots}</span>
             </Link>
 
             <Link
-              href="#locations"
-              className="flex items-center gap-2 rounded-xl border border-[#C7A35A]/50 bg-[#0B1734]/80 px-6 py-3.5 text-sm font-semibold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
+              href="/site-visit"
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 sm:px-6 sm:py-3.5 text-xs sm:text-sm font-semibold text-white hover:bg-white/10 transition"
             >
-              <MapPin className="h-4 w-4" />
-              <span>{t.hero.townshipLocations}</span>
+              <Calendar className="h-4 w-4 text-[#1EA275] shrink-0" />
+              <span>{t.hero.bookVisit}</span>
             </Link>
 
             <Link
-              href="/site-visit"
-              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white hover:bg-white/10 transition"
+              href="#locations"
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-[#C7A35A]/50 bg-[#0B1734]/80 px-3.5 py-2.5 sm:px-6 sm:py-3.5 text-xs sm:text-sm font-semibold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
             >
-              <Calendar className="h-4 w-4 text-[#1EA275]" />
-              <span>{t.hero.bookVisit}</span>
+              <MapPin className="h-4 w-4 shrink-0" />
+              <span>{t.hero.townshipLocations}</span>
             </Link>
 
             <a
               href="https://wa.me/916306917991?text=Namaste%20AKGV%20Infra%20City!%20I%20am%20interested%20in%20purchasing%20a%20residential%20plot%20in%20Varanasi.%20Please%20share%20details."
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-3.5 text-sm font-bold text-white shadow-xl hover:bg-emerald-600 transition active:scale-95"
+              className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 sm:px-5 sm:py-3.5 text-xs sm:text-sm font-bold text-white shadow-xl hover:bg-emerald-600 transition active:scale-95"
             >
               <span>💬 {t.hero.whatsappDesk} (6306917991)</span>
             </a>
           </div>
 
           {/* Direct Phone Assistance Bar */}
-          <div className="pt-6">
-            <div className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-[#050A17]/80 px-5 py-2.5 text-xs text-gray-300 shadow">
-              <PhoneCall className="h-4 w-4 text-[#C7A35A]" />
+          <div className="pt-1 sm:pt-4">
+            <div className="inline-flex items-center gap-2 sm:gap-3 rounded-2xl border border-white/10 bg-[#050A17]/80 px-3.5 py-1.5 sm:px-5 sm:py-2 text-[11px] sm:text-xs text-gray-300 shadow">
+              <PhoneCall className="h-3.5 w-3.5 text-[#C7A35A]" />
               <span>{t.hero.directDesk}</span>
               <a href={`tel:${COMPANY_DETAILS.phone}`} className="font-bold text-[#DFC382] hover:underline">
                 {COMPANY_DETAILS.displayPhone}
@@ -312,12 +311,7 @@ export default function HomePage() {
         <CommissionRewardsView />
       </section>
 
-      {/* 7. BANK LOAN, EMI & STAMP DUTY ESTIMATOR */}
-      <section id="loan-calculator" className="mx-auto max-w-7xl px-4 sm:px-6">
-        <LoanEmiCalculator />
-      </section>
-
-      {/* 8. OFFLINE JOINING KIT LEDGER SECTION */}
+      {/* 7. OFFLINE JOINING KIT LEDGER SECTION */}
       <section id="joining-kit" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">

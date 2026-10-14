@@ -497,6 +497,7 @@ export const DICTIONARY = {
       "home": "Home",
       "plots": "Plots",
       "projects": "Locations",
+      "siteVisit": "Site Visit",
       "emiCalc": "EMI Calc",
       "portal": "Dashboard"
     },
@@ -1029,6 +1030,7 @@ export const DICTIONARY = {
       "home": "होम",
       "plots": "प्लॉट्स",
       "projects": "लोकेशन्स",
+      "siteVisit": "साइट विजिट",
       "emiCalc": "ईएमआई",
       "portal": "डैशबोर्ड"
     },
@@ -1561,6 +1563,7 @@ export const DICTIONARY = {
       "home": "Home",
       "plots": "Plots",
       "projects": "Locations",
+      "siteVisit": "Site Visit",
       "emiCalc": "EMI Calc",
       "portal": "Dashboard"
     },
