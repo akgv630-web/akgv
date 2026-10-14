@@ -26,7 +26,7 @@ import { FieldGpsCameraCapture } from '@/components/gps-camera/FieldGpsCameraCap
 import { AssociateIdCard } from '@/components/member/AssociateIdCard';
 
 export function MemberPortalPage() {
-  const { currentUser, kitIssues, language } = useApp();
+  const { currentUser, kitIssues, language, allProfiles } = useApp();
   const [activeTab, setActiveTab] = useState<'id_card' | 'hierarchy' | 'commission' | 'rewards' | 'field_gps'>('id_card');
 
   // Member Business Volume (Simulated/Calculated)
@@ -34,8 +34,13 @@ export function MemberPortalPage() {
   const currentLevel = calculateMemberLevel(memberBusinessVolumeInr);
   const myKitRecord = kitIssues.find((k) => k.memberId === currentUser.memberId);
 
-  // Downline team members
-  const downlineMembers = DEMO_PROFILES.filter((p) => p.sponsorId === currentUser.id);
+  // Downline team members (filtered from dynamic allProfiles)
+  const downlineMembers = allProfiles.filter(
+    (p) =>
+      p.sponsorId === currentUser.id ||
+      p.sponsorId === currentUser.memberId ||
+      (currentUser.memberId === 'AKGV-3498' && (p.sponsorId === 'usr-sponsor-01' || p.sponsorId === 'AKGV-3498'))
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
@@ -191,26 +196,71 @@ export function MemberPortalPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-serif text-base font-bold text-white">Your Authorized Downline Team</h2>
-            <span className="text-xs text-gray-400">Directly Reporting Members</span>
+            <span className="text-xs text-gray-400">Directly Reporting Members ({downlineMembers.length})</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {downlineMembers.map((member) => (
-              <div key={member.id} className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="font-bold text-white text-sm">{member.fullName}</div>
-                  <span className="rounded-full bg-[#C7A35A]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#DFC382]">
-                    {member.role}
-                  </span>
-                </div>
-                <div className="text-gray-400 space-y-1">
-                  <div>Member ID: <strong className="font-mono text-white">{member.memberId}</strong></div>
-                  <div>Phone: {member.phone}</div>
-                  <div>KYC: <strong className="text-emerald-400">Verified</strong></div>
-                </div>
+          {/* Invitation Banner with Sponsor Code */}
+          <div className="rounded-2xl border border-[#C7A35A]/40 bg-[#0B1734] p-5 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <span className="text-xs text-gray-400 block">Your Official Sponsor Code:</span>
+                <span className="font-mono text-xl font-bold text-[#DFC382] tracking-wider">
+                  {currentUser.memberId || 'AKGV-3498'}
+                </span>
               </div>
-            ))}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const code = currentUser.memberId || 'AKGV-3498';
+                    navigator.clipboard.writeText(code);
+                    alert(`Copied Sponsor Code: ${code}`);
+                  }}
+                  className="rounded-xl bg-[#C7A35A] px-3.5 py-2 font-bold text-[#0B1734] text-xs hover:brightness-110 transition"
+                >
+                  Copy Sponsor Code
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(
+                    `Namaste! Join my team at AKGV Infra City Private Limited. Use my Sponsor ID: ${currentUser.memberId || 'AKGV-3498'} when registering.`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl bg-[#25D366] px-3.5 py-2 font-bold text-white text-xs hover:bg-emerald-600 transition flex items-center gap-1.5"
+                >
+                  Share via WhatsApp
+                </a>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-300">
+              When new field associates or buyers register using your code, they will automatically appear in your team network below.
+            </p>
           </div>
+
+          {downlineMembers.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-[#050A17] p-8 text-center text-xs text-gray-400 space-y-2">
+              <Users className="h-8 w-8 text-gray-500 mx-auto" />
+              <p className="text-white font-semibold">No direct downlines enrolled yet.</p>
+              <p>Share your Sponsor Code above to enroll your first field associates under your hierarchy.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {downlineMembers.map((member) => (
+                <div key={member.id} className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-white text-sm">{member.fullName}</div>
+                    <span className="rounded-full bg-[#C7A35A]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#DFC382]">
+                      {member.role}
+                    </span>
+                  </div>
+                  <div className="text-gray-400 space-y-1">
+                    <div>Member ID: <strong className="font-mono text-white">{member.memberId}</strong></div>
+                    <div>Phone: {member.phone}</div>
+                    <div>KYC: <strong className="text-emerald-400">Verified</strong></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

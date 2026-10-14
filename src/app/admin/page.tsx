@@ -27,7 +27,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { Plot, PlotStatus } from '@/types';
+import { Plot, PlotStatus, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 
 export default function SuperAdminPage() {
@@ -44,12 +44,22 @@ export default function SuperAdminPage() {
     replyToTicket,
     allProfiles,
     currentUser,
+    createSponsorMember,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'plots' | 'payments' | 'bookings' | 'kits' | 'support'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'plots' | 'payments' | 'bookings' | 'kits' | 'support'>('overview');
   const [plotFilterBlock, setPlotFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [plotFilterStatus, setPlotFilterStatus] = useState<'ALL' | PlotStatus>('ALL');
   const [paymentActionNotice, setPaymentActionNotice] = useState<string | null>(null);
+
+  // New Sponsor / Associate Creation Form
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberPhone, setNewMemberPhone] = useState('');
+  const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberRole, setNewMemberRole] = useState<UserRole>('senior_member');
+  const [newMemberSponsorId, setNewMemberSponsorId] = useState('AKGV-3498');
+  const [createdSponsorFeedback, setCreatedSponsorFeedback] = useState<{ code: string; name: string } | null>(null);
+  const [memberRoleFilter, setMemberRoleFilter] = useState<'ALL' | UserRole>('ALL');
 
   // Database-Derived Metrics
   const totalPlots = plots.length;
@@ -111,6 +121,18 @@ export default function SuperAdminPage() {
         >
           <TrendingUp className="h-4 w-4" />
           <span>Metrics Overview</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('members')}
+          className={`flex items-center gap-2 border-b-2 px-5 py-3 transition ${
+            activeTab === 'members'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          <span>Members & Sponsors ({allProfiles.length})</span>
         </button>
 
         <button
@@ -248,6 +270,255 @@ export default function SuperAdminPage() {
                 Customer inquiries regarding registry documentation, site appointments, and plots.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Members & Sponsor Code Generator */}
+      {activeTab === 'members' && (
+        <div className="space-y-6">
+          {/* Header & Notice */}
+          <div className="rounded-2xl border border-[#C7A35A]/40 bg-[#0B1734] p-5 space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+                <Users className="h-5 w-5 text-[#C7A35A]" />
+                Associate & Sponsor Code Administration
+              </h2>
+              <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-400 border border-emerald-500/30">
+                Live Downline Architecture
+              </span>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed">
+              Super Admin and Sub-Admins create unique member codes (such as <strong className="text-[#DFC382]">AKGV-3498</strong>). Field partners use these codes during public registration to connect under their authorized team leader.
+            </p>
+          </div>
+
+          {/* Creation Form: Generate New Sponsor Code */}
+          <div className="rounded-2xl border border-white/10 bg-[#050A17] p-6 space-y-4 shadow-xl">
+            <h3 className="font-serif text-sm font-bold text-[#DFC382] uppercase tracking-wider flex items-center gap-2">
+              <Plus className="h-4 w-4 text-[#C7A35A]" />
+              Generate New Sponsor Code & Enroll Associate
+            </h3>
+
+            {createdSponsorFeedback && (
+              <div className="rounded-xl border border-emerald-500/50 bg-emerald-950/30 p-4 space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Sponsor Code Generated Successfully!</span>
+                </div>
+                <p className="text-gray-200">
+                  Member <strong>{createdSponsorFeedback.name}</strong> has been enrolled with Unique Sponsor ID:{' '}
+                  <span className="font-mono text-base font-bold text-[#DFC382] bg-black/40 px-2 py-0.5 rounded border border-[#C7A35A]/40">
+                    {createdSponsorFeedback.code}
+                  </span>
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdSponsorFeedback.code);
+                      alert(`Copied Sponsor Code: ${createdSponsorFeedback.code}`);
+                    }}
+                    className="rounded-lg bg-[#C7A35A] px-3 py-1 font-bold text-[#0B1734] text-[11px]"
+                  >
+                    Copy Sponsor Code
+                  </button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `Namaste! Your official AKGV Infra City Sponsor ID is ${createdSponsorFeedback.code}. Use this to register on the platform.`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg bg-[#25D366] px-3 py-1 font-bold text-white text-[11px] flex items-center gap-1"
+                  >
+                    Share via WhatsApp
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newMemberName.trim() || !newMemberPhone.trim()) {
+                  alert('Please enter member name and phone number.');
+                  return;
+                }
+                const profile = createSponsorMember({
+                  fullName: newMemberName.trim(),
+                  phone: newMemberPhone.trim(),
+                  email: newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`,
+                  role: newMemberRole,
+                  sponsorId: newMemberSponsorId,
+                });
+                setCreatedSponsorFeedback({
+                  code: profile.memberId || 'AKGV-NEW',
+                  name: profile.fullName,
+                });
+                setNewMemberName('');
+                setNewMemberPhone('');
+                setNewMemberEmail('');
+              }}
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 text-xs"
+            >
+              <div>
+                <label className="block text-gray-400 mb-1 font-medium">Associate Full Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ramesh Patel"
+                  value={newMemberName}
+                  onChange={(e) => setNewMemberName(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 mb-1 font-medium">Mobile Number</label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 9839XXXXXX"
+                  value={newMemberPhone}
+                  onChange={(e) => setNewMemberPhone(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 mb-1 font-medium">Role Assignment</label>
+                <select
+                  value={newMemberRole}
+                  onChange={(e) => setNewMemberRole(e.target.value as UserRole)}
+                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white focus:border-[#C7A35A] focus:outline-none"
+                >
+                  <option value="sub_admin">Sub-Admin (Area Coordinator)</option>
+                  <option value="senior_member">Senior Manager / Sponsor</option>
+                  <option value="junior_member">Field Associate / Partner</option>
+                  <option value="buyer">Client / Plot Buyer</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-400 mb-1 font-medium">Reporting Sponsor</label>
+                <select
+                  value={newMemberSponsorId}
+                  onChange={(e) => setNewMemberSponsorId(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white focus:border-[#C7A35A] focus:outline-none"
+                >
+                  <option value="AKGV-HQ-001">Super Admin (AKGV-HQ-001)</option>
+                  <option value="AKGV-3498">Vikram Singh (AKGV-3498)</option>
+                  <option value="AKGV-SUB-101">Suresh Yadav Sub-Admin (AKGV-SUB-101)</option>
+                  {allProfiles
+                    .filter((p) => p.role === 'senior_member' && p.memberId !== 'AKGV-3498')
+                    .map((p) => (
+                      <option key={p.id} value={p.memberId || p.id}>
+                        {p.fullName} ({p.memberId})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
+                >
+                  Generate Code & Save
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B1734] p-4 rounded-2xl border border-white/10 text-xs">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-[#C7A35A]" />
+              <span className="text-gray-300 font-semibold">Filter Members by Role:</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(['ALL', 'sub_admin', 'senior_member', 'junior_member', 'buyer'] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setMemberRoleFilter(r)}
+                  className={`rounded-lg px-3 py-1 font-semibold transition ${
+                    memberRoleFilter === r
+                      ? 'bg-[#C7A35A] text-[#0B1734]'
+                      : 'bg-[#050A17] text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {r === 'ALL'
+                    ? `All (${allProfiles.length})`
+                    : r === 'sub_admin'
+                    ? 'Sub-Admin'
+                    : r === 'senior_member'
+                    ? 'Senior Sponsors'
+                    : r === 'junior_member'
+                    ? 'Field Associates'
+                    : 'Buyers'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Members Roster Grid */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {allProfiles
+              .filter((p) => (memberRoleFilter === 'ALL' ? true : p.role === memberRoleFilter))
+              .map((profile) => {
+                const directDownlines = allProfiles.filter(
+                  (child) => child.sponsorId === profile.id || child.sponsorId === profile.memberId
+                );
+                return (
+                  <div
+                    key={profile.id}
+                    className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-3 text-xs shadow-md"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-bold text-white text-sm">{profile.fullName}</h4>
+                        <span className="text-gray-400 text-[11px]">{profile.phone}</span>
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
+                          profile.role === 'super_admin'
+                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                            : profile.role === 'sub_admin'
+                            ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                            : profile.role === 'senior_member'
+                            ? 'bg-[#C7A35A]/20 text-[#DFC382] border-[#C7A35A]/30'
+                            : profile.role === 'buyer'
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                            : 'bg-white/10 text-gray-300 border-white/20'
+                        }`}
+                      >
+                        {profile.role.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl bg-[#050A17] p-3 space-y-1.5 border border-white/5 font-mono text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Sponsor / Member Code:</span>
+                        <strong className="text-[#DFC382]">{profile.memberId || 'N/A'}</strong>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Reporting Sponsor:</span>
+                        <span className="text-white">{profile.sponsorId || 'Company HQ'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400">Direct Downlines:</span>
+                        <strong className="text-emerald-400 font-bold">{directDownlines.length} Members</strong>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-gray-400 border-t border-white/5 pt-2">
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <CheckCircle2 className="h-3 w-3" /> KYC Verified
+                      </span>
+                      <span>Joined {profile.createdAt.slice(0, 10)}</span>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}

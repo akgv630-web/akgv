@@ -123,6 +123,21 @@ export function Footer() {
             </h3>
             <ul className="mt-4 space-y-2 text-xs">
               <li>
+                <Link href="/about" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'हमारे बारे में' : 'About Us'}
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'संपर्क करें' : 'Contact Us'}
+                </Link>
+              </li>
+              <li>
+                <Link href="/faq" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'अक्सर पूछे जाने वाले प्रश्न (FAQ)' : 'FAQs'}
+                </Link>
+              </li>
+              <li>
                 <Link href="/privacy-policy" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-gray-400" /> {c.privacyPolicy}
                 </Link>

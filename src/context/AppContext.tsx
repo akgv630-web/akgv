@@ -52,6 +52,9 @@ interface AppContextType {
   replyToTicket: (ticketId: string, message: string, isInternalNote?: boolean) => void;
   selectedPlotForViewer: Plot | null;
   setSelectedPlotForViewer: (plot: Plot | null) => void;
+  registerMember: (data: { fullName: string; email: string; phone: string; role?: UserRole; sponsorId?: string }) => Profile;
+  loginUser: (identifier: string) => Profile | null;
+  createSponsorMember: (data: { fullName: string; email: string; phone: string; role: UserRole; sponsorId: string }) => Profile;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -77,6 +80,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const savedLang = localStorage.getItem(`${STORAGE_KEY_PREFIX}lang`) as Language;
       if (savedLang && (savedLang === 'en' || savedLang === 'hi' || savedLang === 'hinglish')) {
         setLanguageState(savedLang);
+      }
+      const savedProfiles = localStorage.getItem(`${STORAGE_KEY_PREFIX}profiles`);
+      if (savedProfiles) {
+        try {
+          const parsed = JSON.parse(savedProfiles);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAllProfiles(parsed);
+          }
+        } catch {
+          // Ignore
+        }
       }
       const savedRole = localStorage.getItem(`${STORAGE_KEY_PREFIX}role`) as UserRole;
       if (savedRole) {
@@ -115,6 +129,96 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Ignore
       }
     }
+  };
+
+  const registerMember = (data: {
+    fullName: string;
+    email: string;
+    phone: string;
+    role?: UserRole;
+    sponsorId?: string;
+  }): Profile => {
+    const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newProfile: Profile = {
+      id: `usr-${Date.now()}`,
+      email: data.email,
+      fullName: data.fullName,
+      phone: data.phone,
+      role: data.role || 'junior_member',
+      memberId: newMemberId,
+      sponsorId: data.sponsorId,
+      kycStatus: 'verified',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    setAllProfiles((prev) => {
+      const next = [...prev, newProfile];
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+    setCurrentUser(newProfile);
+    try {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}role`, newProfile.role);
+    } catch {
+      // Ignore
+    }
+    return newProfile;
+  };
+
+  const loginUser = (identifier: string): Profile | null => {
+    const trimmed = identifier.trim().toLowerCase();
+    const found = allProfiles.find(
+      (p) =>
+        p.email.toLowerCase() === trimmed ||
+        p.phone === trimmed ||
+        (p.memberId && p.memberId.toLowerCase() === trimmed)
+    );
+    if (found) {
+      setCurrentUser(found);
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}role`, found.role);
+      } catch {
+        // Ignore
+      }
+      return found;
+    }
+    return null;
+  };
+
+  const createSponsorMember = (data: {
+    fullName: string;
+    email: string;
+    phone: string;
+    role: UserRole;
+    sponsorId: string;
+  }): Profile => {
+    const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newProfile: Profile = {
+      id: `usr-${Date.now()}`,
+      email: data.email,
+      fullName: data.fullName,
+      phone: data.phone,
+      role: data.role,
+      memberId: newMemberId,
+      sponsorId: data.sponsorId,
+      kycStatus: 'verified',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+    setAllProfiles((prev) => {
+      const next = [...prev, newProfile];
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
+      } catch {
+        // Ignore
+      }
+      return next;
+    });
+    return newProfile;
   };
 
   const updatePlotStatus = (plotId: string, newStatus: PlotStatus, _reason: string) => {
@@ -400,6 +504,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         replyToTicket,
         selectedPlotForViewer,
         setSelectedPlotForViewer,
+        registerMember,
+        loginUser,
+        createSponsorMember,
       }}
     >
       {children}

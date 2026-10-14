@@ -9,6 +9,7 @@ import {
   Globe,
   Home,
   Layers,
+  Lock,
   MapPin,
   Menu,
   PhoneCall,
@@ -20,6 +21,7 @@ import {
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { UserRole } from '@/types';
+import { AuthModal } from '@/components/auth/AuthModal';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -27,6 +29,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const navLinks = [
     { href: '/', label: t.nav.home, icon: Home },
@@ -195,6 +198,15 @@ export function Navbar() {
             )}
           </div>
 
+          {/* Sign In / Register Modal Trigger */}
+          <button
+            onClick={() => setAuthModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A]/50 bg-white/5 px-3 py-2 text-xs font-semibold text-[#DFC382] hover:bg-white/10 hover:border-[#C7A35A] transition active:scale-95"
+          >
+            <Lock className="h-3.5 w-3.5 text-[#C7A35A]" />
+            <span>{language === 'hi' ? 'लॉगिन / कोड' : language === 'hinglish' ? 'Login / Register' : 'Sign In / Register'}</span>
+          </button>
+
           {/* Go To Portal Button */}
           <Link
             href={getDashboardPath(currentUser.role)}
@@ -207,6 +219,12 @@ export function Navbar() {
 
         {/* Mobile Hamburger Button */}
         <div className="flex items-center gap-2 lg:hidden">
+          <button
+            onClick={() => setAuthModalOpen(true)}
+            className="rounded-lg border border-[#C7A35A]/50 bg-white/5 px-2 py-1.5 text-xs font-semibold text-[#DFC382]"
+          >
+            {language === 'hi' ? 'लॉगिन' : 'Sign In'}
+          </button>
           <Link
             href={getDashboardPath(currentUser.role)}
             className="rounded-lg bg-[#C7A35A] px-2.5 py-1.5 text-xs font-bold text-[#0B1734]"
@@ -241,6 +259,19 @@ export function Navbar() {
               );
             })}
           </nav>
+
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setAuthModalOpen(true);
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 text-xs font-bold text-[#0B1734] shadow-md"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              <span>{language === 'hi' ? 'लॉगिन / स्पॉन्सर कोड से पंजीकरण' : 'Login / Register with Sponsor Code'}</span>
+            </button>
+          </div>
 
           <div className="mt-4 border-t border-white/10 pt-4">
             <div className="mb-2 text-xs font-medium text-gray-400">Language:</div>
@@ -282,6 +313,9 @@ export function Navbar() {
           </div>
         </div>
       )}
+
+      {/* Global Interactive Auth Modal */}
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </header>
   );
 }
