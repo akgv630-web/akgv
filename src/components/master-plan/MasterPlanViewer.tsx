@@ -192,7 +192,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const vastuData = selectedPlot ? getVastuInfo(selectedPlot.roadFacing) : null;
 
   return (
-    <div className={`w-full space-y-6 ${isFullscreen ? 'fixed inset-0 z-50 overflow-y-auto bg-[#040814] p-6' : ''}`}>
+    <div className={`w-full max-w-full min-w-0 overflow-hidden space-y-6 ${isFullscreen ? 'fixed inset-0 z-50 overflow-y-auto bg-[#040814] p-6' : ''}`}>
       {/* 1. Header Toolbar with Authentic Branding, View Modes & Filters */}
       <div className="flex flex-col gap-4 rounded-2xl border border-[#C7A35A]/30 bg-[#050A17]/90 p-4 shadow-2xl backdrop-blur-md">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -424,9 +424,9 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
       </div>
 
       {/* Main Interactive Map & Inspector Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 min-w-0 max-w-full">
         {/* Left Column: Interactive Vector Canvas Master Plan (8 Cols) */}
-        <div className="relative overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 lg:col-span-8 shadow-2xl">
+        <div className="relative overflow-hidden rounded-2xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 lg:col-span-8 shadow-2xl min-w-0 max-w-full">
           {/* Interactive Tap-to-Enlarge Instruction Pill */}
           <div className="mb-2 flex items-center justify-between rounded-xl border border-[#C7A35A]/25 bg-[#0B1734]/85 px-3 py-1.5 text-[11px] text-[#DFC382] backdrop-blur">
             <div className="flex items-center gap-1.5">
@@ -515,7 +515,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
           </div>
 
           {/* SVG Vector Map Container with Smooth Scaling */}
-          <div className="w-full overflow-x-auto overflow-y-hidden pb-4 pt-2 touch-pan-x touch-pan-y overscroll-contain no-scrollbar">
+          <div className="w-full max-w-full min-w-0 overflow-x-auto overflow-y-hidden pb-4 pt-2 touch-pan-x touch-pan-y overscroll-contain no-scrollbar">
             <div
               className="transition-transform duration-200 origin-top-left"
               style={{ transform: `scale(${zoomLevel})` }}
@@ -821,7 +821,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         </div>
 
         {/* Right Column: Interactive Plot Inspector & Booking Details (4 Cols) */}
-        <div className="lg:col-span-4 space-y-4">
+        <div className="lg:col-span-4 space-y-4 min-w-0 max-w-full">
           {selectedPlot && currentStatusMeta ? (
             <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734] p-5 shadow-2xl space-y-5">
               {/* Plot Header */}

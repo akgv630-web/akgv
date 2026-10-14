@@ -55,7 +55,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#C7A35A]/30 bg-[#0B1734]/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full max-w-full overflow-hidden border-b border-[#C7A35A]/30 bg-[#0B1734]/95 backdrop-blur-md">
       {/* Top Luxury Banner */}
       <div className="hidden border-b border-white/5 bg-[#050A17] px-4 py-1.5 text-xs text-[#DFC382] sm:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between">

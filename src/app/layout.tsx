@@ -58,11 +58,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="flex min-h-screen flex-col bg-[#0B1734] font-sans text-[#F6F1E7] selection:bg-[#C7A35A] selection:text-[#0B1734] overflow-x-hidden">
+      <body className="flex min-h-screen w-full max-w-full flex-col bg-[#0B1734] font-sans text-[#F6F1E7] selection:bg-[#C7A35A] selection:text-[#0B1734] overflow-x-hidden">
         <AppProvider>
           <PwaInstallPrompt />
           <Navbar />
-          <main className="flex-1 pb-24 sm:pb-0 min-h-screen">{children}</main>
+          <main className="flex-1 pb-24 sm:pb-0 min-h-screen w-full max-w-full overflow-x-hidden">{children}</main>
           <WhatsAppPopup />
           <MobileBottomNav />
           <Footer />

@@ -36,7 +36,7 @@ export default function HomePage() {
   const faqs = t.faqs;
 
   return (
-    <div className="flex flex-col gap-8 sm:gap-14 lg:gap-16 pb-16">
+    <div className="flex flex-col gap-8 sm:gap-14 lg:gap-16 pb-16 w-full max-w-full overflow-x-hidden">
       {/* 1. HERO SECTION - 100% PLOTTED TOWNSHIP FOCUS */}
       <section className="relative min-h-0 sm:min-h-[70vh] flex items-center justify-center overflow-hidden border-b border-[#C7A35A]/30 bg-gradient-to-b from-[#050A17] via-[#0B1734] to-[#050A17] px-3 sm:px-4 py-8 sm:py-14 lg:py-20">
         {/* Subtle Luxury Architectural Backdrop */}
@@ -44,7 +44,7 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-[radial-gradient(#C7A35A_1px,transparent_1px)] [background-size:24px_24px]" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-5xl text-center space-y-3.5 sm:space-y-6">
+        <div className="relative z-10 mx-auto max-w-5xl text-center space-y-4 sm:space-y-6">
           {/* Top Badge */}
           <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#C7A35A]/50 bg-[#0B1734]/90 px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-[#DFC382] shadow-lg backdrop-blur">
             <Sparkles className="h-3.5 w-3.5 text-[#C7A35A]" />
@@ -98,8 +98,24 @@ export default function HomePage() {
             </a>
           </div>
 
+          {/* Hero Highlight Value Cards (Ensures page never looks empty/khali) */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2 sm:pt-4 max-w-2xl mx-auto">
+            <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17]/80 p-2 sm:p-3 text-center">
+              <span className="font-serif text-xs sm:text-base font-bold text-[#DFC382] block">55 Plots</span>
+              <span className="text-[9px] sm:text-xs text-gray-400">Rampur Blueprint</span>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-[#050A17]/80 p-2 sm:p-3 text-center">
+              <span className="font-serif text-xs sm:text-base font-bold text-white block">30ft / 25ft</span>
+              <span className="text-[9px] sm:text-xs text-gray-400">Wide Asphalt Roads</span>
+            </div>
+            <div className="rounded-xl border border-emerald-500/30 bg-[#050A17]/80 p-2 sm:p-3 text-center">
+              <span className="font-serif text-xs sm:text-base font-bold text-emerald-400 block">Immediate</span>
+              <span className="text-[9px] sm:text-xs text-emerald-300">Registry Ready</span>
+            </div>
+          </div>
+
           {/* Direct Phone Assistance Bar */}
-          <div className="pt-1 sm:pt-4">
+          <div className="pt-1">
             <div className="inline-flex items-center gap-2 sm:gap-3 rounded-2xl border border-white/10 bg-[#050A17]/80 px-3.5 py-1.5 sm:px-5 sm:py-2 text-[11px] sm:text-xs text-gray-300 shadow">
               <PhoneCall className="h-3.5 w-3.5 text-[#C7A35A]" />
               <span>{t.hero.directDesk}</span>
@@ -114,7 +130,7 @@ export default function HomePage() {
       </section>
 
       {/* 2. THREE FLAGSHIP PROJECT LOCATIONS */}
-      <section id="locations" className="mx-auto max-w-7xl px-4 sm:px-6">
+      <section id="locations" className="mx-auto max-w-7xl px-4 sm:px-6 w-full max-w-full overflow-hidden">
         <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
           <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
             {t.locations.badge}
@@ -199,7 +215,7 @@ export default function HomePage() {
       </section>
 
       {/* 3. INTERACTIVE MASTER PLAN (EMBEDDED) */}
-      <section id="master-plan" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
+      <section id="master-plan" className="w-full max-w-7xl mx-auto px-4 sm:px-6 space-y-6 overflow-hidden">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#1EA275] uppercase tracking-wider">
             {t.masterPlan.badge}
@@ -216,7 +232,7 @@ export default function HomePage() {
       </section>
 
       {/* 4. ARCHITECTURAL GUIDANCE FOR YOUR PURCHASED PLOT (REPLACING 3D BUILDER ON HOME) */}
-      <section id="architectural-guidance" className="mx-auto max-w-7xl px-4 sm:px-6">
+      <section id="architectural-guidance" className="w-full max-w-7xl mx-auto px-4 sm:px-6 overflow-hidden">
         <div className="rounded-3xl border border-[#C7A35A]/40 bg-gradient-to-br from-[#0B1734] via-[#050A17] to-[#0B1734] p-6 sm:p-10 shadow-2xl space-y-8">
           {/* Section Header */}
           <div className="text-center max-w-3xl mx-auto space-y-2">
@@ -290,12 +306,12 @@ export default function HomePage() {
       </section>
 
       {/* 5. TRUST, LEGAL GUARANTEE & INFRASTRUCTURE STANDARDS */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6">
+      <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 overflow-hidden">
         <TrustAndLegalSection />
       </section>
 
       {/* 6. LEVEL COMMISSION & REWARD PLAN (EMBEDDED) */}
-      <section id="rewards" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
+      <section id="rewards" className="w-full max-w-7xl mx-auto px-4 sm:px-6 space-y-6 overflow-hidden">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#DFC382] uppercase tracking-wider">
             {language === 'hi' ? 'प्रोत्साहन एवं पुरस्कार' : language === 'hinglish' ? 'Growth & Rewards' : 'Performance Recognition'}
@@ -312,7 +328,7 @@ export default function HomePage() {
       </section>
 
       {/* 7. OFFLINE JOINING KIT LEDGER SECTION */}
-      <section id="joining-kit" className="mx-auto max-w-7xl px-4 sm:px-6 space-y-6">
+      <section id="joining-kit" className="w-full max-w-7xl mx-auto px-4 sm:px-6 space-y-6 overflow-hidden">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
             {t.joiningKit.badge}
@@ -328,8 +344,8 @@ export default function HomePage() {
         <JoiningKitLedger />
       </section>
 
-      {/* 9. FREQUENTLY ASKED QUESTIONS */}
-      <section className="mx-auto max-w-4xl px-4 sm:px-6 space-y-6">
+      {/* 8. FREQUENTLY ASKED QUESTIONS */}
+      <section className="w-full max-w-4xl mx-auto px-4 sm:px-6 space-y-6 overflow-hidden">
         <div className="text-center space-y-2">
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
             {t.faqSection.title}

@@ -38,7 +38,7 @@ export const PROJECT_LOCATIONS: ProjectLocation[] = [
       'Immediate Registry & Possession Readiness',
       'Bank Loan Assistance Available'
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80'
+    imageUrl: '/assets/villa_horizontal_block_c.jpg'
   },
   {
     id: 'loc-lahartara',
@@ -58,7 +58,7 @@ export const PROJECT_LOCATIONS: ProjectLocation[] = [
       'Commercial Frontage & Residential Enclaves',
       'Complete Municipal Infrastructure'
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80'
+    imageUrl: '/assets/villa_vertical_luxury.jpg'
   },
   {
     id: 'loc-mirza-murad',
@@ -78,7 +78,7 @@ export const PROJECT_LOCATIONS: ProjectLocation[] = [
       'High Investment Appreciation Zone',
       'Integrated Commercial Plaza & Parks'
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'
+    imageUrl: '/assets/villa_vertical_standard.jpg'
   }
 ];
 

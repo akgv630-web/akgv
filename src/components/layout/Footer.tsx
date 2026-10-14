@@ -11,7 +11,7 @@ export function Footer() {
   const c = t.footer;
 
   return (
-    <footer className="border-t border-[#C7A35A]/30 bg-[#050A17] text-gray-300">
+    <footer className="w-full max-w-full overflow-hidden border-t border-[#C7A35A]/30 bg-[#050A17] text-gray-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Column 1: Brand Info */}
