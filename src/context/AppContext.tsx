@@ -36,6 +36,9 @@ interface AppContextType {
   allProfiles: Profile[];
   plots: Plot[];
   updatePlotStatus: (plotId: string, newStatus: PlotStatus, reason: string) => void;
+  addPlot: (plotData: Omit<Plot, 'id'>) => Plot;
+  updatePlot: (plotId: string, patch: Partial<Plot>) => void;
+  deletePlot: (plotId: string) => void;
   bookings: Booking[];
   createBookingRequest: (plotId: string, buyerName: string, buyerPhone: string, houseModelId?: string) => Booking;
   confirmBooking: (bookingId: string) => void;
@@ -330,6 +333,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updatePlotStatus = (plotId: string, newStatus: PlotStatus, _reason: string) => {
     setPlots((prev) => {
       const updated = prev.map((p) => (p.id === plotId ? { ...p, status: newStatus } : p));
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+  };
+
+  const addPlot = (plotData: Omit<Plot, 'id'>): Plot => {
+    const cleanNum = plotData.plotNumber.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+    const newPlot: Plot = {
+      ...plotData,
+      id: `plot-${cleanNum}-${Date.now().toString().slice(-4)}`,
+    };
+    setPlots((prev) => {
+      const updated = [...prev, newPlot];
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+    return newPlot;
+  };
+
+  const updatePlot = (plotId: string, patch: Partial<Plot>) => {
+    setPlots((prev) => {
+      const updated = prev.map((p) => (p.id === plotId ? { ...p, ...patch } : p));
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+  };
+
+  const deletePlot = (plotId: string) => {
+    setPlots((prev) => {
+      const updated = prev.filter((p) => p.id !== plotId);
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(updated));
       } catch {
@@ -649,6 +694,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         allProfiles,
         plots,
         updatePlotStatus,
+        addPlot,
+        updatePlot,
+        deletePlot,
         bookings,
         createBookingRequest,
         confirmBooking,

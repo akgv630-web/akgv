@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Compass,
   Copy,
   CreditCard,
   DollarSign,
@@ -45,6 +46,7 @@ import {
 import { useApp } from '@/context/AppContext';
 import { KycStatus, Plot, PlotStatus, Profile, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
+import { PlotManagementModal } from '@/components/admin/PlotManagementModal';
 
 function formatTenure(dateStr?: string): { joinedFormatted: string; tenureFormatted: string } {
   if (!dateStr) return { joinedFormatted: 'Recent', tenureFormatted: 'Active' };
@@ -110,6 +112,9 @@ export default function SuperAdminPage() {
   const {
     plots,
     updatePlotStatus,
+    addPlot,
+    updatePlot,
+    deletePlot,
     bookings,
     confirmBooking,
     cancelBooking,
@@ -133,8 +138,13 @@ export default function SuperAdminPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'plots' | 'payments' | 'bookings' | 'kits' | 'support' | 'reviews'>('overview');
   const [reviewFilterStatus, setReviewFilterStatus] = useState<'ALL' | 'approved' | 'pending' | 'rejected'>('ALL');
   const [reviewReplyInputs, setReviewReplyInputs] = useState<Record<string, string>>({});
-  const [plotFilterBlock, setPlotFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
+  const [plotFilterBlock, setPlotFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C' | 'D'>('ALL');
   const [plotFilterStatus, setPlotFilterStatus] = useState<'ALL' | PlotStatus>('ALL');
+  const [plotSearchQuery, setPlotSearchQuery] = useState('');
+  const [isPlotModalOpen, setIsPlotModalOpen] = useState(false);
+  const [editingPlot, setEditingPlot] = useState<Plot | null>(null);
+  const [deletingPlot, setDeletingPlot] = useState<Plot | null>(null);
+  const [plotActionNotice, setPlotActionNotice] = useState<string | null>(null);
   const [paymentActionNotice, setPaymentActionNotice] = useState<string | null>(null);
 
   // Member Management State
@@ -190,8 +200,17 @@ export default function SuperAdminPage() {
   const openTickets = supportTickets.filter((t) => t.status === 'open' || t.status === 'in_progress');
 
   const filteredPlots = plots.filter((p) => {
-    if (plotFilterBlock !== 'ALL' && p.block !== plotFilterBlock) return false;
+    if (plotFilterBlock !== 'ALL' && p.block.toUpperCase() !== plotFilterBlock.toUpperCase()) return false;
     if (plotFilterStatus !== 'ALL' && p.status !== plotFilterStatus) return false;
+    if (plotSearchQuery.trim()) {
+      const q = plotSearchQuery.toLowerCase().trim();
+      const matchNum = p.plotNumber.toLowerCase().includes(q);
+      const matchFacing = (p.roadFacing || '').toLowerCase().includes(q);
+      const matchArea = p.areaSqft.toString().includes(q);
+      const matchDim = (p.dimensions || '').toLowerCase().includes(q);
+      const matchRoad = (p.roadWidth || '').toLowerCase().includes(q);
+      if (!matchNum && !matchFacing && !matchArea && !matchDim && !matchRoad) return false;
+    }
     return true;
   });
 
@@ -1902,119 +1921,322 @@ export default function SuperAdminPage() {
         </div>
       )}
 
-      {/* Tab 2: Plot Inventory Manager */}
+      {/* Tab 2: Plot Inventory Governance & Management */}
       {activeTab === 'plots' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B1734] p-4 rounded-2xl border border-white/10">
+          {/* Action Notification Alert */}
+          {plotActionNotice && (
+            <div className="flex items-center justify-between rounded-2xl border border-emerald-500/40 bg-emerald-950/40 px-5 py-3 text-xs text-emerald-300 shadow-lg animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 font-medium">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <span>{plotActionNotice}</span>
+              </div>
+              <button
+                onClick={() => setPlotActionNotice(null)}
+                className="text-emerald-400 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Top Control Bar with Add Plot Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0B1734] p-5 rounded-3xl border border-[#C7A35A]/30 shadow-xl">
             <div>
-              <h2 className="font-serif text-base font-bold text-white">Plot Status & Inventory Governance</h2>
-              <p className="text-xs text-gray-400">
-                Toggle plot availability between Green (Bookable), Yellow (Confirmed Booked), and Red (Vacant/Reserved).
+              <div className="flex items-center gap-2">
+                <h2 className="font-serif text-lg font-bold text-white">Master Plan Plot Inventory Governance</h2>
+                <span className="rounded-full bg-[#C7A35A]/15 border border-[#C7A35A]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#DFC382]">
+                  1:500 Scale Blueprint
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Manage all demarcated plots, assign architectural elevations, update valuations, or register new plots directly into the master plan canvas.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 text-xs">
-              <div className="flex rounded-lg border border-white/10 bg-[#050A17] p-0.5">
-                {(['ALL', 'A', 'B', 'C'] as const).map((blk) => (
+            <button
+              onClick={() => {
+                setEditingPlot(null);
+                setIsPlotModalOpen(true);
+              }}
+              type="button"
+              className="self-start sm:self-auto rounded-xl bg-gradient-to-r from-[#C7A35A] via-[#DFC382] to-[#9E7E36] px-5 py-2.5 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 transition flex items-center gap-2 hover:scale-[1.02] shrink-0"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Register New Plot / नया प्लॉट जोड़ें</span>
+            </button>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#050A17] p-3.5 rounded-2xl border border-white/10 text-xs">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-gray-500" />
+              <input
+                type="text"
+                value={plotSearchQuery}
+                onChange={(e) => setPlotSearchQuery(e.target.value)}
+                placeholder="Search by Plot # (e.g. A-04), dimensions, area, or facing..."
+                className="w-full rounded-xl border border-white/10 bg-[#0B1734] pl-9 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+              />
+              {plotSearchQuery && (
+                <button
+                  onClick={() => setPlotSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-lg border border-white/10 bg-[#0B1734] p-0.5">
+                {(['ALL', 'A', 'B', 'C', 'D'] as const).map((blk) => (
                   <button
                     key={blk}
                     onClick={() => setPlotFilterBlock(blk)}
-                    className={`rounded px-2.5 py-1 ${plotFilterBlock === blk ? 'bg-[#C7A35A] text-[#0B1734] font-bold' : 'text-gray-300'}`}
+                    className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                      plotFilterBlock === blk
+                        ? 'bg-[#C7A35A] text-[#0B1734] font-bold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
                   >
                     {blk === 'ALL' ? 'All Blocks' : `Block ${blk}`}
                   </button>
                 ))}
               </div>
 
-              <div className="flex rounded-lg border border-white/10 bg-[#050A17] p-0.5">
+              <div className="flex rounded-lg border border-white/10 bg-[#0B1734] p-0.5">
                 {(['ALL', 'available_green', 'booked_yellow', 'vacant_red'] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setPlotFilterStatus(st)}
-                    className={`rounded px-2.5 py-1 ${plotFilterStatus === st ? 'bg-[#C7A35A] text-[#0B1734] font-bold' : 'text-gray-300'}`}
+                    className={`rounded px-2.5 py-1 text-[11px] font-semibold transition ${
+                      plotFilterStatus === st
+                        ? 'bg-[#C7A35A] text-[#0B1734] font-bold'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
                   >
-                    {st === 'ALL' ? 'All Status' : st.replace('_', ' ')}
+                    {st === 'ALL' ? 'All Status' : st === 'available_green' ? 'Available' : st === 'booked_yellow' ? 'Booked' : 'Vacant'}
                   </button>
                 ))}
               </div>
+
+              <span className="text-[11px] text-gray-400 ml-1">
+                Showing {filteredPlots.length} of {plots.length}
+              </span>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B1734]">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 bg-[#050A17] text-[#DFC382] uppercase text-[10px]">
-                <tr>
-                  <th className="px-4 py-3">Plot #</th>
-                  <th className="px-4 py-3">Block</th>
-                  <th className="px-4 py-3">Area & Dimensions</th>
-                  <th className="px-4 py-3">Road Corridor</th>
-                  <th className="px-4 py-3">Current Status</th>
-                  <th className="px-4 py-3 text-right">Administrative Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5 text-gray-200">
-                {filteredPlots.map((plot) => (
-                  <tr key={plot.id} className="hover:bg-white/5">
-                    <td className="px-4 py-3 font-serif font-bold text-white text-sm">{plot.plotNumber}</td>
-                    <td className="px-4 py-3 font-semibold text-[#DFC382]">{plot.block}</td>
-                    <td className="px-4 py-3">
-                      <div>{plot.areaSqft} sqft</div>
-                      <span className="text-[10px] text-gray-400 font-mono">{plot.dimensions}</span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-300">{plot.roadWidth}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
-                          plot.status === 'available_green'
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                            : plot.status === 'booked_yellow'
-                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                            : 'bg-red-500/10 border-red-500/30 text-red-400'
-                        }`}
-                      >
-                        {plot.status === 'available_green'
-                          ? 'Available (Green)'
-                          : plot.status === 'booked_yellow'
-                          ? 'Booked (Yellow)'
-                          : 'Vacant (Red)'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-1.5">
-                        {plot.status !== 'available_green' && (
-                          <button
-                            onClick={() => updatePlotStatus(plot.id, 'available_green', 'Admin marked available')}
-                            className="rounded px-2 py-1 bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white"
-                            title="Make Available for Booking"
-                          >
-                            Set Green
-                          </button>
-                        )}
-                        {plot.status !== 'booked_yellow' && (
-                          <button
-                            onClick={() => updatePlotStatus(plot.id, 'booked_yellow', 'Admin marked booked')}
-                            className="rounded px-2 py-1 bg-amber-600/30 text-amber-400 border border-amber-500/40 hover:bg-amber-600 hover:text-white"
-                            title="Mark as Confirmed Booked"
-                          >
-                            Set Yellow
-                          </button>
-                        )}
-                        {plot.status !== 'vacant_red' && (
-                          <button
-                            onClick={() => updatePlotStatus(plot.id, 'vacant_red', 'Admin marked vacant')}
-                            className="rounded px-2 py-1 bg-red-600/30 text-red-400 border border-red-500/40 hover:bg-red-600 hover:text-white"
-                            title="Set to Vacant/Reserved"
-                          >
-                            Set Red
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          {/* Plots Table */}
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B1734] shadow-xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-white/10 bg-[#050A17] text-[#DFC382] uppercase text-[10px] tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3">Plot #</th>
+                    <th className="px-4 py-3">Block & Facing</th>
+                    <th className="px-4 py-3">Area & Dimensions</th>
+                    <th className="px-4 py-3">Road Corridor</th>
+                    <th className="px-4 py-3">Base Valuation</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-white/5 text-gray-200">
+                  {filteredPlots.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                        No plots found matching your criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPlots.map((plot) => (
+                      <tr key={plot.id} className="hover:bg-white/5 transition">
+                        {/* Plot Number & Corner badge */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-serif font-bold text-white text-sm">{plot.plotNumber}</span>
+                            {plot.isCornerPlot && (
+                              <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-bold text-amber-300 border border-amber-500/30">
+                                Corner
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Block & Facing */}
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-[#DFC382]">Block {plot.block}</div>
+                          <div className="text-[10px] text-gray-400 flex items-center gap-1">
+                            <Compass className="h-3 w-3 text-gray-500" />
+                            <span>{plot.roadFacing || 'North'}</span>
+                          </div>
+                        </td>
+
+                        {/* Area & Dimensions */}
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-white">{plot.areaSqft} sqft</div>
+                          <span className="text-[10px] text-gray-400 font-mono">{plot.dimensions}</span>
+                        </td>
+
+                        {/* Road Corridor */}
+                        <td className="px-4 py-3 text-gray-300">{plot.roadWidth}</td>
+
+                        {/* Base Price */}
+                        <td className="px-4 py-3">
+                          <div className="font-mono font-bold text-white">
+                            ₹{((plot.basePriceInr || 1200000) / 100000).toFixed(2)} Lakh
+                          </div>
+                          <div className="text-[10px] text-emerald-400">
+                            ₹{Math.round((plot.basePriceInr || 1200000) / (plot.areaSqft || 1000))}/sqft
+                          </div>
+                        </td>
+
+                        {/* Status Badge */}
+                        <td className="px-4 py-3">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
+                              plot.status === 'available_green'
+                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                : plot.status === 'booked_yellow'
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                                : 'bg-red-500/10 border-red-500/30 text-red-400'
+                            }`}
+                          >
+                            {plot.status === 'available_green'
+                              ? 'Available (Green)'
+                              : plot.status === 'booked_yellow'
+                              ? 'Booked (Yellow)'
+                              : 'Vacant (Red)'}
+                          </span>
+                        </td>
+
+                        {/* Administrative Action Buttons */}
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {/* Fast status toggles */}
+                            {plot.status !== 'available_green' && (
+                              <button
+                                onClick={() => updatePlotStatus(plot.id, 'available_green', 'Admin marked available')}
+                                className="rounded px-2 py-1 bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-600 hover:text-white transition text-[11px]"
+                                title="Make Available for Booking"
+                              >
+                                Set Green
+                              </button>
+                            )}
+                            {plot.status !== 'booked_yellow' && (
+                              <button
+                                onClick={() => updatePlotStatus(plot.id, 'booked_yellow', 'Admin marked booked')}
+                                className="rounded px-2 py-1 bg-amber-600/30 text-amber-400 border border-amber-500/40 hover:bg-amber-600 hover:text-white transition text-[11px]"
+                                title="Mark as Confirmed Booked"
+                              >
+                                Set Yellow
+                              </button>
+                            )}
+                            {plot.status !== 'vacant_red' && (
+                              <button
+                                onClick={() => updatePlotStatus(plot.id, 'vacant_red', 'Admin marked vacant')}
+                                className="rounded px-2 py-1 bg-red-600/30 text-red-400 border border-red-500/40 hover:bg-red-600 hover:text-white transition text-[11px]"
+                                title="Set to Vacant/Reserved"
+                              >
+                                Set Red
+                              </button>
+                            )}
+
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => {
+                                setEditingPlot(plot);
+                                setIsPlotModalOpen(true);
+                              }}
+                              className="rounded p-1.5 bg-white/5 border border-white/10 text-[#DFC382] hover:bg-white/10 transition"
+                              title="Edit plot details"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => setDeletingPlot(plot)}
+                              className="rounded p-1.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition"
+                              title="Delete plot"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* Delete Plot Confirmation Dialog */}
+          {deletingPlot && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+              <div className="w-full max-w-md rounded-3xl border border-red-500/40 bg-gradient-to-b from-[#0B1734] to-[#050A17] p-6 shadow-2xl text-white space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/20 border border-red-500/40 text-red-400">
+                    <Trash2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-white">
+                      Delete Plot #{deletingPlot.plotNumber}?
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      Block {deletingPlot.block} • {deletingPlot.areaSqft} sqft
+                    </p>
+                  </div>
+                </div>
+
+                {bookings.some((b) => b.plotId === deletingPlot.id && b.status !== 'cancelled') ? (
+                  <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                    ⚠️ Cannot delete this plot because it has active client bookings. Please reassign or cancel the booking first.
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-300">
+                    Are you sure you want to permanently delete Plot <strong>#{deletingPlot.plotNumber}</strong> from the master plan layout? This action cannot be undone.
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    onClick={() => setDeletingPlot(null)}
+                    className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 transition"
+                  >
+                    Cancel / रद्द करें
+                  </button>
+                  {!bookings.some((b) => b.plotId === deletingPlot.id && b.status !== 'cancelled') && (
+                    <button
+                      onClick={() => {
+                        deletePlot(deletingPlot.id);
+                        setPlotActionNotice(`Plot #${deletingPlot.plotNumber} successfully deleted.`);
+                        setDeletingPlot(null);
+                      }}
+                      className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white hover:bg-red-700 transition"
+                    >
+                      Confirm Delete / हटाएं
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Plot Add & Edit Management Modal */}
+          <PlotManagementModal
+            isOpen={isPlotModalOpen}
+            onClose={() => {
+              setIsPlotModalOpen(false);
+              setEditingPlot(null);
+            }}
+            plotToEdit={editingPlot}
+            onSuccessNotice={(msg) => setPlotActionNotice(msg)}
+          />
         </div>
       )}
 
