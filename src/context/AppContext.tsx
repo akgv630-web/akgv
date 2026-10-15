@@ -26,6 +26,21 @@ import {
   INITIAL_SUPPORT_TICKETS
 } from '@/lib/store';
 import { DICTIONARY, Language } from '@/lib/i18n';
+import {
+  fetchPlotsFromSupabase,
+  savePlotToSupabase,
+  deletePlotFromSupabase,
+  fetchReviewsFromSupabase,
+  saveReviewToSupabase,
+  deleteReviewFromSupabase,
+  fetchBookingsFromSupabase,
+  saveBookingToSupabase,
+  savePaymentToSupabase,
+  saveSiteVisitToSupabase,
+  fetchProfilesFromSupabase,
+  saveProfileToSupabase,
+  deleteProfileFromSupabase
+} from '@/lib/supabase/syncService';
 
 interface AppContextType {
   language: Language;
@@ -149,7 +164,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore client hydration errors
     }
+
+    // Supabase Live Remote Sync (Non-blocking background sync)
+    async function syncWithSupabase() {
+      try {
+        const [remotePlots, remoteReviews, remoteBookings, remoteProfiles] = await Promise.all([
+          fetchPlotsFromSupabase(),
+          fetchReviewsFromSupabase(),
+          fetchBookingsFromSupabase(),
+          fetchProfilesFromSupabase(),
+        ]);
+
+        if (remotePlots && remotePlots.length > 0) {
+          setPlots(remotePlots);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(remotePlots)); } catch {}
+        }
+        if (remoteReviews && remoteReviews.length > 0) {
+          setReviews(remoteReviews);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}reviews`, JSON.stringify(remoteReviews)); } catch {}
+        }
+        if (remoteBookings && remoteBookings.length > 0) {
+          setBookings(remoteBookings);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}bookings`, JSON.stringify(remoteBookings)); } catch {}
+        }
+        if (remoteProfiles && remoteProfiles.length > 0) {
+          setAllProfiles(remoteProfiles);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(remoteProfiles)); } catch {}
+        }
+      } catch (err) {
+        console.warn('[Supabase Sync] Remote hydration notice:', err);
+      }
+    }
+
+    syncWithSupabase();
   }, []);
+
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
@@ -285,12 +334,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
+    void saveProfileToSupabase(newProfile);
     return newProfile;
   };
 
   const updateMember = (id: string, data: Partial<Profile>) => {
+    let updatedMember: Profile | null = null;
     setAllProfiles((prev) => {
-      const next = prev.map((p) => (p.id === id ? { ...p, ...data } : p));
+      const next = prev.map((p) => {
+        if (p.id === id) {
+          updatedMember = { ...p, ...data };
+          return updatedMember;
+        }
+        return p;
+      });
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
       } catch {
@@ -298,6 +355,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
+    if (updatedMember) {
+      void saveProfileToSupabase(updatedMember);
+    }
     if (currentUser.id === id) {
       setCurrentUser((prev) => ({ ...prev, ...data }));
     }
@@ -313,11 +373,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
+    void deleteProfileFromSupabase(id);
   };
 
   const toggleMemberStatus = (id: string) => {
+    let toggledMember: Profile | null = null;
     setAllProfiles((prev) => {
-      const next = prev.map((p) => (p.id === id ? { ...p, isActive: !p.isActive } : p));
+      const next = prev.map((p) => {
+        if (p.id === id) {
+          toggledMember = { ...p, isActive: !p.isActive };
+          return toggledMember;
+        }
+        return p;
+      });
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
       } catch {
@@ -325,14 +393,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
+    if (toggledMember) {
+      void saveProfileToSupabase(toggledMember);
+    }
     if (currentUser.id === id) {
       setCurrentUser((prev) => ({ ...prev, isActive: !prev.isActive }));
     }
   };
 
+
   const updatePlotStatus = (plotId: string, newStatus: PlotStatus, _reason: string) => {
+    let targetPlot: Plot | null = null;
     setPlots((prev) => {
-      const updated = prev.map((p) => (p.id === plotId ? { ...p, status: newStatus } : p));
+      const updated = prev.map((p) => {
+        if (p.id === plotId) {
+          targetPlot = { ...p, status: newStatus };
+          return targetPlot;
+        }
+        return p;
+      });
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(updated));
       } catch {
@@ -340,6 +419,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (targetPlot) {
+      void savePlotToSupabase(targetPlot);
+    }
   };
 
   const addPlot = (plotData: Omit<Plot, 'id'>): Plot => {
@@ -357,12 +439,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    void savePlotToSupabase(newPlot);
     return newPlot;
   };
 
   const updatePlot = (plotId: string, patch: Partial<Plot>) => {
+    let targetPlot: Plot | null = null;
     setPlots((prev) => {
-      const updated = prev.map((p) => (p.id === plotId ? { ...p, ...patch } : p));
+      const updated = prev.map((p) => {
+        if (p.id === plotId) {
+          targetPlot = { ...p, ...patch };
+          return targetPlot;
+        }
+        return p;
+      });
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(updated));
       } catch {
@@ -370,6 +460,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    if (targetPlot) {
+      void savePlotToSupabase(targetPlot);
+    }
   };
 
   const deletePlot = (plotId: string) => {
@@ -382,7 +475,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
+    void deletePlotFromSupabase(plotId);
   };
+
 
   const createBookingRequest = (
     plotId: string,
@@ -420,16 +515,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
+    void saveBookingToSupabase(newBooking);
+
     // Mark plot as hold_pending or notify
     updatePlotStatus(plotId, 'hold_pending', 'Booking request initiated by buyer');
     return newBooking;
   };
 
   const confirmBooking = (bookingId: string) => {
+    let targetBooking: Booking | null = null;
     setBookings((prev) => {
-      const next = prev.map((b) =>
-        b.id === bookingId ? { ...b, status: 'confirmed' as const, confirmedAt: new Date().toISOString() } : b
-      );
+      const next = prev.map((b) => {
+        if (b.id === bookingId) {
+          targetBooking = { ...b, status: 'confirmed' as const, confirmedAt: new Date().toISOString() };
+          return targetBooking;
+        }
+        return b;
+      });
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}bookings`, JSON.stringify(next));
       } catch {
@@ -438,17 +540,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    const booking = bookings.find((b) => b.id === bookingId);
-    if (booking) {
-      updatePlotStatus(booking.plotId, 'booked_yellow', 'Booking confirmed by administrator');
+    if (targetBooking) {
+      void saveBookingToSupabase(targetBooking);
+      updatePlotStatus((targetBooking as Booking).plotId, 'booked_yellow', 'Booking confirmed by administrator');
     }
   };
 
   const cancelBooking = (bookingId: string, _reason: string) => {
+    let targetBooking: Booking | null = null;
     setBookings((prev) => {
-      const next = prev.map((b) =>
-        b.id === bookingId ? { ...b, status: 'cancelled' as const } : b
-      );
+      const next = prev.map((b) => {
+        if (b.id === bookingId) {
+          targetBooking = { ...b, status: 'cancelled' as const };
+          return targetBooking;
+        }
+        return b;
+      });
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}bookings`, JSON.stringify(next));
       } catch {
@@ -457,9 +564,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    const booking = bookings.find((b) => b.id === bookingId);
-    if (booking) {
-      updatePlotStatus(booking.plotId, 'available_green', 'Booking cancelled and released');
+    if (targetBooking) {
+      void saveBookingToSupabase(targetBooking);
+      updatePlotStatus((targetBooking as Booking).plotId, 'available_green', 'Booking cancelled and released');
     }
   };
 
@@ -492,14 +599,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
+    void savePaymentToSupabase(newPayment);
     return newPayment;
   };
 
   const verifyPayment = (paymentId: string, approved: boolean, reason?: string) => {
+    let targetPay: PaymentRecord | null = null;
     setPayments((prev) => {
       const next = prev.map((p) => {
         if (p.id === paymentId) {
-          return {
+          targetPay = {
             ...p,
             status: approved ? ('verified' as const) : ('rejected' as const),
             receiptNumber: approved ? `RCP-AKGV-${Date.now().toString().slice(-6)}` : undefined,
@@ -507,6 +616,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             verifiedBy: currentUser.id,
             rejectionReason: !approved ? reason : undefined,
           };
+          return targetPay;
         }
         return p;
       });
@@ -518,11 +628,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    if (approved) {
-      const targetPay = payments.find((p) => p.id === paymentId);
-      if (targetPay) {
-        confirmBooking(targetPay.bookingId);
-      }
+    if (targetPay) {
+      void savePaymentToSupabase(targetPay);
+    }
+
+    if (approved && targetPay) {
+      confirmBooking((targetPay as PaymentRecord).bookingId);
     }
   };
 
@@ -552,8 +663,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     setSiteVisits((prev) => [newVisit, ...prev]);
+    void saveSiteVisitToSupabase(newVisit);
     return newVisit;
   };
+
 
   const submitGpsEvidence = (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>): FieldGpsEvidence => {
     const newEvidence: FieldGpsEvidence = {
@@ -643,43 +756,70 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
     const updated = [newReview, ...reviews];
     saveReviews(updated);
+    void saveReviewToSupabase(newReview);
     return newReview;
   };
 
   const voteHelpful = (reviewId: string) => {
-    const updated = reviews.map((r) =>
-      r.id === reviewId ? { ...r, helpfulCount: (r.helpfulCount || 0) + 1 } : r
-    );
+    let targetReview: ReviewRecord | null = null;
+    const updated = reviews.map((r) => {
+      if (r.id === reviewId) {
+        targetReview = { ...r, helpfulCount: (r.helpfulCount || 0) + 1 };
+        return targetReview;
+      }
+      return r;
+    });
     saveReviews(updated);
+    if (targetReview) {
+      void saveReviewToSupabase(targetReview);
+    }
   };
 
   const updateReviewStatus = (reviewId: string, status: 'approved' | 'pending' | 'rejected') => {
-    const updated = reviews.map((r) => (r.id === reviewId ? { ...r, status } : r));
+    let targetReview: ReviewRecord | null = null;
+    const updated = reviews.map((r) => {
+      if (r.id === reviewId) {
+        targetReview = { ...r, status };
+        return targetReview;
+      }
+      return r;
+    });
     saveReviews(updated);
+    if (targetReview) {
+      void saveReviewToSupabase(targetReview);
+    }
   };
 
   const replyToReview = (reviewId: string, replyText: string) => {
-    const updated = reviews.map((r) =>
-      r.id === reviewId
-        ? {
-            ...r,
-            adminReply: {
-              replyText,
-              repliedAt: new Date().toISOString(),
-              replierName: currentUser.fullName
-                ? `${currentUser.fullName} (${currentUser.rankTitle || 'Director'})`
-                : 'Rajesh Kumar Patel (Director)'
-            }
+    let targetReview: ReviewRecord | null = null;
+    const updated = reviews.map((r) => {
+      if (r.id === reviewId) {
+        targetReview = {
+          ...r,
+          adminReply: {
+            replyText,
+            repliedAt: new Date().toISOString(),
+            replierName: currentUser.fullName
+              ? `${currentUser.fullName} (${currentUser.rankTitle || 'Director'})`
+              : 'Rajesh Kumar Patel (Director)'
           }
-        : r
-    );
+        };
+        return targetReview;
+      }
+      return r;
+    });
     saveReviews(updated);
+    if (targetReview) {
+      void saveReviewToSupabase(targetReview);
+    }
   };
 
   const deleteReview = (reviewId: string) => {
     const updated = reviews.filter((r) => r.id !== reviewId);
     saveReviews(updated);
+    void deleteReviewFromSupabase(reviewId);
   };
+
 
   const t = DICTIONARY[language] || DICTIONARY.en;
 
