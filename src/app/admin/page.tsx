@@ -48,6 +48,7 @@ import { KycStatus, Plot, PlotStatus, Profile, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { PlotManagementModal } from '@/components/admin/PlotManagementModal';
 import { AuthBarrier, UnauthorizedBarrier } from '@/components/auth/AuthBarrier';
+import { COMMISSION_LEVELS_GROUND_TRUTH } from '@/data/groundTruth';
 
 function formatTenure(dateStr?: string): { joinedFormatted: string; tenureFormatted: string } {
   if (!dateStr) return { joinedFormatted: 'Recent', tenureFormatted: 'Active' };
@@ -92,20 +93,12 @@ function formatBusinessVolume(amountInr?: number): string {
 }
 
 function getLevelInfo(level?: number) {
-  const lvl = Math.min(Math.max(level || 1, 1), 7);
-  const commissionMap: Record<number, { percent: number; rankTitle: string }> = {
-    1: { percent: 4, rankTitle: 'Sales Assistant' },
-    2: { percent: 5, rankTitle: 'Star Associate' },
-    3: { percent: 6, rankTitle: 'Gold Star' },
-    4: { percent: 7, rankTitle: 'Diamond Star' },
-    5: { percent: 8, rankTitle: 'Platinum Leader' },
-    6: { percent: 9, rankTitle: 'Crown Leader' },
-    7: { percent: 10, rankTitle: 'Director' },
-  };
+  const lvl = Math.min(Math.max(level || 1, 1), COMMISSION_LEVELS_GROUND_TRUTH.length);
+  const rule = COMMISSION_LEVELS_GROUND_TRUTH.find((r) => r.levelNumber === lvl) || COMMISSION_LEVELS_GROUND_TRUTH[0];
   return {
-    level: lvl,
-    percent: commissionMap[lvl]?.percent || 4,
-    defaultRank: commissionMap[lvl]?.rankTitle || 'Sales Assistant',
+    level: rule.levelNumber,
+    percent: rule.commissionPercent,
+    defaultRank: rule.rankTitleEn,
   };
 }
 

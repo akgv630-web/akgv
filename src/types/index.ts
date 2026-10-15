@@ -135,6 +135,7 @@ export interface PaymentRecord {
   transactionRef: string;
   bookingId: string;
   plotNumber: string;
+  payerId?: string;
   payerName: string;
   payerPhone: string;
   amountInr: number;
@@ -243,6 +244,7 @@ export interface FieldGpsEvidence {
   status: 'pending_review' | 'approved' | 'rejected' | 'recapture_requested';
   adminNotes?: string;
   isLiveCamera?: boolean;
+  captureSource?: 'live_camera' | 'file_upload';
   measuredDimensions?: string;
   measuredAreaSqft?: number;
   roadAccessWidth?: string;

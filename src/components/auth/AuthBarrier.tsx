@@ -7,20 +7,17 @@ import {
   Lock,
   ArrowRight,
   Home,
-  Sparkles,
-  UserCheck,
   KeyRound
 } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 import { useApp } from '@/context/AppContext';
-import { DEMO_PROFILES } from '@/lib/store';
 
 interface AuthBarrierProps {
   requiredRole?: 'admin' | 'member' | 'buyer';
 }
 
 export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
-  const { language, loginUser } = useApp();
+  const { language } = useApp();
   const [modalOpen, setModalOpen] = useState(false);
 
   const roleText =
@@ -70,67 +67,6 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
             <Home className="h-4 w-4" />
             <span>{language === 'hi' ? 'मुख्य पृष्ठ पर लौटें' : 'Back to Home'}</span>
           </Link>
-        </div>
-
-        {/* Development Quick-Test Bar */}
-        <div className="mt-8 pt-5 border-t border-white/10 text-left">
-          <div className="flex items-center justify-between text-[11px] text-gray-400 mb-2">
-            <span className="flex items-center gap-1 text-[#DFC382] font-semibold">
-              <Sparkles className="h-3 w-3" />
-              <span>Sandbox / Evaluation Quick Access:</span>
-            </span>
-            <span className="text-[10px] text-amber-400 font-mono">[DEV TESTING ONLY]</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            {requiredRole === 'admin' && (
-              <>
-                <button
-                  onClick={() => loginUser('admin@akgvinfacity.com')}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-left text-gray-200 hover:border-[#C7A35A]/50 transition"
-                >
-                  <p className="font-bold text-white text-[11px]">Super Admin (HQ)</p>
-                  <p className="text-[10px] text-gray-400">Rajesh Kumar Patel</p>
-                </button>
-                <button
-                  onClick={() => loginUser('suresh.yadav@akgvinfacity.com')}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-left text-gray-200 hover:border-[#C7A35A]/50 transition"
-                >
-                  <p className="font-bold text-white text-[11px]">Sub Admin (Lahartara)</p>
-                  <p className="text-[10px] text-gray-400">Suresh Yadav</p>
-                </button>
-              </>
-            )}
-
-            {requiredRole === 'member' && (
-              <>
-                <button
-                  onClick={() => loginUser('vikram.singh@akgvinfacity.com')}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-left text-gray-200 hover:border-[#C7A35A]/50 transition"
-                >
-                  <p className="font-bold text-white text-[11px]">Senior Associate (Team Lead)</p>
-                  <p className="text-[10px] text-gray-400">Vikram Singh (AKGV-3498)</p>
-                </button>
-                <button
-                  onClick={() => loginUser('amit.sharma@akgvinfacity.com')}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-left text-gray-200 hover:border-[#C7A35A]/50 transition"
-                >
-                  <p className="font-bold text-white text-[11px]">Field Agent (Junior)</p>
-                  <p className="text-[10px] text-gray-400">Amit Sharma (AKGV0042)</p>
-                </button>
-              </>
-            )}
-
-            {requiredRole === 'buyer' && (
-              <button
-                onClick={() => loginUser('pradeep.verma@gmail.com')}
-                className="col-span-full p-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-left text-gray-200 hover:border-[#C7A35A]/50 transition"
-              >
-                <p className="font-bold text-white text-[11px]">Verified Buyer (Plot A-03)</p>
-                <p className="text-[10px] text-gray-400">Pradeep Verma</p>
-              </button>
-            )}
-          </div>
         </div>
       </div>
 

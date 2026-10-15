@@ -342,7 +342,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Genuine Supabase Credentials Login with Local Fallback
+  // Hardened Credentials Login with strict environment security boundaries
   const loginWithCredentials = async (
     identifier: string,
     password: string
@@ -352,7 +352,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: 'Please enter both login identifier and password.' };
     }
 
-    // 1. Try Supabase Auth
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // 1. Authenticate with Supabase Auth Provider
     try {
       const res = await supabaseSignIn(trimmedId, password);
       if (res && res.data && res.data.user) {
@@ -364,13 +366,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             p.phone === trimmedId ||
             (p.memberId && p.memberId.toLowerCase() === trimmedId.toLowerCase())
         );
+
+        if (found && !found.isActive) {
+          return { success: false, error: 'Your account has been deactivated or suspended. Please contact company management.' };
+        }
+
         const profileToSet = found || {
           id: authUser.id,
           email: authUser.email || trimmedId,
           fullName: authUser.user_metadata?.full_name || trimmedId.split('@')[0],
           phone: authUser.user_metadata?.phone || '',
           role: (authUser.user_metadata?.role as UserRole) || 'buyer',
-          kycStatus: 'verified' as const,
+          kycStatus: 'pending' as const,
           isActive: true,
           createdAt: new Date().toISOString(),
         };
@@ -379,12 +386,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profileToSet));
         } catch {}
         return { success: true, profile: profileToSet };
+      } else if (isProduction && res?.error) {
+        return { success: false, error: res.error.message || 'Invalid login credentials.' };
       }
-    } catch {
-      // Supabase auth service offline / proceed to local verification
+    } catch (err: unknown) {
+      if (isProduction) {
+        const msg = err instanceof Error ? err.message : 'Authentication service is unreachable.';
+        return { success: false, error: msg };
+      }
     }
 
-    // 2. Local verified accounts verification
+    // In production, strictly fail if not authenticated by the provider (No local bypass)
+    if (isProduction) {
+      return { success: false, error: 'Invalid login credentials or authentication provider offline.' };
+    }
+
+    // 2. Development / Sandbox verification (Strictly gated and requires designated test password)
     const found = allProfiles.find(
       (p) =>
         p.email.toLowerCase() === trimmedId.toLowerCase() ||
@@ -393,16 +410,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
 
     if (found) {
-      // Require password check for demo/local testing:
-      // Accepts standard password 'akgv@2026' or 'admin123' or any 6+ char password in sandbox
-      if (password === 'akgv@2026' || password === 'admin123' || password.length >= 6) {
+      if (!found.isActive) {
+        return { success: false, error: 'Your account has been deactivated or suspended. Please contact company management.' };
+      }
+      if (password === 'akgv@2026') {
         setCurrentUser(found);
         try {
           localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(found));
         } catch {}
         return { success: true, profile: found };
       } else {
-        return { success: false, error: 'Incorrect password. (Sandbox default: akgv@2026)' };
+        return { success: false, error: 'Incorrect password. (Sandbox test password: akgv@2026)' };
       }
     }
 
@@ -419,6 +437,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     city?: string;
     branchLocation?: string;
   }): Promise<{ success: boolean; error?: string; profile?: Profile }> => {
+    // Security Enforcement: Public registrations are strictly forced to 'buyer' role
+    const assignedRole: UserRole = 'buyer';
+
     // 1. Attempt Supabase Auth Registration
     try {
       await supabaseSignUp({
@@ -426,11 +447,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         email: data.email,
         phone: data.phone,
         password: data.password,
-        role: data.role || 'junior_member',
+        role: assignedRole,
         sponsorId: data.sponsorId,
       });
     } catch {
       // Proceed with local profile creation
+    }
+
+    // Validate sponsor if provided
+    const sponsorTrimmed = data.sponsorId?.trim();
+    let verifiedSponsorId: string | undefined = undefined;
+    if (sponsorTrimmed) {
+      const sponsorExists = allProfiles.some(
+        (p) => (p.memberId && p.memberId.toLowerCase() === sponsorTrimmed.toLowerCase()) || p.id === sponsorTrimmed
+      );
+      if (sponsorExists) {
+        verifiedSponsorId = sponsorTrimmed;
+      }
     }
 
     const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -439,12 +472,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       email: data.email,
       fullName: data.fullName,
       phone: data.phone,
-      role: data.role || 'junior_member',
+      role: assignedRole,
       memberId: newMemberId,
-      sponsorId: data.sponsorId,
+      sponsorId: verifiedSponsorId,
       city: data.city || 'Varanasi',
       branchLocation: data.branchLocation || 'Rampur Head Office',
-      kycStatus: 'verified',
+      kycStatus: 'pending',
       isActive: true,
       createdAt: new Date().toISOString(),
     };
@@ -484,6 +517,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginUser = (identifier: string): Profile | null => {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[Security] Quick-login bypass is disabled in production builds.');
+      return null;
+    }
     const trimmed = identifier.trim().toLowerCase();
     const found = allProfiles.find(
       (p) =>
@@ -502,6 +539,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const switchUserRole = (role: UserRole) => {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[Security] Role switching is strictly disabled in production builds.');
+      return;
+    }
     const found = allProfiles.find((p) => p.role === role) || DEMO_PROFILES.find((p) => p.role === role);
     if (found) {
       setCurrentUser(found);
@@ -554,20 +595,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     level?: number;
     rankTitle?: string;
   }): Profile => {
+    // Authorization Check: Must be admin or authorized senior member
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    const isAuthorizedSenior = currentUser?.role === 'senior_member' && Boolean(currentUser?.permissions?.canCreateDownline);
+
+    if (!isAdmin && !isAuthorizedSenior) {
+      throw new Error('Access denied: You do not have permission to register network members.');
+    }
+
+    // Role Escalation Prevention: Non-admin seniors may ONLY onboard junior_members
+    let assignedRole: UserRole = data.role;
+    if (!isAdmin) {
+      assignedRole = 'junior_member';
+    }
+
+    // Hierarchy Check: Non-admin seniors must be the direct sponsor of their onboarded recruits
+    let effectiveSponsorId = data.sponsorId;
+    if (!isAdmin && currentUser?.memberId) {
+      effectiveSponsorId = currentUser.memberId;
+    }
+
     const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
     const nowIso = new Date().toISOString();
     const todayDate = nowIso.slice(0, 10);
 
-    const defaultLevel = data.level || (data.role === 'senior_member' ? 4 : data.role === 'sub_admin' ? 5 : 1);
+    const defaultLevel = data.level || (assignedRole === 'senior_member' ? 4 : assignedRole === 'sub_admin' ? 5 : 1);
     const defaultRank =
       data.rankTitle ||
-      (data.role === 'super_admin'
+      (assignedRole === 'super_admin'
         ? 'Director (कंपनी निदेशक)'
-        : data.role === 'sub_admin'
+        : assignedRole === 'sub_admin'
         ? 'Platinum Leader (क्षेत्रीय प्रभारी)'
-        : data.role === 'senior_member'
+        : assignedRole === 'senior_member'
         ? 'Diamond Star (वरिष्ठ प्रबंधक)'
-        : data.role === 'buyer'
+        : assignedRole === 'buyer'
         ? 'Verified Client (सत्यापित क्रेता)'
         : 'Sales Assistant (फील्ड एजेंट)');
 
@@ -576,9 +637,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       email: data.email,
       fullName: data.fullName,
       phone: data.phone,
-      role: data.role,
+      role: assignedRole,
       memberId: newMemberId,
-      sponsorId: data.sponsorId,
+      sponsorId: effectiveSponsorId,
       city: data.city || 'Varanasi',
       branchLocation: data.branchLocation || 'Rampur Head Office',
       address: data.address || '',
@@ -603,11 +664,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateMember = (id: string, data: Partial<Profile>) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    const isSelf = currentUser?.id === id;
+
+    if (!isAdmin && !isSelf) {
+      throw new Error('Access denied: You cannot modify another user profile.');
+    }
+
+    // Privilege Escalation Prevention: Non-admin users cannot alter privileged administrative fields
+    const sanitizedData: Partial<Profile> = { ...data };
+    if (!isAdmin) {
+      delete sanitizedData.role;
+      delete sanitizedData.kycStatus;
+      delete sanitizedData.isActive;
+      delete sanitizedData.permissions;
+      delete sanitizedData.level;
+      delete sanitizedData.rankTitle;
+      delete sanitizedData.totalBusinessVolumeInr;
+      delete sanitizedData.plotsClosedCount;
+    }
+
     let updatedMember: Profile | null = null;
     setAllProfiles((prev) => {
       const next = prev.map((p) => {
         if (p.id === id) {
-          updatedMember = { ...p, ...data };
+          updatedMember = { ...p, ...sanitizedData };
           return updatedMember;
         }
         return p;
@@ -621,11 +702,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void saveProfileToSupabase(updatedMember);
     }
     if (currentUser?.id === id) {
-      setCurrentUser((prev) => (prev ? { ...prev, ...data } : null));
+      setCurrentUser((prev) => (prev ? { ...prev, ...sanitizedData } : null));
     }
   };
 
   const deleteMember = (id: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can remove members.');
+    }
     setAllProfiles((prev) => {
       const next = prev.filter((p) => p.id !== id);
       try {
@@ -637,6 +722,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleMemberStatus = (id: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can toggle account activation status.');
+    }
     let toggledMember: Profile | null = null;
     setAllProfiles((prev) => {
       const next = prev.map((p) => {
@@ -736,6 +825,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const plot = plots.find((p) => p.id === plotId);
     if (!plot) throw new Error('Plot not found');
 
+    if (plot.status !== 'available_green') {
+      throw new Error(`Plot ${plot.plotNumber} is not available for booking (status: ${plot.status}).`);
+    }
+
+    const existingActiveBooking = bookings.find(
+      (b) => b.plotId === plotId && ['confirmed', 'under_review', 'hold', 'pending'].includes(b.status)
+    );
+    if (existingActiveBooking) {
+      throw new Error(`Plot ${plot.plotNumber} already has an active reservation (${existingActiveBooking.bookingNumber}).`);
+    }
+
     const newBooking: Booking = {
       id: `bk-${Date.now()}`,
       bookingNumber: `BK-2026-${Math.floor(100 + Math.random() * 900)}`,
@@ -822,6 +922,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       transactionRef: txRef,
       bookingId,
       plotNumber: booking ? booking.plotNumber : 'A-01',
+      payerId: currentUser?.id,
       payerName: currentUser?.fullName || 'Verified Buyer',
       payerPhone: currentUser?.phone || '6306917991',
       amountInr: amount,
@@ -842,6 +943,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const verifyPayment = (paymentId: string, approved: boolean, reason?: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    const canVerify = isAdmin || Boolean(currentUser?.permissions?.canVerifyPayments);
+
+    if (!canVerify) {
+      throw new Error('Access denied: Only authorized administrators or finance managers can verify payments.');
+    }
+
+    const existingPayment = payments.find((p) => p.id === paymentId);
+    if (!existingPayment) {
+      throw new Error('Payment record not found.');
+    }
+
+    // Separation of Duties: An administrator or agent cannot approve their own payment proof
+    const isSelfApproval =
+      (currentUser?.id && existingPayment.payerId === currentUser.id) ||
+      (currentUser?.fullName && existingPayment.payerName.trim().toLowerCase() === currentUser.fullName.trim().toLowerCase()) ||
+      (currentUser?.phone && existingPayment.payerPhone && currentUser.phone === existingPayment.payerPhone);
+
+    if (isSelfApproval) {
+      throw new Error('Separation of duties violation: An administrator or agent cannot approve their own payment proof.');
+    }
+
     let targetPay: PaymentRecord | null = null;
     setPayments((prev) => {
       const next = prev.map((p) => {

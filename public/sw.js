@@ -32,8 +32,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Never cache API routes, auth endpoints, or private data
-  if (url.pathname.startsWith('/api') || url.pathname.startsWith('/auth') || event.request.method !== 'GET') {
+  // Never cache API routes, auth endpoints, private dashboards, or remote Supabase calls
+  if (
+    url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/auth') ||
+    url.pathname.startsWith('/admin') ||
+    url.pathname.startsWith('/member') ||
+    url.pathname.startsWith('/buyer') ||
+    url.hostname.includes('supabase.co') ||
+    event.request.method !== 'GET'
+  ) {
     return;
   }
 

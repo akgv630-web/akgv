@@ -346,7 +346,119 @@ ALTER TABLE cms_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE field_gps_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
--- Generous client sync policies (portal level enforcement with DB safety)
+-- Helper Functions for Role-Based Row Level Security
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS TEXT AS $$
+  SELECT role FROM public.profiles WHERE auth_user_id = auth.uid() OR id = auth.uid()::text LIMIT 1;
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT COALESCE(
+    (SELECT role IN ('super_admin', 'sub_admin') FROM public.profiles WHERE auth_user_id = auth.uid() OR id = auth.uid()::text LIMIT 1),
+    FALSE
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- Partial Unique Index on Active Bookings (Prevents Double Bookings and Race Conditions)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_plot_booking 
+ON bookings (plot_id) 
+WHERE status IN ('confirmed', 'under_review', 'hold', 'pending');
+
+-- Atomic Plot Booking Function with Row-Level Locking
+CREATE OR REPLACE FUNCTION create_plot_booking_atomic(
+    p_plot_id TEXT,
+    p_buyer_id TEXT,
+    p_buyer_name TEXT,
+    p_buyer_phone TEXT,
+    p_total_amount NUMERIC,
+    p_sponsor_id TEXT DEFAULT NULL,
+    p_house_model_id TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_plot RECORD;
+    v_existing_booking RECORD;
+    v_new_booking_id TEXT;
+    v_booking_number TEXT;
+    v_hold_expires TIMESTAMPTZ;
+BEGIN
+    -- 1. Lock the plot row FOR UPDATE
+    SELECT * INTO v_plot FROM plots WHERE id = p_plot_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Plot not found');
+    END IF;
+
+    -- 2. Check availability
+    IF v_plot.status NOT IN ('available_green') THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Plot is not available for booking (status: ' || v_plot.status || ')');
+    END IF;
+
+    -- 3. Check existing active booking
+    SELECT * INTO v_existing_booking FROM bookings 
+    WHERE plot_id = p_plot_id AND status IN ('confirmed', 'under_review', 'hold', 'pending')
+    LIMIT 1;
+
+    IF FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'An active reservation or booking already exists for this plot');
+    END IF;
+
+    -- 4. Create booking
+    v_new_booking_id := 'bk-' || extract(epoch from now())::bigint || '-' || floor(random() * 1000)::text;
+    v_booking_number := 'BK-2026-' || floor(100 + random() * 900)::text;
+    v_hold_expires := now() + interval '72 hours';
+
+    INSERT INTO bookings (
+        id,
+        booking_number,
+        plot_id,
+        plot_number,
+        buyer_id,
+        buyer_name,
+        buyer_phone,
+        sponsor_id,
+        status,
+        house_model_id,
+        total_amount_inr,
+        paid_amount_inr,
+        hold_expires_at,
+        created_at
+    ) VALUES (
+        v_new_booking_id,
+        v_booking_number,
+        p_plot_id,
+        v_plot.plot_number,
+        p_buyer_id,
+        p_buyer_name,
+        p_buyer_phone,
+        p_sponsor_id,
+        'pending',
+        p_house_model_id,
+        p_total_amount,
+        0,
+        v_hold_expires,
+        now()
+    );
+
+    -- 5. Mark plot status as hold_pending
+    UPDATE plots 
+    SET status = 'hold_pending', updated_at = now() 
+    WHERE id = p_plot_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'booking_id', v_new_booking_id,
+        'booking_number', v_booking_number,
+        'plot_number', v_plot.plot_number,
+        'hold_expires_at', v_hold_expires
+    );
+END;
+$$;
+
+-- Drop obsolete open access policies
 DO $$
 BEGIN
     DROP POLICY IF EXISTS "Public access to locations" ON locations;
@@ -366,27 +478,128 @@ BEGIN
     DROP POLICY IF EXISTS "Public access to cms_content" ON cms_content;
     DROP POLICY IF EXISTS "Public access to field_gps_evidence" ON field_gps_evidence;
     DROP POLICY IF EXISTS "Public access to audit_logs" ON audit_logs;
+
+    DROP POLICY IF EXISTS "Public read locations" ON locations;
+    DROP POLICY IF EXISTS "Admin write locations" ON locations;
+    DROP POLICY IF EXISTS "Public read projects" ON projects;
+    DROP POLICY IF EXISTS "Admin write projects" ON projects;
+    DROP POLICY IF EXISTS "Public read plots" ON plots;
+    DROP POLICY IF EXISTS "Admin write plots" ON plots;
+    DROP POLICY IF EXISTS "Public read cms_content" ON cms_content;
+    DROP POLICY IF EXISTS "Admin write cms_content" ON cms_content;
+    DROP POLICY IF EXISTS "Public read commission_rules" ON commission_rules;
+    DROP POLICY IF EXISTS "Admin write commission_rules" ON commission_rules;
+    DROP POLICY IF EXISTS "Public read offer_incentives" ON offer_incentives;
+    DROP POLICY IF EXISTS "Admin write offer_incentives" ON offer_incentives;
+    DROP POLICY IF EXISTS "Read approved reviews" ON reviews;
+    DROP POLICY IF EXISTS "Public insert reviews" ON reviews;
+    DROP POLICY IF EXISTS "Admin or author update reviews" ON reviews;
+    DROP POLICY IF EXISTS "Admin delete reviews" ON reviews;
+    DROP POLICY IF EXISTS "Public insert enquiries" ON client_enquiries;
+    DROP POLICY IF EXISTS "Admin or assigned read enquiries" ON client_enquiries;
+    DROP POLICY IF EXISTS "Admin update enquiries" ON client_enquiries;
+    DROP POLICY IF EXISTS "Admin delete enquiries" ON client_enquiries;
+    DROP POLICY IF EXISTS "Public insert site visits" ON site_visits;
+    DROP POLICY IF EXISTS "Buyer or admin read site visits" ON site_visits;
+    DROP POLICY IF EXISTS "Admin update site visits" ON site_visits;
+    DROP POLICY IF EXISTS "Admin delete site visits" ON site_visits;
+    DROP POLICY IF EXISTS "Public read active profiles" ON profiles;
+    DROP POLICY IF EXISTS "Authenticated create profile" ON profiles;
+    DROP POLICY IF EXISTS "Self or admin update profile" ON profiles;
+    DROP POLICY IF EXISTS "Admin delete profile" ON profiles;
+    DROP POLICY IF EXISTS "Buyer or sponsor or admin read bookings" ON bookings;
+    DROP POLICY IF EXISTS "Buyer create booking" ON bookings;
+    DROP POLICY IF EXISTS "Admin update bookings" ON bookings;
+    DROP POLICY IF EXISTS "Admin delete bookings" ON bookings;
+    DROP POLICY IF EXISTS "Payer or admin read payments" ON payment_records;
+    DROP POLICY IF EXISTS "Payer create payment" ON payment_records;
+    DROP POLICY IF EXISTS "Admin update payments" ON payment_records;
+    DROP POLICY IF EXISTS "Admin delete payments" ON payment_records;
+    DROP POLICY IF EXISTS "Member or admin read targets" ON sales_targets;
+    DROP POLICY IF EXISTS "Admin write targets" ON sales_targets;
+    DROP POLICY IF EXISTS "Assigned or admin read tasks" ON task_reminders;
+    DROP POLICY IF EXISTS "Assigned or admin update tasks" ON task_reminders;
+    DROP POLICY IF EXISTS "Admin delete tasks" ON task_reminders;
+    DROP POLICY IF EXISTS "Admin create tasks" ON task_reminders;
+    DROP POLICY IF EXISTS "Recipient or admin read messages" ON in_app_messages;
+    DROP POLICY IF EXISTS "Admin write messages" ON in_app_messages;
+    DROP POLICY IF EXISTS "Read gps evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Authenticated insert gps evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Admin update gps evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Admin delete gps evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Admin read audit_logs" ON audit_logs;
+    DROP POLICY IF EXISTS "Authenticated insert audit_logs" ON audit_logs;
 EXCEPTION
     WHEN undefined_object THEN NULL;
 END $$;
 
-CREATE POLICY "Public access to locations" ON locations FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to projects" ON projects FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to profiles" ON profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to plots" ON plots FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to reviews" ON reviews FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to bookings" ON bookings FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to payments" ON payment_records FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to site_visits" ON site_visits FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to commission_rules" ON commission_rules FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to client_enquiries" ON client_enquiries FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to offer_incentives" ON offer_incentives FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to sales_targets" ON sales_targets FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to task_reminders" ON task_reminders FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to in_app_messages" ON in_app_messages FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to cms_content" ON cms_content FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to field_gps_evidence" ON field_gps_evidence FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Public access to audit_logs" ON audit_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+-- Fine-grained Least-Privilege RLS Policies
+CREATE POLICY "Public read locations" ON locations FOR SELECT TO anon, authenticated USING (is_active = TRUE OR public.is_admin());
+CREATE POLICY "Admin write locations" ON locations FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Public read projects" ON projects FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin write projects" ON projects FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Public read plots" ON plots FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin write plots" ON plots FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Public read cms_content" ON cms_content FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin write cms_content" ON cms_content FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Public read commission_rules" ON commission_rules FOR SELECT TO anon, authenticated USING (is_active = TRUE OR public.is_admin());
+CREATE POLICY "Admin write commission_rules" ON commission_rules FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Public read offer_incentives" ON offer_incentives FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Admin write offer_incentives" ON offer_incentives FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Read approved reviews" ON reviews FOR SELECT TO anon, authenticated USING (status = 'approved' OR public.is_admin() OR author_id = auth.uid()::text);
+CREATE POLICY "Public insert reviews" ON reviews FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Admin or author update reviews" ON reviews FOR UPDATE TO authenticated USING (public.is_admin() OR author_id = auth.uid()::text);
+CREATE POLICY "Admin delete reviews" ON reviews FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Public insert enquiries" ON client_enquiries FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Admin or assigned read enquiries" ON client_enquiries FOR SELECT TO authenticated USING (public.is_admin() OR assigned_member_id = auth.uid()::text);
+CREATE POLICY "Admin update enquiries" ON client_enquiries FOR UPDATE TO authenticated USING (public.is_admin());
+CREATE POLICY "Admin delete enquiries" ON client_enquiries FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Public insert site visits" ON site_visits FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Buyer or admin read site visits" ON site_visits FOR SELECT TO authenticated USING (public.is_admin() OR buyer_id = auth.uid()::text);
+CREATE POLICY "Admin update site visits" ON site_visits FOR UPDATE TO authenticated USING (public.is_admin());
+CREATE POLICY "Admin delete site visits" ON site_visits FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Public read active profiles" ON profiles FOR SELECT TO anon, authenticated USING (is_active = TRUE OR public.is_admin());
+CREATE POLICY "Authenticated create profile" ON profiles FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR ((auth_user_id = auth.uid() OR id = auth.uid()::text) AND role = 'buyer'));
+CREATE POLICY "Self or admin update profile" ON profiles FOR UPDATE TO authenticated USING (public.is_admin() OR auth_user_id = auth.uid() OR id = auth.uid()::text) WITH CHECK (public.is_admin() OR ((auth_user_id = auth.uid() OR id = auth.uid()::text) AND role = (SELECT p2.role FROM profiles p2 WHERE p2.auth_user_id = auth.uid() OR p2.id = auth.uid()::text LIMIT 1)));
+CREATE POLICY "Admin delete profile" ON profiles FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Buyer or sponsor or admin read bookings" ON bookings FOR SELECT TO authenticated USING (public.is_admin() OR buyer_id = auth.uid()::text OR sponsor_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
+CREATE POLICY "Buyer create booking" ON bookings FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR buyer_id = auth.uid()::text);
+CREATE POLICY "Admin update bookings" ON bookings FOR UPDATE TO authenticated USING (public.is_admin());
+CREATE POLICY "Admin delete bookings" ON bookings FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Payer or admin read payments" ON payment_records FOR SELECT TO authenticated USING (public.is_admin() OR payer_id = auth.uid()::text OR booking_id IN (SELECT b.id FROM bookings b WHERE b.buyer_id = auth.uid()::text));
+CREATE POLICY "Payer create payment" ON payment_records FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR payer_id = auth.uid()::text);
+CREATE POLICY "Admin update payments" ON payment_records FOR UPDATE TO authenticated USING (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text);
+CREATE POLICY "Admin delete payments" ON payment_records FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Member or admin read targets" ON sales_targets FOR SELECT TO authenticated USING (public.is_admin() OR member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
+CREATE POLICY "Admin write targets" ON sales_targets FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Assigned or admin read tasks" ON task_reminders FOR SELECT TO authenticated USING (public.is_admin() OR assigned_to_member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
+CREATE POLICY "Assigned or admin update tasks" ON task_reminders FOR UPDATE TO authenticated USING (public.is_admin() OR assigned_to_member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
+CREATE POLICY "Admin delete tasks" ON task_reminders FOR DELETE TO authenticated USING (public.is_admin());
+CREATE POLICY "Admin create tasks" ON task_reminders FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+
+CREATE POLICY "Recipient or admin read messages" ON in_app_messages FOR SELECT TO authenticated USING (recipient_type = 'all' OR public.is_admin() OR recipient_id = auth.uid()::text);
+CREATE POLICY "Admin write messages" ON in_app_messages FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Read gps evidence" ON field_gps_evidence FOR SELECT TO anon, authenticated USING (status = 'approved' OR public.is_admin() OR captured_by_member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
+CREATE POLICY "Authenticated insert gps evidence" ON field_gps_evidence FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Admin update gps evidence" ON field_gps_evidence FOR UPDATE TO authenticated USING (public.is_admin());
+CREATE POLICY "Admin delete gps evidence" ON field_gps_evidence FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Admin read audit_logs" ON audit_logs FOR SELECT TO authenticated USING (public.is_admin());
+CREATE POLICY "Authenticated insert audit_logs" ON audit_logs FOR INSERT TO authenticated WITH CHECK (true);
 
 -- ==============================================================================
 -- SEED DATA INSERTION

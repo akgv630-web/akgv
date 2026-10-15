@@ -34,12 +34,14 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     loginWithCredentials,
     registerWithCredentials,
     resetPasswordRequest,
-    switchUserRole,
     language,
     currentUser,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot' | 'sandbox'>(initialTab);
+  const isDev = process.env.NODE_ENV !== 'production';
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot' | 'sandbox'>(
+    initialTab === 'sandbox' && !isDev ? 'login' : initialTab
+  );
 
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -49,12 +51,12 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [loggedInName, setLoggedInName] = useState('');
 
-  // Register form state
+  // Register form state (Public registration is strictly for buyers)
   const [regName, setRegName] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
-  const [regRole, setRegRole] = useState<UserRole>('junior_member');
+  const regRole: UserRole = 'buyer';
   const [regSponsorCode, setRegSponsorCode] = useState('AKGV-3498'); // default sponsor
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
@@ -202,8 +204,8 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
         onClose();
       }, 1000);
     } else {
-      switchUserRole(role);
-      onClose();
+      setLoginError(res.error || 'Authentication failed. Please verify credentials.');
+      setActiveTab('login');
     }
   };
 
@@ -267,19 +269,21 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
               ? 'Register'
               : 'Register'}
           </button>
-          <button
-            onClick={() => {
-              setActiveTab('sandbox');
-              setRegisteredMemberCode(null);
-            }}
-            className={`flex-1 py-3 text-center transition border-b-2 ${
-              activeTab === 'sandbox'
-                ? 'border-[#C7A35A] text-[#DFC382] bg-white/5'
-                : 'border-transparent text-gray-400 hover:text-white'
-            }`}
-          >
-            {language === 'hi' ? 'सैंडबॉक्स टेस्ट' : 'Sandbox Roles'}
-          </button>
+          {isDev && (
+            <button
+              onClick={() => {
+                setActiveTab('sandbox');
+                setRegisteredMemberCode(null);
+              }}
+              className={`flex-1 py-3 text-center transition border-b-2 ${
+                activeTab === 'sandbox'
+                  ? 'border-[#C7A35A] text-[#DFC382] bg-white/5'
+                  : 'border-transparent text-gray-400 hover:text-white'
+              }`}
+            >
+              {language === 'hi' ? 'सैंडबॉक्स टेस्ट' : 'Sandbox Roles'}
+            </button>
+          )}
           <button
             onClick={() => {
               setActiveTab('forgot');
@@ -517,15 +521,10 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                       <label className="block text-xs font-semibold text-gray-300 mb-1">
                         {language === 'hi' ? 'पंजीकरण का प्रकार' : 'Account Role'}
                       </label>
-                      <select
-                        value={regRole}
-                        onChange={(e) => setRegRole(e.target.value as UserRole)}
-                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
-                      >
-                        <option value="junior_member">Field Associate / Partner</option>
-                        <option value="buyer">Plot Buyer / Investor</option>
-                        <option value="senior_member">Senior Area Manager</option>
-                      </select>
+                      <div className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-xs font-semibold text-[#DFC382] flex items-center justify-between">
+                        <span>{language === 'hi' ? 'प्लॉट खरीदार / निवेशक' : 'Plot Buyer / Investor Portal'}</span>
+                        <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">PUBLIC ONBOARDING</span>
+                      </div>
                     </div>
                   </div>
 
@@ -543,9 +542,9 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 text-[11px] text-gray-400 space-y-1">
-                    <div className="font-semibold text-[#DFC382]">Notice on Joining Kit & Plot Sales:</div>
+                    <div className="font-semibold text-[#DFC382]">Notice for Business Associates:</div>
                     <p>
-                      AKGV Infra City sells approved residential plots only. Joining fee ₹999 provides 1 Bag, 1 Pen, 1 Diary, and 1 Project File handed over physically via branch office cash ledger.
+                      Official field associate and senior manager accounts are provisioned exclusively by AKGV Infra City administration or authorized branch sponsors. Public registration creates secure buyer accounts only.
                     </p>
                   </div>
 
@@ -568,8 +567,8 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
             </div>
           )}
 
-          {/* Tab 3: Sandbox Quick Evaluation */}
-          {activeTab === 'sandbox' && (
+          {/* Tab 3: Sandbox Quick Evaluation (Gated strictly in development) */}
+          {isDev && activeTab === 'sandbox' && (
             <div className="p-6 space-y-4">
               <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17] p-3.5 space-y-1.5">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#DFC382]">

@@ -23,6 +23,7 @@ export function FieldGpsCameraCapture() {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [captureMethod, setCaptureMethod] = useState<'live_camera' | 'file_upload' | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [notes, setNotes] = useState('');
   const [submittedNotice, setSubmittedNotice] = useState<string | null>(null);
@@ -88,6 +89,7 @@ export function FieldGpsCameraCapture() {
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
       setPhotoPreview(dataUrl);
+      setCaptureMethod('live_camera');
     }
     stopCamera();
   };
@@ -111,6 +113,7 @@ export function FieldGpsCameraCapture() {
       const reader = new FileReader();
       reader.onload = () => {
         setPhotoPreview(reader.result as string);
+        setCaptureMethod('file_upload');
       };
       reader.readAsDataURL(file);
     }
@@ -138,12 +141,15 @@ export function FieldGpsCameraCapture() {
       capturedByMemberId: currentUser?.memberId || 'GUEST',
       capturedByName: currentUser?.fullName || 'Field Inspector',
       adminNotes: notes,
+      isLiveCamera: captureMethod === 'live_camera',
+      captureSource: captureMethod || 'live_camera',
     });
 
     setSubmittedNotice(`Field GPS evidence for Plot ${selectedPlotNumber} submitted for administrative verification!`);
     setTimeout(() => {
       setSubmittedNotice(null);
       setPhotoPreview(null);
+      setCaptureMethod(null);
       setNotes('');
     }, 3000);
   };
@@ -262,9 +268,31 @@ export function FieldGpsCameraCapture() {
                     alt="Captured Plot"
                     className="w-full h-52 object-cover rounded-xl"
                   />
+                  <div
+                    className={`absolute top-4 left-4 rounded-full px-2.5 py-1 text-[10px] font-bold shadow-md backdrop-blur-md flex items-center gap-1.5 border ${
+                      captureMethod === 'live_camera'
+                        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                        : 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                    }`}
+                  >
+                    {captureMethod === 'live_camera' ? (
+                      <>
+                        <Camera className="h-3 w-3" />
+                        <span>Live Sensor Stream</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3 w-3" />
+                        <span>Gallery File Upload</span>
+                      </>
+                    )}
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setPhotoPreview(null)}
+                    onClick={() => {
+                      setPhotoPreview(null);
+                      setCaptureMethod(null);
+                    }}
                     className="absolute top-4 right-4 rounded-full bg-black/70 p-1.5 text-white hover:bg-black"
                   >
                     <X className="h-4 w-4" />
@@ -359,7 +387,18 @@ export function FieldGpsCameraCapture() {
                 className="rounded-xl border border-white/5 bg-[#0B1734] p-3 text-xs space-y-2 hover:border-[#C7A35A]/30 transition"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-white">Plot {ev.plotNumber}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-white">Plot {ev.plotNumber}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold border ${
+                        ev.isLiveCamera
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      }`}
+                    >
+                      {ev.isLiveCamera ? 'Live Camera' : 'Gallery Upload'}
+                    </span>
+                  </div>
                   <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 border border-emerald-500/30">
                     {ev.status === 'approved' ? 'Verified on Site' : 'Pending Review'}
                   </span>
