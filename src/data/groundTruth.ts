@@ -353,6 +353,13 @@ export const HOUSE_MODELS: HouseModel[] = [
         primaryColor: '#F5EBE1',
         accentColor: '#C7A35A',
         roofColor: '#1F2937'
+      },
+      {
+        id: 'theme-royal-graphite',
+        name: 'Royal Slate & Champagne Gold',
+        primaryColor: '#E2E8F0',
+        accentColor: '#C7A35A',
+        roofColor: '#0B1734'
       }
     ],
     imageUrl: '/assets/villa_horizontal_block_c.jpg'

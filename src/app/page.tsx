@@ -2,26 +2,17 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   ArrowRight,
+  Box,
   Building,
   Calendar,
   CheckCircle2,
   Clock,
-  Compass,
-  FileCheck,
-  Gift,
-  HelpCircle,
-  Info,
   Layers,
   MapPin,
   PhoneCall,
-  ShieldAlert,
-  ShieldCheck,
   Sparkles,
-  Trophy,
-  Users
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS, PROJECT_LOCATIONS } from '@/data/groundTruth';
@@ -265,7 +256,108 @@ export default function HomePage() {
         <MasterPlanViewer />
       </section>
 
+      {/* 4. 3D VILLA ARCHITECTURAL EXPERIENCE & FITMENT SIMULATION */}
+      <section id="house-viewer" className="w-full max-w-7xl mx-auto px-4 sm:px-6 overflow-hidden">
+        <div className="relative overflow-hidden rounded-3xl border border-[#C7A35A]/40 bg-gradient-to-br from-[#0B1734] via-[#081226] to-[#050A17] p-6 sm:p-10 shadow-2xl">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[#C7A35A]/10 blur-3xl pointer-events-none" />
 
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-7 space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-300">
+                <Box className="h-3.5 w-3.5 text-emerald-400" />
+                <span>{language === 'hi' ? '3D विला आर्किटेक्चरल स्टूडियो' : 'Interactive 3D Villa Experience'}</span>
+              </div>
+
+              <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
+                {language === 'hi'
+                  ? 'अपने प्लॉट पर सपनों का विला 3D में देखें और कस्टमाइज़ करें'
+                  : 'Visualize & Customize Your Dream Villa in Full 3D WebGL'}
+              </h2>
+
+              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                {language === 'hi'
+                  ? 'AKGV इन्फ्रा सिटी के प्रत्येक प्लॉट पर 3BHK एवं 4BHK विला का डिजिटल फिटमेंट सिम्युलेट करें। दिन, शाम और रात की लाइटिंग में एक्सटीरियर पेंट, पत्थर की फिनिश और कार पोर्च आर्किटेक्चर का वास्तविक 360° अनुभव लें।'
+                  : 'Simulate procedural 3BHK and 4BHK architectural villa fitments directly on selected plots. Rotate, inspect floor spans, toggle day/golden-hour/night illumination, and preview luxury finishes with real-time carpet area calculations.'}
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <span className="text-[11px] font-semibold text-gray-400 block">{language === 'hi' ? 'आर्किटेक्चर मॉडल' : 'Villa Models'}</span>
+                  <span className="font-serif text-sm font-bold text-[#DFC382]">3BHK & 4BHK Duplex</span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <span className="text-[11px] font-semibold text-gray-400 block">{language === 'hi' ? 'लाइटिंग मोड' : 'Lighting Modes'}</span>
+                  <span className="font-serif text-sm font-bold text-[#DFC382]">Day • Golden • Night</span>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3 col-span-2 sm:col-span-1">
+                  <span className="text-[11px] font-semibold text-gray-400 block">{language === 'hi' ? 'फिनिश कस्टमाइजेशन' : 'Exterior Themes'}</span>
+                  <span className="font-serif text-sm font-bold text-[#DFC382]">Heritage & Modern</span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-4">
+                <Link
+                  href="/house-viewer-3d"
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-3 text-xs sm:text-sm font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
+                >
+                  <Box className="h-4 w-4" />
+                  <span>{language === 'hi' ? '3D विला स्टूडियो खोलें' : 'Launch 3D Villa Studio'}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <Link
+                  href="/master-plan"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs sm:text-sm font-semibold text-white hover:bg-white/10 transition"
+                >
+                  <Layers className="h-4 w-4 text-[#C7A35A]" />
+                  <span>{language === 'hi' ? 'प्लॉट मास्टर प्लान' : 'Explore Master Plan'}</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5">
+              <div className="relative mx-auto max-w-md rounded-2xl border border-white/10 bg-[#050A17]/80 p-5 backdrop-blur shadow-2xl space-y-4">
+                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs font-bold text-white tracking-wide">WebGL 3D Engine</span>
+                  </div>
+                  <span className="rounded-full bg-[#C7A35A]/20 px-2.5 py-0.5 text-[10px] font-bold text-[#DFC382]">
+                    High Fidelity
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between text-gray-300">
+                    <span>Sample Villa Configuration:</span>
+                    <span className="font-semibold text-white">Royal Heritage 4BHK</span>
+                  </div>
+                  <div className="flex justify-between text-gray-300">
+                    <span>Plot Fitment Simulation:</span>
+                    <span className="font-semibold text-emerald-400">Plot #A-04 (1,200 sqft)</span>
+                  </div>
+                  <div className="flex justify-between text-gray-300">
+                    <span>Ground Coverage:</span>
+                    <span className="font-semibold text-white">68% (Vastu Compliant)</span>
+                  </div>
+                  <div className="flex justify-between text-gray-300">
+                    <span>Estimated Construction:</span>
+                    <span className="font-semibold text-[#DFC382]">₹48.5 Lakhs</span>
+                  </div>
+                </div>
+
+                <Link
+                  href="/house-viewer-3d"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 py-2.5 text-xs font-semibold text-[#DFC382] border border-white/10 transition"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-[#C7A35A]" />
+                  <span>{language === 'hi' ? '3D में इंटरैक्ट करें →' : 'Simulate 3D Fitment →'}</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* 5. TRUST, LEGAL GUARANTEE & INFRASTRUCTURE STANDARDS */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 overflow-hidden">

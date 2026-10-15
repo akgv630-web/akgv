@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Building2,
+  Box,
   Calendar,
   ChevronDown,
   Globe,
   Home,
+  Info,
   Layers,
   Lock,
   LogOut,
@@ -29,7 +30,6 @@ export function Navbar() {
   const pathname = usePathname();
   const { language, setLanguage, t, currentUser, logout } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
@@ -37,9 +37,11 @@ export function Navbar() {
     { href: '/', label: t.nav.home, icon: Home },
     { href: '/projects', label: t.nav.projects, icon: MapPin },
     { href: '/master-plan', label: t.nav.masterPlan, icon: Layers },
+    { href: '/house-viewer-3d', label: language === 'hi' ? '3D विला' : '3D Villa', icon: Box },
     { href: '/site-visit', label: language === 'hi' ? 'साइट विजिट' : 'Site Visit', icon: Calendar },
     { href: '/rewards-plan', label: t.nav.rewards, icon: Trophy },
     { href: '/joining-kit', label: t.nav.joiningKit, icon: ShieldCheck },
+    { href: '/about', label: language === 'hi' ? 'कंपनी' : 'About', icon: Info },
   ];
 
   const roleLabels: Record<UserRole, string> = {

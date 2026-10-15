@@ -1,0 +1,11 @@
+# robots.txt for AKGV Infra City Private Limited
+User-agent: *
+Allow: /
+
+# Private Authenticated Dashboards & Administrative Consoles
+Disallow: /admin
+Disallow: /member
+Disallow: /buyer
+
+# XML Sitemap
+Sitemap: https://akgv.in/sitemap.xml

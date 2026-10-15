@@ -2,24 +2,19 @@
 
 import React, { useState } from 'react';
 import {
-  Building2,
   CheckCircle2,
   Filter,
-  Heart,
-  MapPin,
-  MessageSquare,
   PenLine,
   ShieldCheck,
   Star,
-  ThumbsUp,
-  User
+  ThumbsUp
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { ReviewRecord } from '@/types';
 import { ReviewSubmissionModal } from './ReviewSubmissionModal';
 
 export function ReviewsLiveSection() {
-  const { reviews, voteHelpful, language } = useApp();
+  const { reviews, voteHelpful } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterRole, setFilterRole] = useState<'ALL' | 'buyer' | 'visitor' | '5_star'>('ALL');
   const [votedIds, setVotedIds] = useState<Record<string, boolean>>({});

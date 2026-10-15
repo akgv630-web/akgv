@@ -297,8 +297,8 @@ export default function BuyerPortalPage() {
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B1734]">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#0B1734]">
+            <table className="w-full min-w-[600px] text-left text-xs">
               <thead className="border-b border-white/10 bg-[#050A17] text-[#DFC382] uppercase text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Transaction Ref</th>
@@ -434,7 +434,7 @@ export default function BuyerPortalPage() {
       {/* Payment Proof Submission Modal */}
       {paymentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-[#C7A35A] bg-[#0B1734] p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-[#C7A35A] bg-[#0B1734] p-5 sm:p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
                 <h3 className="font-serif text-lg font-bold text-white">

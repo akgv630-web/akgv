@@ -3,18 +3,10 @@
 import React from 'react';
 import {
   Award,
-  Calendar,
-  CheckCircle2,
-  Download,
-  Mail,
-  Phone,
   Printer,
   QrCode,
-  ShieldCheck,
-  Sparkles,
   User
 } from 'lucide-react';
-import { COMPANY_DETAILS } from '@/data/groundTruth';
 
 interface AssociateIdCardProps {
   name?: string;
@@ -131,8 +123,8 @@ export function AssociateIdCard({
           </div>
 
           <div className="rounded-xl bg-[#050A17] p-2.5 border border-white/5 space-y-0.5">
-            <span className="text-gray-400 block">HQ Helpline:</span>
-            <span className="font-semibold text-[#DFC382] truncate block">+91 6306917991</span>
+            <span className="text-gray-400 block">Associate Email:</span>
+            <span className="font-semibold text-white truncate block">{email}</span>
           </div>
         </div>
 

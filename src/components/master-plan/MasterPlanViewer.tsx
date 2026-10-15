@@ -4,32 +4,21 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  Building2,
-  Calendar,
   CheckCircle2,
   Compass,
   Eye,
   FileCheck,
   FileText,
-  Filter,
-  Flame,
-  Home,
-  Info,
   Layers,
-  MapPin,
   Maximize2,
   Minimize2,
-  Navigation,
-  Phone,
   RotateCcw,
   Search,
-  ShieldCheck,
   Sparkles,
   TreePine,
   X,
   ZoomIn,
-  ZoomOut,
-  Car
+  ZoomOut
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { AREA_SCHEDULE } from '@/data/groundTruth';
@@ -38,7 +27,7 @@ import { MiniVillaSvg } from './MiniVillaSvg';
 import { PlotHoldCertificateModal } from '@/components/common/PlotHoldCertificateModal';
 
 export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (plot: Plot) => void }) {
-  const { plots, createBookingRequest, setSelectedPlotForViewer, t, language } = useApp();
+  const { plots, createBookingRequest, setSelectedPlotForViewer, t } = useApp();
   const c = t.masterPlan;
 
   // Selected plot state (default A-04)
@@ -59,33 +48,24 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   // Filters
   const [filterBlock, setFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | PlotStatus>('ALL');
-  const [filterSize, setFilterSize] = useState<'ALL' | 'compact' | 'mid' | 'luxury'>('ALL');
 
   // Modals
   const [showBrochureModal, setShowBrochureModal] = useState(false);
   const [activeBrochureTab, setActiveBrochureTab] = useState<'layout' | 'photo' | 'rewards'>('layout');
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [buyerName, setBuyerName] = useState('');
-  const [buyerPhone, setBuyerPhone] = useState('');
-  const [bookingSuccessMsg, setBookingSuccessMsg] = useState<string | null>(null);
 
   // Filtered plots computation
   const filteredPlots = useMemo(() => {
     return plots.filter((plot) => {
       if (filterBlock !== 'ALL' && plot.block !== filterBlock) return false;
       if (filterStatus !== 'ALL' && plot.status !== filterStatus) return false;
-      if (filterSize !== 'ALL') {
-        if (filterSize === 'compact' && plot.areaSqft >= 1000) return false;
-        if (filterSize === 'mid' && (plot.areaSqft < 1000 || plot.areaSqft >= 1500)) return false;
-        if (filterSize === 'luxury' && plot.areaSqft < 1500) return false;
-      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         if (!plot.plotNumber.toLowerCase().includes(q)) return false;
       }
       return true;
     });
-  }, [plots, filterBlock, filterStatus, filterSize, searchQuery]);
+  }, [plots, filterBlock, filterStatus, searchQuery]);
 
   // Layer order: Render selected plot LAST in SVG DOM so that scaled plot floats smoothly above neighbors
   const orderedPlots = useMemo(() => {
@@ -139,33 +119,6 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
   const handleResetZoom = () => {
     setZoomLevel(1.0);
     setSearchQuery('');
-  };
-
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPlot) return;
-    if (!buyerName || !buyerPhone) {
-      alert('Please provide your name and phone number');
-      return;
-    }
-
-    try {
-      const booking = await createBookingRequest(
-        selectedPlot.id,
-        buyerName,
-        buyerPhone
-      );
-      setBookingSuccessMsg(
-        `Booking request #${booking.bookingNumber} generated successfully! A hold has been placed for Plot ${selectedPlot.plotNumber}. Complete payment in the Buyer Portal.`
-      );
-      setTimeout(() => {
-        setBookingModalOpen(false);
-        setBookingSuccessMsg(null);
-      }, 3500);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Booking failed';
-      alert(message);
-    }
   };
 
   const currentStatusMeta = selectedPlot ? getStatusColor(selectedPlot.status) : null;

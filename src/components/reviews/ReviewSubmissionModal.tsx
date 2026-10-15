@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import {
   AlertCircle,
-  Building2,
   CheckCircle2,
-  MapPin,
   ShieldCheck,
   Star,
   User,

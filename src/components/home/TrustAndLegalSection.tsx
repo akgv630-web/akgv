@@ -8,7 +8,6 @@ import {
   Compass,
   Layers,
   ShieldCheck,
-  Star,
   Trees,
   Zap
 } from 'lucide-react';

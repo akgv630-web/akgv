@@ -2259,8 +2259,8 @@ export default function SuperAdminPage() {
             )}
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B1734]">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#0B1734]">
+            <table className="w-full min-w-[700px] text-left text-xs">
               <thead className="border-b border-white/10 bg-[#050A17] text-[#DFC382] uppercase text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Tx Ref & Mode</th>
@@ -2355,8 +2355,8 @@ export default function SuperAdminPage() {
             <span className="text-xs text-gray-400">{bookings.length} Registered Bookings</span>
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B1734]">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#0B1734]">
+            <table className="w-full min-w-[700px] text-left text-xs">
               <thead className="border-b border-white/10 bg-[#050A17] text-[#DFC382] uppercase text-[10px]">
                 <tr>
                   <th className="px-4 py-3">Booking ID</th>

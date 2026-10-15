@@ -2,18 +2,11 @@
 
 import React, { useState } from 'react';
 import {
-  MessageCircle,
-  X,
-  Send,
-  Building,
-  Calendar,
-  Trophy,
-  ShieldCheck,
-  CheckCircle2,
   ExternalLink,
-  Phone
+  Phone,
+  Send,
+  X,
 } from 'lucide-react';
-import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { useApp } from '@/context/AppContext';
 
 export function WhatsAppPopup() {

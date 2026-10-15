@@ -4,16 +4,11 @@ import React, { useState } from 'react';
 import {
   Archive,
   CheckCircle2,
-  FileCheck,
-  FileSpreadsheet,
-  FileText,
   Package,
   Plus,
   Printer,
   Receipt,
   Search,
-  ShieldCheck,
-  UserCheck,
   X
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
