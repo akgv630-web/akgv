@@ -4,22 +4,27 @@ import React, { useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
+  Award,
   Building,
+  Calendar,
   Check,
   CheckCircle2,
   ChevronRight,
   Clock,
   Copy,
   CreditCard,
+  DollarSign,
   Edit,
   ExternalLink,
   Eye,
   FileCheck,
   Filter,
   HelpCircle,
+  Home,
   Layers,
   Mail,
   MapPin,
+  Navigation,
   Package,
   Phone,
   Plus,
@@ -28,6 +33,7 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Star,
   Trash2,
   TrendingUp,
   UserCheck,
@@ -39,6 +45,66 @@ import {
 import { useApp } from '@/context/AppContext';
 import { KycStatus, Plot, PlotStatus, Profile, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
+
+function formatTenure(dateStr?: string): { joinedFormatted: string; tenureFormatted: string } {
+  if (!dateStr) return { joinedFormatted: 'Recent', tenureFormatted: 'Active' };
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return { joinedFormatted: 'Recent', tenureFormatted: 'Active' };
+
+  const now = new Date();
+  const diffMonths = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  const joinedFormatted = date.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  let tenureFormatted = '';
+  if (diffMonths >= 12) {
+    const yrs = Math.floor(diffMonths / 12);
+    const rem = diffMonths % 12;
+    tenureFormatted = rem > 0 ? `${yrs}y ${rem}m active` : `${yrs} yr active`;
+  } else if (diffMonths >= 1) {
+    tenureFormatted = `${diffMonths} mo${diffMonths > 1 ? 's' : ''} active`;
+  } else if (diffDays >= 1) {
+    tenureFormatted = `${diffDays} day${diffDays > 1 ? 's' : ''} active`;
+  } else {
+    tenureFormatted = 'Joined today';
+  }
+
+  return { joinedFormatted, tenureFormatted };
+}
+
+function formatBusinessVolume(amountInr?: number): string {
+  if (!amountInr || amountInr === 0) return '₹0';
+  if (amountInr >= 10000000) {
+    return `₹${(amountInr / 10000000).toFixed(1).replace(/\.0$/, '')} Cr`;
+  }
+  if (amountInr >= 100000) {
+    return `₹${(amountInr / 100000).toFixed(1).replace(/\.0$/, '')} Lakh`;
+  }
+  return `₹${amountInr.toLocaleString('en-IN')}`;
+}
+
+function getLevelInfo(level?: number) {
+  const lvl = Math.min(Math.max(level || 1, 1), 7);
+  const commissionMap: Record<number, { percent: number; rankTitle: string }> = {
+    1: { percent: 4, rankTitle: 'Sales Assistant' },
+    2: { percent: 5, rankTitle: 'Star Associate' },
+    3: { percent: 6, rankTitle: 'Gold Star' },
+    4: { percent: 7, rankTitle: 'Diamond Star' },
+    5: { percent: 8, rankTitle: 'Platinum Leader' },
+    6: { percent: 9, rankTitle: 'Crown Leader' },
+    7: { percent: 10, rankTitle: 'Director' },
+  };
+  return {
+    level: lvl,
+    percent: commissionMap[lvl]?.percent || 4,
+    defaultRank: commissionMap[lvl]?.rankTitle || 'Sales Assistant',
+  };
+}
 
 export default function SuperAdminPage() {
   const {
@@ -80,8 +146,12 @@ export default function SuperAdminPage() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberRole, setNewMemberRole] = useState<UserRole>('senior_member');
+  const [newMemberRole, setNewMemberRole] = useState<UserRole>('junior_member');
   const [newMemberSponsorId, setNewMemberSponsorId] = useState('AKGV-3498');
+  const [newMemberCity, setNewMemberCity] = useState('Varanasi');
+  const [newMemberBranch, setNewMemberBranch] = useState('Rampur Head Office');
+  const [newMemberAddress, setNewMemberAddress] = useState('');
+  const [newMemberLevel, setNewMemberLevel] = useState<number>(1);
   const [createdSponsorFeedback, setCreatedSponsorFeedback] = useState<{ code: string; name: string } | null>(null);
 
   // Edit Member Form State
@@ -92,6 +162,14 @@ export default function SuperAdminPage() {
   const [editSponsorId, setEditSponsorId] = useState('');
   const [editKycStatus, setEditKycStatus] = useState<KycStatus>('verified');
   const [editIsActive, setEditIsActive] = useState<boolean>(true);
+  const [editCity, setEditCity] = useState('Varanasi');
+  const [editBranchLocation, setEditBranchLocation] = useState('Rampur Head Office');
+  const [editAddress, setEditAddress] = useState('');
+  const [editLevel, setEditLevel] = useState<number>(1);
+  const [editRankTitle, setEditRankTitle] = useState('');
+  const [editBusinessVolume, setEditBusinessVolume] = useState<number>(0);
+  const [editPlotsClosed, setEditPlotsClosed] = useState<number>(0);
+  const [editJoinedDate, setEditJoinedDate] = useState('');
 
   // Database-Derived Metrics
   const totalPlots = plots.length;
@@ -131,7 +209,10 @@ export default function SuperAdminPage() {
       const matchEmail = p.email.toLowerCase().includes(q);
       const matchCode = (p.memberId || '').toLowerCase().includes(q);
       const matchSponsor = (p.sponsorId || '').toLowerCase().includes(q);
-      return matchName || matchPhone || matchEmail || matchCode || matchSponsor;
+      const matchCity = (p.city || '').toLowerCase().includes(q);
+      const matchBranch = (p.branchLocation || '').toLowerCase().includes(q);
+      const matchRank = (p.rankTitle || '').toLowerCase().includes(q);
+      return matchName || matchPhone || matchEmail || matchCode || matchSponsor || matchCity || matchBranch || matchRank;
     }
     return true;
   });
@@ -145,6 +226,14 @@ export default function SuperAdminPage() {
     setEditSponsorId(member.sponsorId || '');
     setEditKycStatus(member.kycStatus || 'verified');
     setEditIsActive(member.isActive);
+    setEditCity(member.city || 'Varanasi');
+    setEditBranchLocation(member.branchLocation || 'Rampur Head Office');
+    setEditAddress(member.address || '');
+    setEditLevel(member.level || 1);
+    setEditRankTitle(member.rankTitle || getLevelInfo(member.level).defaultRank);
+    setEditBusinessVolume(member.totalBusinessVolumeInr || 0);
+    setEditPlotsClosed(member.plotsClosedCount || 0);
+    setEditJoinedDate(member.joinedDate || (member.createdAt ? member.createdAt.slice(0, 10) : ''));
   };
 
   const handleSaveEditMember = (e: React.FormEvent) => {
@@ -162,8 +251,16 @@ export default function SuperAdminPage() {
       sponsorId: editSponsorId.trim() || undefined,
       kycStatus: editKycStatus,
       isActive: editIsActive,
+      city: editCity.trim(),
+      branchLocation: editBranchLocation.trim(),
+      address: editAddress.trim(),
+      level: Number(editLevel) || 1,
+      rankTitle: editRankTitle.trim() || undefined,
+      totalBusinessVolumeInr: Number(editBusinessVolume) || 0,
+      plotsClosedCount: Number(editPlotsClosed) || 0,
+      joinedDate: editJoinedDate || undefined,
     });
-    setMemberActionNotice(`Member "${editFullName.trim()}" has been updated successfully.`);
+    setMemberActionNotice(`Member "${editFullName.trim()}" dossier updated successfully.`);
     setEditingMember(null);
     setTimeout(() => setMemberActionNotice(null), 4000);
   };
@@ -601,6 +698,11 @@ export default function SuperAdminPage() {
                   );
                   const roleBadge = getRoleBadge(profile.role);
                   const isCurrentLoggedAdmin = profile.id === currentUser.id;
+                  const { joinedFormatted, tenureFormatted } = formatTenure(profile.joinedDate || profile.createdAt);
+                  const levelInfo = getLevelInfo(profile.level);
+                  const memberBookings = bookings.filter(
+                    (b) => b.buyerId === profile.id || b.buyerPhone === profile.phone
+                  );
 
                   return (
                     <div
@@ -616,7 +718,7 @@ export default function SuperAdminPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-3">
                             {/* Avatar */}
-                            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-[#050A17] border border-[#C7A35A]/40 text-[#DFC382] font-bold text-sm shadow overflow-hidden">
+                            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#050A17] border border-[#C7A35A]/40 text-[#DFC382] font-bold text-sm shadow overflow-hidden">
                               {profile.avatarUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
@@ -637,7 +739,7 @@ export default function SuperAdminPage() {
                             </div>
 
                             <div>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <h4 className="font-bold text-white text-sm line-clamp-1">
                                   {profile.fullName}
                                 </h4>
@@ -647,7 +749,7 @@ export default function SuperAdminPage() {
                                   </span>
                                 )}
                               </div>
-                              <span className="text-gray-400 text-[11px] block">{profile.phone}</span>
+                              <span className="text-gray-300 font-mono text-[11px] block">{profile.phone}</span>
                             </div>
                           </div>
 
@@ -658,6 +760,75 @@ export default function SuperAdminPage() {
                             {roleBadge.label}
                           </span>
                         </div>
+
+                        {/* Location & Tenure Highlights */}
+                        <div className="space-y-1.5 pt-1 border-t border-white/5">
+                          {/* Location & Assigned Branch */}
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-300">
+                            <MapPin className="h-3.5 w-3.5 text-[#C7A35A] shrink-0" />
+                            <span className="truncate">
+                              <strong className="text-white">{profile.city || 'Varanasi'}</strong> •{' '}
+                              <span className="text-[#DFC382]">{profile.branchLocation || 'Rampur Head Office'}</span>
+                            </span>
+                          </div>
+
+                          {/* Joined Date & Tenure Duration */}
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                            <Calendar className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                            <span>
+                              Joined <strong className="text-gray-200">{joinedFormatted}</strong>{' '}
+                              <span className="text-emerald-400 font-medium">({tenureFormatted})</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Level & Sales Performance OR Buyer Portfolio */}
+                        {profile.role !== 'buyer' ? (
+                          <div className="rounded-xl bg-[#050A17] p-2.5 space-y-1 border border-white/5 text-[11px]">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1 text-[#DFC382] font-semibold">
+                                <Award className="h-3.5 w-3.5 text-[#C7A35A]" />
+                                <span>Level {profile.level || levelInfo.level}:</span>
+                                <span className="text-white">{profile.rankTitle || levelInfo.defaultRank}</span>
+                              </div>
+                              <span className="rounded bg-[#C7A35A]/15 px-1.5 py-0.2 text-[10px] font-bold text-[#DFC382]">
+                                {levelInfo.percent}% Comm
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-gray-400 text-[10px] pt-0.5">
+                              <span>
+                                Vol: <strong className="text-emerald-400">{formatBusinessVolume(profile.totalBusinessVolumeInr)}</strong>
+                              </span>
+                              <span>
+                                Closed: <strong className="text-white">{profile.plotsClosedCount || 0} Plots</strong>
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-xl bg-[#050A17] p-2.5 space-y-1 border border-white/5 text-[11px]">
+                            <div className="flex items-center justify-between text-emerald-400 font-semibold">
+                              <div className="flex items-center gap-1">
+                                <Home className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>
+                                  {memberBookings.length > 0
+                                    ? `Plots: ${memberBookings.map((b) => b.plotNumber).join(', ')}`
+                                    : 'Prospective Client'}
+                                </span>
+                              </div>
+                              <span className="rounded bg-emerald-500/10 px-1.5 py-0.2 text-[10px] font-bold text-emerald-300">
+                                {memberBookings.length} Booked
+                              </span>
+                            </div>
+                            <div className="text-gray-400 text-[10px] pt-0.5 flex justify-between">
+                              <span>
+                                Paid: <strong className="text-emerald-300">₹{memberBookings.reduce((sum, b) => sum + b.paidAmountInr, 0).toLocaleString('en-IN')}</strong>
+                              </span>
+                              <span>
+                                Total: <strong className="text-white">₹{memberBookings.reduce((sum, b) => sum + b.totalAmountInr, 0).toLocaleString('en-IN')}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Member Details Matrix */}
                         <div className="rounded-xl bg-[#050A17] p-3 space-y-2 border border-white/5 font-mono text-[11px]">
@@ -832,6 +1003,10 @@ export default function SuperAdminPage() {
                       email: newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`,
                       role: newMemberRole,
                       sponsorId: newMemberSponsorId,
+                      city: newMemberCity.trim(),
+                      branchLocation: newMemberBranch.trim(),
+                      address: newMemberAddress.trim(),
+                      level: Number(newMemberLevel) || 1,
                     });
                     setCreatedSponsorFeedback({
                       code: profile.memberId || 'AKGV-NEW',
@@ -841,6 +1016,7 @@ export default function SuperAdminPage() {
                     setNewMemberName('');
                     setNewMemberPhone('');
                     setNewMemberEmail('');
+                    setNewMemberAddress('');
                     setTimeout(() => setMemberActionNotice(null), 5000);
                   }}
                   className="p-5 space-y-4 text-xs"
@@ -923,6 +1099,43 @@ export default function SuperAdminPage() {
                     </div>
                   </div>
 
+                  {/* Location & Assigned Branch */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Native City / District (गृह जिला / शहर)
+                      </label>
+                      <select
+                        value={newMemberCity}
+                        onChange={(e) => setNewMemberCity(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
+                      >
+                        <option value="Varanasi">Varanasi (वाराणसी)</option>
+                        <option value="Chandauli">Chandauli (चंदौली)</option>
+                        <option value="Mirzapur">Mirzapur (मिर्जापुर)</option>
+                        <option value="Prayagraj">Prayagraj (प्रयागराज)</option>
+                        <option value="Ghazipur">Ghazipur (गाजीपुर)</option>
+                        <option value="Bhadohi">Bhadohi (भदोही)</option>
+                        <option value="Jaunpur">Jaunpur (जौनपुर)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Assigned Branch Office (संबद्ध शाखा)
+                      </label>
+                      <select
+                        value={newMemberBranch}
+                        onChange={(e) => setNewMemberBranch(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
+                      >
+                        <option value="Rampur Head Office">Rampur Head Office (रामपुर प्रधान कार्यालय)</option>
+                        <option value="Lahartara Branch">Lahartara Branch (लहरतारा शाखा, निकट कैंट)</option>
+                        <option value="Mirza Murad Branch">Mirza Murad Branch (मिर्जामुराद शाखा, NH-19)</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
@@ -942,25 +1155,57 @@ export default function SuperAdminPage() {
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Reporting Sponsor (सीनियर स्पॉन्सर)
+                        Initial MLM Level (लेवल)
                       </label>
                       <select
-                        value={newMemberSponsorId}
-                        onChange={(e) => setNewMemberSponsorId(e.target.value)}
+                        value={newMemberLevel}
+                        onChange={(e) => setNewMemberLevel(Number(e.target.value))}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                       >
-                        <option value="AKGV-HQ-001">Super Admin (AKGV-HQ-001)</option>
-                        <option value="AKGV-3498">Vikram Singh (AKGV-3498)</option>
-                        <option value="AKGV-SUB-101">Suresh Yadav Sub-Admin (AKGV-SUB-101)</option>
-                        {allProfiles
-                          .filter((p) => p.role === 'senior_member' && p.memberId !== 'AKGV-3498')
-                          .map((p) => (
-                            <option key={p.id} value={p.memberId || p.id}>
-                              {p.fullName} ({p.memberId})
-                            </option>
-                          ))}
+                        <option value={1}>Level 1: Sales Assistant (4% Comm)</option>
+                        <option value={2}>Level 2: Star Associate (5% Comm)</option>
+                        <option value={3}>Level 3: Gold Star (6% Comm)</option>
+                        <option value={4}>Level 4: Diamond Star (7% Comm)</option>
+                        <option value={5}>Level 5: Platinum Leader (8% Comm)</option>
+                        <option value={6}>Level 6: Crown Leader (9% Comm)</option>
+                        <option value={7}>Level 7: Director (10% Comm)</option>
                       </select>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">
+                      Reporting Sponsor (सीनियर स्पॉन्सर)
+                    </label>
+                    <select
+                      value={newMemberSponsorId}
+                      onChange={(e) => setNewMemberSponsorId(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
+                    >
+                      <option value="AKGV-HQ-001">Super Admin (AKGV-HQ-001)</option>
+                      <option value="AKGV-3498">Vikram Singh (AKGV-3498)</option>
+                      <option value="AKGV-SUB-101">Suresh Yadav Sub-Admin (AKGV-SUB-101)</option>
+                      {allProfiles
+                        .filter((p) => p.role === 'senior_member' && p.memberId !== 'AKGV-3498')
+                        .map((p) => (
+                          <option key={p.id} value={p.memberId || p.id}>
+                            {p.fullName} ({p.memberId})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">
+                      Residential Address (स्थायी पता)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Near Shiv Mandir, Mohalla, City"
+                      value={newMemberAddress}
+                      onChange={(e) => setNewMemberAddress(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                    />
                   </div>
 
                   <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">
@@ -1100,6 +1345,138 @@ export default function SuperAdminPage() {
                     </div>
                   </div>
 
+                  {/* Location & Assigned Branch */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Native City / District (गृह जिला / शहर)
+                      </label>
+                      <select
+                        value={editCity}
+                        onChange={(e) => setEditCity(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      >
+                        <option value="Varanasi">Varanasi (वाराणसी)</option>
+                        <option value="Chandauli">Chandauli (चंदौली)</option>
+                        <option value="Mirzapur">Mirzapur (मिर्जापुर)</option>
+                        <option value="Prayagraj">Prayagraj (प्रयागराज)</option>
+                        <option value="Ghazipur">Ghazipur (गाजीपुर)</option>
+                        <option value="Bhadohi">Bhadohi (भदोही)</option>
+                        <option value="Jaunpur">Jaunpur (जौनपुर)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Assigned Branch Office (संबद्ध शाखा)
+                      </label>
+                      <select
+                        value={editBranchLocation}
+                        onChange={(e) => setEditBranchLocation(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      >
+                        <option value="Rampur Head Office">Rampur Head Office (रामपुर प्रधान कार्यालय)</option>
+                        <option value="Lahartara Branch">Lahartara Branch (लहरतारा शाखा, निकट कैंट)</option>
+                        <option value="Mirza Murad Branch">Mirza Murad Branch (मिर्जामुराद शाखा, NH-19)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Level & Rank Title */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        MLM Tier Level (लेवल)
+                      </label>
+                      <select
+                        value={editLevel}
+                        onChange={(e) => {
+                          const lvl = Number(e.target.value);
+                          setEditLevel(lvl);
+                          setEditRankTitle(getLevelInfo(lvl).defaultRank);
+                        }}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      >
+                        <option value={1}>Level 1: Sales Assistant (4% Comm)</option>
+                        <option value={2}>Level 2: Star Associate (5% Comm)</option>
+                        <option value={3}>Level 3: Gold Star (6% Comm)</option>
+                        <option value={4}>Level 4: Diamond Star (7% Comm)</option>
+                        <option value={5}>Level 5: Platinum Leader (8% Comm)</option>
+                        <option value={6}>Level 6: Crown Leader (9% Comm)</option>
+                        <option value={7}>Level 7: Director (10% Comm)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Official Rank Title (पदनाम)
+                      </label>
+                      <input
+                        type="text"
+                        value={editRankTitle}
+                        onChange={(e) => setEditRankTitle(e.target.value)}
+                        placeholder="e.g. Star Associate / Senior Manager"
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Business Volume & Plots Closed */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Business Volume (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="10000"
+                        value={editBusinessVolume}
+                        onChange={(e) => setEditBusinessVolume(Number(e.target.value))}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Plots Closed Count
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editPlotsClosed}
+                        onChange={(e) => setEditPlotsClosed(Number(e.target.value))}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        Joined Date (तारीख)
+                      </label>
+                      <input
+                        type="date"
+                        value={editJoinedDate}
+                        onChange={(e) => setEditJoinedDate(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Full Address */}
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">
+                      Residential Address (स्थायी पता)
+                    </label>
+                    <input
+                      type="text"
+                      value={editAddress}
+                      onChange={(e) => setEditAddress(e.target.value)}
+                      placeholder="e.g. Near Shiv Mandir, Mohalla, City"
+                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
+                    />
+                  </div>
+
                   <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">
                     <button
                       type="button"
@@ -1120,165 +1497,346 @@ export default function SuperAdminPage() {
             </div>
           )}
 
-          {/* ================= MODAL 3: VIEW MEMBER DETAILS ================= */}
-          {viewingMember && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md overflow-y-auto">
-              <div className="relative my-auto w-full max-w-xl rounded-2xl border border-[#C7A35A] bg-[#070D1E] shadow-2xl overflow-hidden">
-                <div className="flex items-center justify-between border-b border-white/10 bg-[#0B1734] px-5 py-3.5">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-[#C7A35A]" />
-                    <h3 className="font-serif text-sm sm:text-base font-bold text-white">
-                      Associate Profile & Network Dossier
-                    </h3>
-                  </div>
-                  <button
-                    onClick={() => setViewingMember(null)}
-                    className="rounded-lg p-1 text-gray-400 hover:bg-white/10 hover:text-white"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
+          {/* ================= MODAL 3: VIEW MEMBER DETAILS (COMPREHENSIVE DOSSIER) ================= */}
+          {viewingMember && (() => {
+            const { joinedFormatted, tenureFormatted } = formatTenure(viewingMember.joinedDate || viewingMember.createdAt);
+            const levelInfo = getLevelInfo(viewingMember.level);
+            const memberBookings = bookings.filter(
+              (b) => b.buyerId === viewingMember.id || b.buyerPhone === viewingMember.phone
+            );
+            const totalBuyerPaid = memberBookings.reduce((sum, b) => sum + b.paidAmountInr, 0);
+            const totalBuyerCommitted = memberBookings.reduce((sum, b) => sum + b.totalAmountInr, 0);
+            const directDownlines = allProfiles.filter(
+              (p) => p.sponsorId === viewingMember.id || p.sponsorId === viewingMember.memberId
+            );
 
-                <div className="p-5 space-y-4 text-xs">
-                  {/* Top Profile Card */}
-                  <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0B1734] p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#C7A35A] bg-[#050A17] font-serif text-lg font-bold text-[#DFC382] overflow-hidden">
-                        {viewingMember.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={viewingMember.avatarUrl}
-                            alt={viewingMember.fullName}
-                            className="h-full w-full object-cover"
-                          />
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-md overflow-y-auto">
+                <div className="relative my-auto w-full max-w-2xl rounded-2xl border border-[#C7A35A] bg-[#070D1E] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between border-b border-white/10 bg-[#0B1734] px-5 py-3.5 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-[#C7A35A]" />
+                      <h3 className="font-serif text-sm sm:text-base font-bold text-white">
+                        Executive Member Dossier (सदस्य संपूर्ण विवरण)
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setViewingMember(null)}
+                      className="rounded-lg p-1 text-gray-400 hover:bg-white/10 hover:text-white"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="p-5 space-y-4 text-xs overflow-y-auto">
+                    {/* Top Profile Card */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0B1734] p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-[#C7A35A] bg-[#050A17] font-serif text-lg font-bold text-[#DFC382] overflow-hidden shadow-lg">
+                          {viewingMember.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={viewingMember.avatarUrl}
+                              alt={viewingMember.fullName}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            viewingMember.fullName.slice(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-serif text-base font-bold text-white">
+                            {viewingMember.fullName}
+                          </h4>
+                          <span className="text-gray-400 text-xs block">{viewingMember.email}</span>
+                          <span className="text-[#DFC382] font-mono text-xs">+91 {viewingMember.phone}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right space-y-1">
+                        <span className={`rounded-full px-3 py-1 text-[10px] font-bold border inline-block ${getRoleBadge(viewingMember.role).bg}`}>
+                          {getRoleBadge(viewingMember.role).label}
+                        </span>
+                        <div className="text-[10px] text-gray-400">
+                          Account:{' '}
+                          <strong className={viewingMember.isActive ? 'text-emerald-400' : 'text-red-400'}>
+                            {viewingMember.isActive ? 'ACTIVE ACCESS' : 'SUSPENDED'}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 1: Geographic & Branch Information (कहाँ के हैं) */}
+                    <div className="rounded-xl border border-white/10 bg-[#050A17] p-4 space-y-2">
+                      <div className="flex items-center gap-1.5 text-[#DFC382] font-bold text-xs border-b border-white/5 pb-1.5">
+                        <MapPin className="h-4 w-4 text-[#C7A35A]" />
+                        <span>1. Regional & Branch Details (कहाँ के निवासी हैं एवं संबद्ध शाखा)</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <span className="text-gray-400 text-[10px] block">Native City / District (गृह जिला / शहर):</span>
+                          <strong className="text-white text-xs block font-serif">
+                            {viewingMember.city || 'Varanasi (वाराणसी)'}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 text-[10px] block">Assigned Branch Office (संबद्ध शाखा कार्यालय):</span>
+                          <strong className="text-[#DFC382] text-xs block">
+                            {viewingMember.branchLocation || 'Rampur Head Office'}
+                          </strong>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <span className="text-gray-400 text-[10px] block">Permanent Residential / Office Address (स्थायी पता):</span>
+                          <p className="text-gray-200 text-xs mt-0.5">
+                            {viewingMember.address || 'Address registered with branch records (Varanasi Region, Uttar Pradesh)'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 2: Tenure & Enrollment Record (कब से जुड़े हैं) */}
+                    <div className="rounded-xl border border-white/10 bg-[#050A17] p-4 space-y-2">
+                      <div className="flex items-center gap-1.5 text-blue-300 font-bold text-xs border-b border-white/5 pb-1.5">
+                        <Calendar className="h-4 w-4 text-blue-400" />
+                        <span>2. Enrollment & Active Tenure (कब से जुड़े हैं / कार्यकाल)</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center sm:text-left">
+                        <div className="rounded-lg bg-white/5 p-2.5">
+                          <span className="text-gray-400 text-[10px] block">Joining Date</span>
+                          <strong className="text-white text-xs block">{joinedFormatted}</strong>
+                        </div>
+                        <div className="rounded-lg bg-emerald-950/40 border border-emerald-500/20 p-2.5">
+                          <span className="text-emerald-300 text-[10px] block">Active Duration</span>
+                          <strong className="text-emerald-400 text-xs block">{tenureFormatted}</strong>
+                        </div>
+                        <div className="rounded-lg bg-white/5 p-2.5">
+                          <span className="text-gray-400 text-[10px] block">Member ID</span>
+                          <strong className="text-[#DFC382] font-mono text-xs block">
+                            {viewingMember.memberId || 'N/A'}
+                          </strong>
+                        </div>
+                        <div className="rounded-lg bg-white/5 p-2.5">
+                          <span className="text-gray-400 text-[10px] block">KYC Verification</span>
+                          <strong className="text-emerald-400 text-xs block uppercase">
+                            {viewingMember.kycStatus || 'VERIFIED'}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 3: Rank, MLM Level & Performance Record (लेवल एवं बिज़नेस) */}
+                    <div className="rounded-xl border border-[#C7A35A]/30 bg-[#0B1734] p-4 space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <div className="flex items-center gap-1.5 text-[#DFC382] font-bold text-xs">
+                          <Award className="h-4 w-4 text-[#C7A35A]" />
+                          <span>3. Professional Rank, Level & Volume (पद, लेवल एवं बिज़नेस रिपोर्ट)</span>
+                        </div>
+                        <div className="flex items-center gap-0.5 text-amber-400">
+                          {Array.from({ length: levelInfo.level }).map((_, i) => (
+                            <Star key={i} className="h-3 w-3 fill-amber-400" />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                        <div className="rounded-lg bg-[#050A17] p-2.5 border border-white/5">
+                          <span className="text-gray-400 text-[10px] block">MLM Tier Level</span>
+                          <strong className="text-[#DFC382] text-sm block">
+                            Level {viewingMember.level || levelInfo.level}
+                          </strong>
+                          <span className="text-[10px] text-gray-400">
+                            {viewingMember.rankTitle || levelInfo.defaultRank}
+                          </span>
+                        </div>
+
+                        <div className="rounded-lg bg-[#050A17] p-2.5 border border-white/5">
+                          <span className="text-gray-400 text-[10px] block">Commission Tier</span>
+                          <strong className="text-emerald-400 text-sm block">
+                            {levelInfo.percent}% Direct
+                          </strong>
+                          <span className="text-[10px] text-gray-400">Ground truth payout</span>
+                        </div>
+
+                        <div className="rounded-lg bg-[#050A17] p-2.5 border border-white/5">
+                          <span className="text-gray-400 text-[10px] block">Reporting Senior</span>
+                          <strong className="text-white text-xs block truncate">
+                            {viewingMember.sponsorId || 'AKGV-HQ-001 (Company HQ)'}
+                          </strong>
+                          <span className="text-[10px] text-gray-400">Executive upline</span>
+                        </div>
+
+                        <div className="rounded-lg bg-[#050A17] p-2.5 border border-white/5">
+                          <span className="text-gray-400 text-[10px] block">Cumulative Sales Volume</span>
+                          <strong className="text-emerald-300 text-sm block">
+                            {formatBusinessVolume(viewingMember.totalBusinessVolumeInr)}
+                          </strong>
+                          <span className="text-[10px] text-gray-400">
+                            ₹{Number(viewingMember.totalBusinessVolumeInr || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+
+                        <div className="rounded-lg bg-[#050A17] p-2.5 border border-white/5">
+                          <span className="text-gray-400 text-[10px] block">Plots Closed / Booked</span>
+                          <strong className="text-white text-sm block">
+                            {viewingMember.plotsClosedCount || 0} Plots
+                          </strong>
+                          <span className="text-[10px] text-gray-400">Verified contracts</span>
+                        </div>
+
+                        <div className="rounded-lg bg-[#050A17] p-2.5 border border-white/5">
+                          <span className="text-gray-400 text-[10px] block">Direct Downlines</span>
+                          <strong className="text-[#DFC382] text-sm block">
+                            {directDownlines.length} Partners
+                          </strong>
+                          <span className="text-[10px] text-gray-400">Network team size</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION 4: Client / Buyer Specifics (If buyer or has bookings) */}
+                    {(viewingMember.role === 'buyer' || memberBookings.length > 0) && (
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-2.5">
+                        <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
+                          <div className="flex items-center gap-1.5 text-emerald-300 font-bold text-xs">
+                            <Home className="h-4 w-4 text-emerald-400" />
+                            <span>4. Client Property Portfolio (क्रेता भूखंड विवरण एवं भुगतान)</span>
+                          </div>
+                          <span className="text-emerald-400 font-bold text-[11px]">
+                            {memberBookings.length} Plot(s) Linked
+                          </span>
+                        </div>
+
+                        {memberBookings.length === 0 ? (
+                          <p className="text-gray-400 text-xs italic">
+                            Prospective Buyer / Client — Lead registered under {viewingMember.branchLocation || 'Rampur Branch'}. No confirmed plot allotment yet.
+                          </p>
                         ) : (
-                          viewingMember.fullName.slice(0, 2).toUpperCase()
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                              <div className="rounded-lg bg-black/40 p-2 border border-white/5">
+                                <span className="text-gray-400 text-[10px] block">Total Property Value</span>
+                                <strong className="text-white text-xs block">
+                                  ₹{totalBuyerCommitted.toLocaleString('en-IN')}
+                                </strong>
+                              </div>
+                              <div className="rounded-lg bg-black/40 p-2 border border-white/5">
+                                <span className="text-gray-400 text-[10px] block">Total Paid to Date</span>
+                                <strong className="text-emerald-400 text-xs block">
+                                  ₹{totalBuyerPaid.toLocaleString('en-IN')}
+                                </strong>
+                              </div>
+                              <div className="rounded-lg bg-black/40 p-2 border border-white/5 col-span-2 sm:col-span-1">
+                                <span className="text-gray-400 text-[10px] block">Payment Clearance</span>
+                                <strong className="text-amber-300 text-xs block">
+                                  {totalBuyerPaid >= totalBuyerCommitted ? '100% Fully Paid' : `₹${(totalBuyerCommitted - totalBuyerPaid).toLocaleString('en-IN')} Remaining`}
+                                </strong>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1 pt-1">
+                              {memberBookings.map((b) => (
+                                <div
+                                  key={b.id}
+                                  className="flex items-center justify-between rounded-lg bg-black/30 px-3 py-2 border border-white/5 text-[11px]"
+                                >
+                                  <div>
+                                    <strong className="text-[#DFC382] font-mono">{b.plotNumber}</strong>{' '}
+                                    <span className="text-gray-300">({b.bookingNumber})</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-emerald-400 font-bold">
+                                      ₹{b.paidAmountInr.toLocaleString('en-IN')}
+                                    </span>{' '}
+                                    <span className="text-gray-400 text-[10px]">/ ₹{b.totalAmountInr.toLocaleString('en-IN')}</span>
+                                    <span className="ml-2 rounded px-1.5 py-0.2 text-[9px] bg-emerald-500/20 text-emerald-300 uppercase">
+                                      {b.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-serif text-base font-bold text-white">
-                          {viewingMember.fullName}
-                        </h4>
-                        <span className="text-gray-400 text-xs block">{viewingMember.email}</span>
-                        <span className="text-[#DFC382] font-mono text-xs">+91 {viewingMember.phone}</span>
+                    )}
+
+                    {/* SECTION 5: Direct Downlines Team List */}
+                    <div className="rounded-xl border border-white/10 bg-[#050A17] p-4 space-y-2">
+                      <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
+                        <span className="font-bold text-gray-200">
+                          5. Direct Network Downlines ({directDownlines.length})
+                        </span>
+                        <span className="text-[10px] text-gray-400">
+                          Recruited under this member code
+                        </span>
                       </div>
-                    </div>
 
-                    <div className="text-right space-y-1">
-                      <span className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold border ${getRoleBadge(viewingMember.role).bg}`}>
-                        {getRoleBadge(viewingMember.role).label}
-                      </span>
-                      <div className="text-[10px] text-gray-400">
-                        Status:{' '}
-                        <strong className={viewingMember.isActive ? 'text-emerald-400' : 'text-red-400'}>
-                          {viewingMember.isActive ? 'ACTIVE' : 'SUSPENDED'}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Metadata Matrix */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 space-y-1">
-                      <span className="text-gray-400 text-[10px] block">Member Code</span>
-                      <div className="flex items-center gap-1 font-mono font-bold text-[#DFC382]">
-                        <span>{viewingMember.memberId || 'N/A'}</span>
-                        {viewingMember.memberId && (
-                          <button onClick={() => handleCopyCode(viewingMember.memberId!)}>
-                            <Copy className="h-3 w-3 text-gray-400 hover:text-white" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 space-y-1">
-                      <span className="text-gray-400 text-[10px] block">Reporting Senior</span>
-                      <span className="font-bold text-white block truncate">
-                        {viewingMember.sponsorId || 'Company HQ'}
-                      </span>
-                    </div>
-
-                    <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 space-y-1">
-                      <span className="text-gray-400 text-[10px] block">KYC Verification</span>
-                      <span className="font-bold text-emerald-400 block uppercase">
-                        {viewingMember.kycStatus || 'VERIFIED'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Direct Downlines Team List */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-gray-200">
-                        Direct Network Associates ({allProfiles.filter((p) => p.sponsorId === viewingMember.id || p.sponsorId === viewingMember.memberId).length})
-                      </span>
-                      <span className="text-[10px] text-gray-400">
-                        Members recruited by this associate
-                      </span>
-                    </div>
-
-                    {allProfiles.filter((p) => p.sponsorId === viewingMember.id || p.sponsorId === viewingMember.memberId).length === 0 ? (
-                      <div className="rounded-xl border border-white/5 bg-[#050A17] p-4 text-center text-gray-400 text-[11px]">
-                        No direct downlines enrolled under this member code yet.
-                      </div>
-                    ) : (
-                      <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                        {allProfiles
-                          .filter((p) => p.sponsorId === viewingMember.id || p.sponsorId === viewingMember.memberId)
-                          .map((downline) => (
+                      {directDownlines.length === 0 ? (
+                        <div className="rounded-xl border border-white/5 bg-black/20 p-3 text-center text-gray-400 text-[11px]">
+                          No direct downlines enrolled under this member code yet.
+                        </div>
+                      ) : (
+                        <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
+                          {directDownlines.map((downline) => (
                             <div
                               key={downline.id}
-                              className="flex items-center justify-between rounded-lg border border-white/5 bg-[#050A17] px-3 py-2 text-[11px]"
+                              className="flex items-center justify-between rounded-lg border border-white/5 bg-[#0B1734] px-3 py-2 text-[11px]"
                             >
                               <div>
                                 <span className="font-bold text-white block">{downline.fullName}</span>
-                                <span className="text-gray-400 text-[10px]">{downline.phone}</span>
+                                <span className="text-gray-400 text-[10px]">
+                                  {downline.phone} • {downline.city || 'Varanasi'}
+                                </span>
                               </div>
                               <div className="text-right">
                                 <span className="font-mono text-[#DFC382] font-semibold text-[10px] block">
                                   {downline.memberId || 'N/A'}
                                 </span>
-                                <span className="text-[9px] text-gray-400 uppercase">
-                                  {downline.role.replace('_', ' ')}
+                                <span className="text-[9px] text-emerald-400 uppercase font-medium">
+                                  Level {downline.level || 1}
                                 </span>
                               </div>
                             </div>
                           ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Contact Buttons */}
-                  <div className="flex items-center justify-between border-t border-white/10 pt-4">
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`https://wa.me/91${viewingMember.phone.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 rounded-xl bg-[#25D366] px-3.5 py-2 font-bold text-white text-[11px]"
-                      >
-                        <span>WhatsApp Chat</span>
-                      </a>
-                      <a
-                        href={`tel:${viewingMember.phone}`}
-                        className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/5 px-3 py-2 text-white text-[11px] hover:bg-white/10"
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                        <span>Call</span>
-                      </a>
+                        </div>
+                      )}
                     </div>
 
-                    <button
-                      onClick={() => setViewingMember(null)}
-                      className="rounded-xl border border-white/10 px-4 py-2 text-gray-300 hover:text-white"
-                    >
-                      Close Dossier
-                    </button>
+                    {/* Bottom Action / Contact Buttons */}
+                    <div className="flex items-center justify-between border-t border-white/10 pt-4">
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={`https://wa.me/91${viewingMember.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                            `Namaste ${viewingMember.fullName}, this is regarding your AKGV Infra City account (${viewingMember.memberId || 'Member'}).`
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 rounded-xl bg-[#25D366] px-4 py-2 font-bold text-white text-[11px] shadow-md hover:brightness-110 transition"
+                        >
+                          <span>WhatsApp Chat</span>
+                        </a>
+                        <a
+                          href={`tel:${viewingMember.phone}`}
+                          className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-white text-[11px] hover:bg-white/10 transition"
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                          <span>Call</span>
+                        </a>
+                      </div>
+
+                      <button
+                        onClick={() => setViewingMember(null)}
+                        className="rounded-xl border border-white/10 px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5 transition"
+                      >
+                        Close Dossier
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ================= MODAL 4: DELETE MEMBER CONFIRMATION ================= */}
           {deletingMember && (

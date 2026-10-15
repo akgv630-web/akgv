@@ -54,7 +54,18 @@ interface AppContextType {
   setSelectedPlotForViewer: (plot: Plot | null) => void;
   registerMember: (data: { fullName: string; email: string; phone: string; role?: UserRole; sponsorId?: string }) => Profile;
   loginUser: (identifier: string) => Profile | null;
-  createSponsorMember: (data: { fullName: string; email: string; phone: string; role: UserRole; sponsorId: string }) => Profile;
+  createSponsorMember: (data: {
+    fullName: string;
+    email: string;
+    phone: string;
+    role: UserRole;
+    sponsorId: string;
+    city?: string;
+    branchLocation?: string;
+    address?: string;
+    level?: number;
+    rankTitle?: string;
+  }) => Profile;
   updateMember: (id: string, data: Partial<Profile>) => void;
   deleteMember: (id: string) => void;
   toggleMemberStatus: (id: string) => void;
@@ -202,8 +213,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     phone: string;
     role: UserRole;
     sponsorId: string;
+    city?: string;
+    branchLocation?: string;
+    address?: string;
+    level?: number;
+    rankTitle?: string;
   }): Profile => {
     const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
+    const nowIso = new Date().toISOString();
+    const todayDate = nowIso.slice(0, 10);
+
+    // Determine sensible default rank and level based on role
+    const defaultLevel = data.level || (data.role === 'senior_member' ? 4 : data.role === 'sub_admin' ? 5 : data.role === 'buyer' ? 1 : 1);
+    const defaultRank = data.rankTitle || (
+      data.role === 'super_admin' ? 'Director (कंपनी निदेशक)' :
+      data.role === 'sub_admin' ? 'Platinum Leader (क्षेत्रीय प्रभारी)' :
+      data.role === 'senior_member' ? 'Diamond Star (वरिष्ठ प्रबंधक)' :
+      data.role === 'buyer' ? 'Verified Client (सत्यापित क्रेता)' :
+      'Sales Assistant (फील्ड एजेंट)'
+    );
+
     const newProfile: Profile = {
       id: `usr-${Date.now()}`,
       email: data.email,
@@ -212,9 +241,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       role: data.role,
       memberId: newMemberId,
       sponsorId: data.sponsorId,
+      city: data.city || 'Varanasi',
+      branchLocation: data.branchLocation || 'Rampur Head Office',
+      address: data.address || '',
+      level: defaultLevel,
+      rankTitle: defaultRank,
+      totalBusinessVolumeInr: 0,
+      plotsClosedCount: 0,
+      joinedDate: todayDate,
       kycStatus: 'verified',
       isActive: true,
-      createdAt: new Date().toISOString(),
+      createdAt: nowIso,
     };
     setAllProfiles((prev) => {
       const next = [...prev, newProfile];

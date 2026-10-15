@@ -22,7 +22,18 @@ export interface Profile {
   isActive: boolean;
   avatarUrl?: string;
   createdAt: string;
+
+  // CRM, Geographic & Performance Dossier
+  city?: string; // e.g. "Varanasi", "Chandauli", "Mirzapur", "Prayagraj"
+  branchLocation?: string; // e.g. "Rampur Head Office", "Lahartara Branch", "Mirza Murad Branch"
+  address?: string; // Full residential / communication address
+  level?: number; // 1 to 7
+  rankTitle?: string; // e.g. "Sales Assistant", "Star Associate", "Gold Star", "Director"
+  totalBusinessVolumeInr?: number; // Cumulative business volume in INR
+  plotsClosedCount?: number; // Count of plots booked or closed
+  joinedDate?: string; // Explicit join date (ISO or formatted string)
 }
+
 
 export interface ProjectLocation {
   id: string;
