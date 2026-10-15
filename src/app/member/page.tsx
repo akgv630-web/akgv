@@ -25,14 +25,23 @@ import { COMMISSION_LEVELS_GROUND_TRUTH, COMPANY_DETAILS } from '@/data/groundTr
 import { FieldGpsCameraCapture } from '@/components/gps-camera/FieldGpsCameraCapture';
 import { AssociateIdCard } from '@/components/member/AssociateIdCard';
 import { ProfilePhotoStudioModal } from '@/components/common/ProfilePhotoStudioModal';
+import { AuthBarrier, UnauthorizedBarrier } from '@/components/auth/AuthBarrier';
 
 export function MemberPortalPage() {
   const { currentUser, kitIssues, language, allProfiles, updateMember } = useApp();
   const [activeTab, setActiveTab] = useState<'id_card' | 'hierarchy' | 'commission' | 'rewards' | 'field_gps'>('id_card');
   const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
 
+  if (!currentUser) {
+    return <AuthBarrier requiredRole="member" />;
+  }
+
+  if (currentUser.role === 'buyer') {
+    return <UnauthorizedBarrier currentRole={currentUser.role} requiredRole="Associate / Senior Manager" />;
+  }
+
   // Member Business Volume (Simulated/Calculated)
-  const memberBusinessVolumeInr = 8500000; // ₹85 Lakh (Gold Star Level 3)
+  const memberBusinessVolumeInr = currentUser.totalBusinessVolumeInr || 8500000;
   const currentLevel = calculateMemberLevel(memberBusinessVolumeInr);
   const myKitRecord = kitIssues.find((k) => k.memberId === currentUser.memberId);
 

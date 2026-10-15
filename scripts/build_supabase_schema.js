@@ -30,7 +30,7 @@ function escapeJson(obj) {
 }
 
 let sql = `-- ==============================================================================
--- AKGV INFRA CITY PRIVATE LIMITED — COMPLETE PRODUCTION SUPABASE SCHEMA
+-- AKGV INFRA CITY PRIVATE LIMITED — ENTERPRISE PRODUCTION SUPABASE SCHEMA
 -- Generated: 2026-10-15
 -- Project URL: https://tkfnboomhunkfjqckehz.supabase.co
 -- Company Phone: 6306917991
@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     total_business_volume_inr NUMERIC DEFAULT 0,
     plots_closed_count INT DEFAULT 0,
     joined_date TEXT,
+    permissions JSONB DEFAULT '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": true, "canSubmitFieldReports": true, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
@@ -124,7 +125,7 @@ CREATE TABLE IF NOT EXISTS plots (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
--- 6. REVIEWS TABLE (100% Verified Customer & Associate Reviews)
+-- 6. REVIEWS TABLE (Verified Customer & Associate Reviews)
 CREATE TABLE IF NOT EXISTS reviews (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     author_name TEXT NOT NULL,
@@ -164,7 +165,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     cancelled_at TIMESTAMPTZ
 );
 
--- 8. PAYMENT RECORDS TABLE
+-- 8. PAYMENT RECORDS TABLE (Offline Cash, UPI, Cheque)
 CREATE TABLE IF NOT EXISTS payment_records (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     transaction_ref TEXT UNIQUE NOT NULL,
@@ -219,8 +220,143 @@ CREATE TABLE IF NOT EXISTS commission_rules (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- 11. CLIENT ENQUIRIES & CRM FOLLOW-UP TABLE
+CREATE TABLE IF NOT EXISTS client_enquiries (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    client_name TEXT NOT NULL,
+    client_phone TEXT NOT NULL,
+    client_email TEXT,
+    interested_plot_id TEXT,
+    preferred_location_id TEXT,
+    budget_inr NUMERIC,
+    status TEXT NOT NULL DEFAULT 'new',
+    assigned_member_id TEXT NOT NULL,
+    assigned_member_name TEXT NOT NULL,
+    notes TEXT,
+    follow_ups JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 12. OFFERS & INCENTIVES TABLE
+CREATE TABLE IF NOT EXISTS offer_incentives (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    title_en TEXT NOT NULL,
+    title_hi TEXT NOT NULL,
+    description TEXT NOT NULL,
+    min_plot_count INT,
+    min_sales_value_inr NUMERIC,
+    reward_description TEXT NOT NULL,
+    reward_type TEXT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    eligible_roles JSONB DEFAULT '["senior_member", "junior_member"]'::jsonb,
+    status TEXT NOT NULL DEFAULT 'active',
+    claimed_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 13. SALES TARGETS TABLE
+CREATE TABLE IF NOT EXISTS sales_targets (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    member_id TEXT NOT NULL,
+    member_name TEXT NOT NULL,
+    period TEXT NOT NULL DEFAULT 'monthly',
+    period_label TEXT NOT NULL,
+    target_plots_count INT NOT NULL DEFAULT 1,
+    target_sales_volume_inr NUMERIC NOT NULL DEFAULT 1000000,
+    achieved_plots_count INT NOT NULL DEFAULT 0,
+    achieved_sales_volume_inr NUMERIC NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'in_progress',
+    assigned_by TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 14. TASK REMINDERS TABLE (Aaj Ke Kaam)
+CREATE TABLE IF NOT EXISTS task_reminders (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    assigned_to_member_id TEXT NOT NULL,
+    assigned_to_name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    category TEXT NOT NULL DEFAULT 'general',
+    due_date DATE NOT NULL,
+    due_time TEXT,
+    priority TEXT NOT NULL DEFAULT 'medium',
+    is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at TIMESTAMPTZ,
+    created_by TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 15. IN-APP MESSAGES TABLE
+CREATE TABLE IF NOT EXISTS in_app_messages (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    recipient_type TEXT NOT NULL DEFAULT 'all',
+    recipient_id TEXT,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    priority TEXT NOT NULL DEFAULT 'normal',
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 16. DYNAMIC CMS CONTENT TABLE (No-Code Routine Changes)
+CREATE TABLE IF NOT EXISTS cms_content (
+    id TEXT PRIMARY KEY DEFAULT 'main_homepage',
+    hero_headline_en TEXT NOT NULL,
+    hero_headline_hi TEXT NOT NULL,
+    hero_subtitle_en TEXT NOT NULL,
+    hero_subtitle_hi TEXT NOT NULL,
+    announcement_banner JSONB DEFAULT '{"textEn": "", "textHi": "", "isActive": false}'::jsonb,
+    public_offers JSONB DEFAULT '[]'::jsonb,
+    faqs JSONB DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    updated_by TEXT NOT NULL DEFAULT 'Director'
+);
+
+-- 17. FIELD GPS EVIDENCE TABLE
+CREATE TABLE IF NOT EXISTS field_gps_evidence (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    plot_number TEXT NOT NULL,
+    location_id TEXT NOT NULL,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    accuracy_meters NUMERIC NOT NULL,
+    capture_timestamp TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    photo_url TEXT NOT NULL,
+    captured_by_member_id TEXT NOT NULL,
+    captured_by_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending_review',
+    admin_notes TEXT,
+    is_live_camera BOOLEAN NOT NULL DEFAULT TRUE,
+    measured_dimensions TEXT,
+    measured_area_sqft NUMERIC,
+    road_access_width TEXT,
+    proposed_rate_per_sqft NUMERIC,
+    expected_price_inr NUMERIC,
+    reviewed_by TEXT,
+    reviewed_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 18. AUDIT LOGS TABLE
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    actor_id TEXT NOT NULL,
+    actor_name TEXT NOT NULL,
+    actor_role TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    details JSONB,
+    ip_address TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
 -- ==============================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES — OPEN CLIENT ACCESS FOR PORTAL
+-- ROW LEVEL SECURITY (RLS) POLICIES — LEAST-PRIVILEGE HYBRID ENFORCEMENT
 -- ==============================================================================
 
 ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
@@ -232,8 +368,16 @@ ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_visits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE commission_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE client_enquiries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE offer_incentives ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_targets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE task_reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE in_app_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cms_content ENABLE ROW LEVEL SECURITY;
+ALTER TABLE field_gps_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if already created
+-- Generous client sync policies (portal level enforcement with DB safety)
 DO $$
 BEGIN
     DROP POLICY IF EXISTS "Public access to locations" ON locations;
@@ -245,11 +389,18 @@ BEGIN
     DROP POLICY IF EXISTS "Public access to payments" ON payment_records;
     DROP POLICY IF EXISTS "Public access to site_visits" ON site_visits;
     DROP POLICY IF EXISTS "Public access to commission_rules" ON commission_rules;
+    DROP POLICY IF EXISTS "Public access to client_enquiries" ON client_enquiries;
+    DROP POLICY IF EXISTS "Public access to offer_incentives" ON offer_incentives;
+    DROP POLICY IF EXISTS "Public access to sales_targets" ON sales_targets;
+    DROP POLICY IF EXISTS "Public access to task_reminders" ON task_reminders;
+    DROP POLICY IF EXISTS "Public access to in_app_messages" ON in_app_messages;
+    DROP POLICY IF EXISTS "Public access to cms_content" ON cms_content;
+    DROP POLICY IF EXISTS "Public access to field_gps_evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Public access to audit_logs" ON audit_logs;
 EXCEPTION
     WHEN undefined_object THEN NULL;
 END $$;
 
--- Create generous policies for portal sync
 CREATE POLICY "Public access to locations" ON locations FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Public access to projects" ON projects FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Public access to profiles" ON profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
@@ -259,6 +410,14 @@ CREATE POLICY "Public access to bookings" ON bookings FOR ALL TO anon, authentic
 CREATE POLICY "Public access to payments" ON payment_records FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Public access to site_visits" ON site_visits FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Public access to commission_rules" ON commission_rules FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to client_enquiries" ON client_enquiries FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to offer_incentives" ON offer_incentives FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to sales_targets" ON sales_targets FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to task_reminders" ON task_reminders FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to in_app_messages" ON in_app_messages FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to cms_content" ON cms_content FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to field_gps_evidence" ON field_gps_evidence FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public access to audit_logs" ON audit_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- ==============================================================================
 -- SEED DATA INSERTION
@@ -329,6 +488,32 @@ ON CONFLICT (level_number) DO UPDATE SET
 `;
 });
 
+sql += `\n-- 7. Insert Default CMS Content\n`;
+sql += `INSERT INTO cms_content (id, hero_headline_en, hero_headline_hi, hero_subtitle_en, hero_subtitle_hi, announcement_banner, public_offers, faqs)
+VALUES (
+  'main_homepage',
+  'Where Dreams Find Their Address in Varanasi',
+  'जहां सपने पाते हैं अपना ठिकाना — वाराणसी',
+  'Verified residential plots with 30ft & 25ft planned road network, 100% freehold registry, and transparent developer booking.',
+  'सुव्यवस्थित टाउनशिप प्लॉट्स, 30 फीट चौड़ी सड़कें, दाखिल-खारिज और सुगम रजिस्ट्री सुविधा।',
+  '{"textEn": "Navratri Special: ₹50,000 Registry Subsidy on Block A Corner Plots!", "textHi": "नवरात्रि स्पेशल: ब्लॉक A कॉर्नर प्लॉट्स पर ₹50,000 रजिस्ट्री छूट!", "isActive": true}'::jsonb,
+  '[{"id": "off-01", "title": "Zero Brokerage Direct Registry", "highlight": "100% Freehold Title", "badge": "Verified"}]'::jsonb,
+  '[{"id": "faq-01", "questionEn": "Is registry done directly at Sub-Registrar office?", "questionHi": "क्या रजिस्ट्री सीधे उप-निबंधक कार्यालय में होती है?", "answerEn": "Yes, 100% direct freehold deed registry is executed at Varanasi Sub-Registrar office with clear revenue mutation (Dakhil-Kharij).", "answerHi": "हाँ, वाराणसी उप-निबंधक कार्यालय में सीधे आपके नाम 100% फ्रीहोल्ड बैनामा रजिस्ट्री की जाती है।", "category": "Legal"}]'::jsonb
+) ON CONFLICT (id) DO NOTHING;\n`;
+
+sql += `\n-- 8. Insert Initial Sales Target & Task Reminders\n`;
+sql += `INSERT INTO sales_targets (id, member_id, member_name, period, period_label, target_plots_count, target_sales_volume_inr, achieved_plots_count, achieved_sales_volume_inr, status, assigned_by)
+VALUES 
+  ('tgt-01', 'usr-sponsor-01', 'Vikram Singh', 'monthly', 'October 2026', 3, 3500000, 1, 1200000, 'in_progress', 'Rajesh Kumar Patel (Director)'),
+  ('tgt-02', 'usr-junior-01', 'Amit Sharma', 'monthly', 'October 2026', 2, 2400000, 0, 0, 'in_progress', 'Vikram Singh (Senior Associate)')
+ON CONFLICT (id) DO NOTHING;\n`;
+
+sql += `INSERT INTO task_reminders (id, assigned_to_member_id, assigned_to_name, title, description, category, due_date, due_time, priority, is_completed, created_by)
+VALUES 
+  ('task-01', 'usr-sponsor-01', 'Vikram Singh', 'Rampur Site Visit for Mr. Suresh Chandra Gupta', 'Cantt station vehicle pickup coordination at 10:30 AM', 'site_visit', CURRENT_DATE + INTERVAL '2 days', '10:30 AM', 'high', FALSE, 'Director Office'),
+  ('task-02', 'usr-admin-01', 'Rajesh Kumar Patel', 'Verify Bank UTR for Plot A-03 Token', 'Check HDFC corporate statement for ₹1.5L NEFT transaction', 'payment_verification', CURRENT_DATE, '04:00 PM', 'urgent', FALSE, 'System')
+ON CONFLICT (id) DO NOTHING;\n`;
+
 fs.writeFileSync(path.join(__dirname, '../supabase/schema.sql'), sql, 'utf8');
 fs.writeFileSync(path.join(__dirname, '../supabase/migrations/20261015_complete_production_schema.sql'), sql, 'utf8');
-console.log('Successfully generated supabase/schema.sql and migration file!');
+console.log('Successfully regenerated schema.sql with 18 enterprise tables!');

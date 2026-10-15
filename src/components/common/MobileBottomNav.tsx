@@ -18,7 +18,8 @@ export function MobileBottomNav() {
   const { currentUser, t } = useApp();
   const c = t.mobileNav;
 
-  const getDashboardPath = (role: UserRole) => {
+  const getDashboardPath = (role?: UserRole) => {
+    if (!role) return '/member';
     if (role === 'super_admin' || role === 'sub_admin') return '/admin';
     if (role === 'senior_member' || role === 'junior_member') return '/member';
     return '/buyer';
@@ -29,7 +30,11 @@ export function MobileBottomNav() {
     { href: '/master-plan', label: c.plots, icon: Layers },
     { href: '/projects', label: c.projects, icon: MapPin },
     { href: '/site-visit', label: c.siteVisit || 'Site Visit', icon: Calendar },
-    { href: getDashboardPath(currentUser.role), label: c.portal, icon: User },
+    {
+      href: currentUser ? getDashboardPath(currentUser.role) : '/member',
+      label: currentUser ? c.portal : 'Portal',
+      icon: User,
+    },
   ];
 
   return (

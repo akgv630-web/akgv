@@ -32,6 +32,17 @@ export interface Profile {
   totalBusinessVolumeInr?: number; // Cumulative business volume in INR
   plotsClosedCount?: number; // Count of plots booked or closed
   joinedDate?: string; // Explicit join date (ISO or formatted string)
+  permissions?: MemberPermissions;
+}
+
+export interface MemberPermissions {
+  canCreateDownline?: boolean;
+  canManagePlots?: boolean;
+  canRecordEnquiries?: boolean;
+  canSubmitFieldReports?: boolean;
+  canViewTeamSales?: boolean;
+  canVerifyPayments?: boolean;
+  canEditCms?: boolean;
 }
 
 
@@ -231,7 +242,17 @@ export interface FieldGpsEvidence {
   capturedByName: string;
   status: 'pending_review' | 'approved' | 'rejected' | 'recapture_requested';
   adminNotes?: string;
+  isLiveCamera?: boolean;
+  measuredDimensions?: string;
+  measuredAreaSqft?: number;
+  roadAccessWidth?: string;
+  proposedRatePerSqft?: number;
+  expectedPriceInr?: number;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  rejectionReason?: string;
 }
+
 
 export interface SupportTicket {
   id: string;
@@ -279,4 +300,114 @@ export interface ReviewRecord {
     replierName: string;
   };
 }
+
+export interface ClientEnquiry {
+  id: string;
+  clientName: string;
+  clientPhone: string;
+  clientEmail?: string;
+  interestedPlotId?: string;
+  preferredLocationId?: string;
+  budgetInr?: number;
+  status: 'new' | 'contacted' | 'visit_scheduled' | 'booked' | 'lost';
+  assignedMemberId: string;
+  assignedMemberName: string;
+  notes?: string;
+  followUps?: {
+    id: string;
+    date: string;
+    summary: string;
+    nextFollowUpDate?: string;
+  }[];
+  createdAt: string;
+}
+
+export interface OfferIncentive {
+  id: string;
+  titleEn: string;
+  titleHi: string;
+  description: string;
+  minPlotCount?: number;
+  minSalesValueInr?: number;
+  rewardDescription: string;
+  rewardType: 'cash_bonus' | 'commission_bump' | 'vehicle' | 'travel' | 'gift';
+  startDate: string;
+  endDate: string;
+  eligibleRoles: UserRole[];
+  status: 'active' | 'draft' | 'expired' | 'archived';
+  claimedCount: number;
+}
+
+export interface SalesTarget {
+  id: string;
+  memberId: string;
+  memberName: string;
+  period: 'monthly' | 'quarterly';
+  periodLabel: string; // e.g. "October 2026", "Q4 2026"
+  targetPlotsCount: number;
+  targetSalesVolumeInr: number;
+  achievedPlotsCount: number;
+  achievedSalesVolumeInr: number;
+  status: 'in_progress' | 'achieved' | 'missed';
+  assignedBy: string;
+  updatedAt: string;
+}
+
+export interface TaskReminder {
+  id: string;
+  assignedToMemberId: string;
+  assignedToName: string;
+  title: string;
+  description?: string;
+  category: 'site_visit' | 'client_followup' | 'payment_verification' | 'field_inspection' | 'general';
+  dueDate: string;
+  dueTime?: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  isCompleted: boolean;
+  completedAt?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface InAppMessage {
+  id: string;
+  recipientType: 'individual' | 'role' | 'branch' | 'all';
+  recipientId?: string; // memberId or role or branch name
+  title: string;
+  message: string;
+  senderName: string;
+  priority: 'normal' | 'important' | 'urgent';
+  isRead?: boolean;
+  createdAt: string;
+}
+
+export interface CmsContent {
+  heroHeadlineEn: string;
+  heroHeadlineHi: string;
+  heroSubtitleEn: string;
+  heroSubtitleHi: string;
+  announcementBanner?: {
+    textEn: string;
+    textHi: string;
+    isActive: boolean;
+    linkUrl?: string;
+  };
+  publicOffers: {
+    id: string;
+    title: string;
+    highlight: string;
+    badge: string;
+  }[];
+  faqs: {
+    id: string;
+    questionEn: string;
+    questionHi: string;
+    answerEn: string;
+    answerHi: string;
+    category: string;
+  }[];
+  updatedAt: string;
+  updatedBy: string;
+}
+
 

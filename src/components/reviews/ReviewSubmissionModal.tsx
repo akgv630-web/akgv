@@ -24,10 +24,10 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
 
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number>(0);
-  const [authorName, setAuthorName] = useState(currentUser.fullName || '');
-  const [authorPhone, setAuthorPhone] = useState(currentUser.phone || '');
+  const [authorName, setAuthorName] = useState(currentUser?.fullName || '');
+  const [authorPhone, setAuthorPhone] = useState(currentUser?.phone || '');
   const [authorRole, setAuthorRole] = useState<ReviewRecord['authorRole']>(
-    currentUser.role === 'buyer' ? 'buyer' : currentUser.role.includes('member') ? 'associate' : 'visitor'
+    currentUser?.role === 'buyer' ? 'buyer' : currentUser?.role?.includes('member') ? 'associate' : 'visitor'
   );
   const [category, setCategory] = useState<ReviewRecord['category']>('plot_purchase');
   const [branchLocation, setBranchLocation] = useState('Rampur Head Office');
@@ -79,7 +79,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
       plotNumber: plotNumber.trim() ? plotNumber.toUpperCase().trim() : undefined,
       branchLocation,
       category,
-      isVerified: authorRole === 'buyer' || authorRole === 'associate' || currentUser.kycStatus === 'verified',
+      isVerified: authorRole === 'buyer' || authorRole === 'associate' || currentUser?.kycStatus === 'verified',
     });
 
     setSuccessSubmitted(true);

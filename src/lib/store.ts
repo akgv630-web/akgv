@@ -14,8 +14,15 @@ import {
   SiteVisit,
   SupportTicket,
   ReviewRecord,
-  UserRole
+  UserRole,
+  ClientEnquiry,
+  OfferIncentive,
+  SalesTarget,
+  TaskReminder,
+  InAppMessage,
+  CmsContent
 } from '@/types';
+
 import {
   COMMISSION_LEVELS_GROUND_TRUTH,
   HOUSE_MODELS,
@@ -386,4 +393,182 @@ export const INITIAL_REVIEWS: ReviewRecord[] = [
     helpfulCount: 8
   }
 ];
+
+export const INITIAL_ENQUIRIES: ClientEnquiry[] = [
+  {
+    id: 'enq-001',
+    clientName: 'Shri Rameshwar Nath Tripathi',
+    clientPhone: '9415012345',
+    clientEmail: 'rn.tripathi@gmail.com',
+    interestedPlotId: 'plot-a-04',
+    preferredLocationId: 'loc-rampur',
+    budgetInr: 1500000,
+    status: 'visit_scheduled',
+    assignedMemberId: 'usr-sponsor-01',
+    assignedMemberName: 'Vikram Singh',
+    notes: 'Interested in East-facing corner plot near 30ft entrance road. Site visit scheduled for Sunday.',
+    followUps: [
+      {
+        id: 'flw-1',
+        date: '2026-10-10',
+        summary: 'Telephonic consultation completed. Customer verified freehold registry policy.',
+        nextFollowUpDate: '2026-10-17'
+      }
+    ],
+    createdAt: '2026-10-09T10:00:00Z'
+  },
+  {
+    id: 'enq-002',
+    clientName: 'Birendra Kumar Yadav',
+    clientPhone: '9839098765',
+    preferredLocationId: 'loc-mirza-murad',
+    budgetInr: 1200000,
+    status: 'contacted',
+    assignedMemberId: 'usr-junior-01',
+    assignedMemberName: 'Amit Sharma',
+    notes: 'Inquired at Mirza Murad NH-19 branch regarding commercial road facing plots.',
+    createdAt: '2026-10-12T14:30:00Z'
+  }
+];
+
+export const INITIAL_OFFERS: OfferIncentive[] = [
+  {
+    id: 'off-navratri-2026',
+    titleEn: 'Navratri Mahotsav: Freehold Registry Subsidy',
+    titleHi: 'नवरात्रि महोत्सव: ₹50,000 निःशुल्क रजिस्ट्री छूट',
+    description: 'Special corporate festival incentive: Instant ₹50,000 registry fee subsidy on direct token booking of any Block A or Block B residential plot.',
+    rewardDescription: '₹50,000 Registry Stamp Duty Adjustment Voucher',
+    rewardType: 'cash_bonus',
+    startDate: '2026-10-01',
+    endDate: '2026-10-31',
+    eligibleRoles: ['senior_member', 'junior_member', 'buyer'],
+    status: 'active',
+    claimedCount: 4
+  },
+  {
+    id: 'off-star-bike-2026',
+    titleEn: 'Mega Associate Volume Challenge',
+    titleHi: 'मेगा एसोसिएट वॉल्यूम चैलेंज (Sports Bike)',
+    description: 'Achieve ₹1.5 Crore cumulative team sales volume in Q4 2026 and receive an official company-funded Sports Bike experience reward.',
+    minSalesValueInr: 15000000,
+    minPlotCount: 12,
+    rewardDescription: 'Sports Bike / ₹1.5 Lakh Cash Equivalent',
+    rewardType: 'vehicle',
+    startDate: '2026-10-01',
+    endDate: '2026-12-31',
+    eligibleRoles: ['senior_member', 'junior_member'],
+    status: 'active',
+    claimedCount: 1
+  }
+];
+
+export const INITIAL_TARGETS: SalesTarget[] = [
+  {
+    id: 'tgt-01',
+    memberId: 'usr-sponsor-01',
+    memberName: 'Vikram Singh (Senior Associate)',
+    period: 'monthly',
+    periodLabel: 'October 2026',
+    targetPlotsCount: 3,
+    targetSalesVolumeInr: 3500000,
+    achievedPlotsCount: 1,
+    achievedSalesVolumeInr: 1200000,
+    status: 'in_progress',
+    assignedBy: 'Rajesh Kumar Patel (Director)',
+    updatedAt: '2026-10-14T10:00:00Z'
+  },
+  {
+    id: 'tgt-02',
+    memberId: 'usr-junior-01',
+    memberName: 'Amit Sharma (Field Associate)',
+    period: 'monthly',
+    periodLabel: 'October 2026',
+    targetPlotsCount: 2,
+    targetSalesVolumeInr: 2400000,
+    achievedPlotsCount: 0,
+    achievedSalesVolumeInr: 0,
+    status: 'in_progress',
+    assignedBy: 'Vikram Singh (Team Lead)',
+    updatedAt: '2026-10-14T10:00:00Z'
+  }
+];
+
+export const INITIAL_TASKS: TaskReminder[] = [
+  {
+    id: 'task-01',
+    assignedToMemberId: 'usr-sponsor-01',
+    assignedToName: 'Vikram Singh',
+    title: 'Site Visit Escort: Cantt Station to Rampur',
+    description: 'Escort Shri Suresh Chandra Gupta from Varanasi Cantt Station in company vehicle for Block A boundary inspection.',
+    category: 'site_visit',
+    dueDate: '2026-10-18',
+    dueTime: '10:30 AM',
+    priority: 'high',
+    isCompleted: false,
+    createdBy: 'Director Office',
+    createdAt: '2026-10-14T08:00:00Z'
+  },
+  {
+    id: 'task-02',
+    assignedToMemberId: 'usr-admin-01',
+    assignedToName: 'Rajesh Kumar Patel',
+    title: 'Verify Bank Statement for Plot A-03 Token Payment',
+    description: 'Cross-check HDFC Bank current account statement for ₹1.5L NEFT credit ref #UPI-REF-9928192847.',
+    category: 'payment_verification',
+    dueDate: '2026-10-16',
+    dueTime: '04:00 PM',
+    priority: 'urgent',
+    isCompleted: false,
+    createdBy: 'Automated Ledger Monitor',
+    createdAt: '2026-10-14T09:30:00Z'
+  }
+];
+
+export const INITIAL_CMS_CONTENT: CmsContent = {
+  heroHeadlineEn: 'Where Dreams Find Their Address in Varanasi',
+  heroHeadlineHi: 'जहां सपने पाते हैं अपना ठिकाना — वाराणसी',
+  heroSubtitleEn: 'Verified residential plots with 30ft & 25ft planned road network, 100% freehold registry, and transparent developer booking.',
+  heroSubtitleHi: 'सुव्यवस्थित टाउनशिप प्लॉट्स, 30 फीट चौड़ी सड़कें, दाखिल-खारिज और सुगम रजिस्ट्री सुविधा।',
+  announcementBanner: {
+    textEn: 'Navratri Special: ₹50,000 Registry Subsidy on Block A Corner Plots!',
+    textHi: 'नवरात्रि स्पेशल: ब्लॉक A कॉर्नर प्लॉट्स पर ₹50,000 रजिस्ट्री छूट!',
+    isActive: true,
+    linkUrl: '/master-plan'
+  },
+  publicOffers: [
+    {
+      id: 'off-01',
+      title: 'Zero Brokerage Direct Registry',
+      highlight: '100% Freehold Title',
+      badge: 'Verified'
+    },
+    {
+      id: 'off-02',
+      title: '30ft Wide Dedicated Road Network',
+      highlight: 'Demarcated Pillars',
+      badge: 'On Ground'
+    }
+  ],
+  faqs: [
+    {
+      id: 'faq-01',
+      questionEn: 'Is the registry executed directly at the Sub-Registrar office?',
+      questionHi: 'क्या रजिस्ट्री सीधे उप-निबंधक कार्यालय में होती है?',
+      answerEn: 'Yes, 100% direct freehold deed registry is executed at the Varanasi Sub-Registrar office with complete revenue mutation (Dakhil-Kharij) support.',
+      answerHi: 'हाँ, वाराणसी उप-निबंधक कार्यालय में सीधे आपके नाम 100% फ्रीहोल्ड बैनामा रजिस्ट्री की जाती है और दाखिल-खारिज में पूर्ण सहयोग दिया जाता है।',
+      category: 'Legal'
+    },
+    {
+      id: 'faq-02',
+      questionEn: 'Can I inspect the land boundaries and survey markers on site?',
+      questionHi: 'क्या मैं जमीन के पिलर और सीमांकन की मौके पर जांच कर सकता हूँ?',
+      answerEn: 'Absolutely. We provide company vehicle pickup from Cantt railway station for physical inspection with GPS coordinates and blueprint ground markers.',
+      answerHi: 'जी हाँ, आप कैंट रेलवे स्टेशन से कंपनी वाहन द्वारा मौके पर जाकर 30 फीट सड़क, पिलर और लेआउट की सीधी जांच कर सकते हैं।',
+      category: 'Site Visit'
+    }
+  ],
+  updatedAt: '2026-10-15T00:00:00Z',
+  updatedBy: 'Director (Rajesh Kumar Patel)'
+};
+
 

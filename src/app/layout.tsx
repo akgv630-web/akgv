@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { WhatsAppPopup } from '@/components/common/WhatsAppPopup';
 import { MobileBottomNav } from '@/components/common/MobileBottomNav';
 import { PwaInstallPrompt } from '@/components/common/PwaInstallPrompt';
+import { ServiceWorkerRegistrar } from '@/components/common/ServiceWorkerRegistrar';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -60,6 +61,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-screen w-full max-w-full flex-col bg-[#0B1734] font-sans text-[#F6F1E7] selection:bg-[#C7A35A] selection:text-[#0B1734] overflow-x-hidden">
         <AppProvider>
+          <ServiceWorkerRegistrar />
           <PwaInstallPrompt />
           <Navbar />
           <main className="flex-1 pb-24 sm:pb-0 min-h-screen w-full max-w-full overflow-x-hidden">{children}</main>

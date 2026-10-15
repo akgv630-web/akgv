@@ -135,8 +135,8 @@ export function FieldGpsCameraCapture() {
       accuracyMeters: coords.accuracy,
       captureTimestamp: new Date().toISOString(),
       photoUrl: photoPreview,
-      capturedByMemberId: currentUser.memberId || 'GUEST',
-      capturedByName: currentUser.fullName,
+      capturedByMemberId: currentUser?.memberId || 'GUEST',
+      capturedByName: currentUser?.fullName || 'Field Inspector',
       adminNotes: notes,
     });
 

@@ -11,6 +11,7 @@ import {
   Home,
   Layers,
   Lock,
+  LogOut,
   MapPin,
   Menu,
   PhoneCall,
@@ -26,7 +27,7 @@ import { AuthModal } from '@/components/auth/AuthModal';
 
 export function Navbar() {
   const pathname = usePathname();
-  const { language, setLanguage, t, currentUser, switchUserRole } = useApp();
+  const { language, setLanguage, t, currentUser, logout } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -49,7 +50,8 @@ export function Navbar() {
     buyer: t.nav.roleLabels.buyer,
   };
 
-  const getDashboardPath = (role: UserRole) => {
+  const getDashboardPath = (role?: UserRole) => {
+    if (!role) return '/member';
     if (role === 'super_admin' || role === 'sub_admin') return '/admin';
     if (role === 'senior_member' || role === 'junior_member') return '/member';
     return '/buyer';
@@ -161,60 +163,88 @@ export function Navbar() {
 
         {/* Right Action Bar */}
         <div className="hidden items-center gap-3 sm:flex">
-          {/* Active Account Status Pill */}
-          <Link
-            href={getDashboardPath(currentUser.role)}
-            className="flex items-center gap-2 rounded-lg border border-[#C7A35A]/40 bg-[#050A17] px-3 py-1.5 text-xs text-gray-200 shadow-sm hover:border-[#C7A35A] transition"
-            title={`Signed in as ${currentUser.fullName}`}
-          >
-            <div className="h-2 w-2 rounded-full bg-[#1EA275]" />
-            <span className="text-gray-400">{language === 'hi' ? 'खाता:' : 'Account:'}</span>
-            <span className="font-semibold text-[#DFC382]">{roleLabels[currentUser.role]}</span>
-          </Link>
+          {currentUser ? (
+            <>
+              {/* Active Account Status Pill */}
+              <Link
+                href={getDashboardPath(currentUser.role)}
+                className="flex items-center gap-2 rounded-lg border border-[#C7A35A]/40 bg-[#050A17] px-3 py-1.5 text-xs text-gray-200 shadow-sm hover:border-[#C7A35A] transition"
+                title={`Signed in as ${currentUser.fullName}`}
+              >
+                <div className="h-2 w-2 rounded-full bg-[#1EA275]" />
+                <span className="text-gray-400">{language === 'hi' ? 'खाता:' : 'Account:'}</span>
+                <span className="font-semibold text-[#DFC382]">{roleLabels[currentUser.role]}</span>
+              </Link>
 
-          {/* Sign In / Register Modal Trigger */}
-          <button
-            onClick={() => setAuthModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A]/50 bg-white/5 px-3 py-2 text-xs font-semibold text-[#DFC382] hover:bg-white/10 hover:border-[#C7A35A] transition active:scale-95"
-          >
-            <Lock className="h-3.5 w-3.5 text-[#C7A35A]" />
-            <span>{language === 'hi' ? 'लॉगिन / कोड' : language === 'hinglish' ? 'Login / Register' : 'Sign In / Register'}</span>
-          </button>
+              {/* Go To Portal Button */}
+              <Link
+                href={getDashboardPath(currentUser.role)}
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-4 py-2 text-xs font-bold text-[#0B1734] shadow-md transition hover:brightness-110 active:scale-95"
+              >
+                {currentUser.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.fullName}
+                    className="h-4 w-4 rounded-full object-cover border border-[#0B1734]"
+                  />
+                ) : (
+                  <User className="h-3.5 w-3.5" />
+                )}
+                <span>{t.nav.dashboard}</span>
+              </Link>
 
-          {/* Go To Portal Button */}
-          <Link
-            href={getDashboardPath(currentUser.role)}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-4 py-2 text-xs font-bold text-[#0B1734] shadow-md transition hover:brightness-110 active:scale-95"
-          >
-            {currentUser.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={currentUser.avatarUrl}
-                alt={currentUser.fullName}
-                className="h-4 w-4 rounded-full object-cover border border-[#0B1734]"
-              />
-            ) : (
-              <User className="h-3.5 w-3.5" />
-            )}
-            <span>{t.nav.dashboard}</span>
-          </Link>
+              {/* Sign Out Button */}
+              <button
+                onClick={logout}
+                title={language === 'hi' ? 'लॉगआउट' : 'Sign Out'}
+                className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-950/20 px-2.5 py-1.5 text-xs font-medium text-red-300 hover:bg-red-900/40 hover:text-white transition"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">{language === 'hi' ? 'लॉगआउट' : 'Sign Out'}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Sign In / Register Modal Trigger */}
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-[#C7A35A]/50 bg-white/5 px-3 py-2 text-xs font-semibold text-[#DFC382] hover:bg-white/10 hover:border-[#C7A35A] transition active:scale-95"
+              >
+                <Lock className="h-3.5 w-3.5 text-[#C7A35A]" />
+                <span>{language === 'hi' ? 'पोर्टल लॉगिन' : 'Associate / Buyer Login'}</span>
+              </button>
+
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-4 py-2 text-xs font-bold text-[#0B1734] shadow-md transition hover:brightness-110 active:scale-95"
+              >
+                <User className="h-3.5 w-3.5" />
+                <span>{language === 'hi' ? 'लॉगिन / साइन-अप' : 'Sign In / Register'}</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Mobile Action Buttons */}
         <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden">
-          <button
-            onClick={() => setAuthModalOpen(true)}
-            className="flex items-center gap-1 rounded-lg border border-[#C7A35A]/50 bg-white/5 px-2 py-1 text-xs font-semibold text-[#DFC382]"
-          >
-            <Lock className="h-3 w-3 text-[#C7A35A]" />
-            <span>{language === 'hi' ? 'लॉगिन' : 'Sign In'}</span>
-          </button>
-          <Link
-            href={getDashboardPath(currentUser.role)}
-            className="hidden sm:flex rounded-lg bg-[#C7A35A] px-2.5 py-1 text-xs font-bold text-[#0B1734]"
-          >
-            {language === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}
-          </Link>
+          {currentUser ? (
+            <Link
+              href={getDashboardPath(currentUser.role)}
+              className="flex items-center gap-1 rounded-lg bg-[#C7A35A] px-2.5 py-1 text-xs font-bold text-[#0B1734]"
+            >
+              <User className="h-3 w-3" />
+              <span>{language === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => setAuthModalOpen(true)}
+              className="flex items-center gap-1 rounded-lg border border-[#C7A35A]/50 bg-white/5 px-2.5 py-1 text-xs font-semibold text-[#DFC382]"
+            >
+              <Lock className="h-3 w-3 text-[#C7A35A]" />
+              <span>{language === 'hi' ? 'लॉगिन' : 'Sign In'}</span>
+            </button>
+          )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="rounded-lg border border-white/10 p-1.5 text-gray-300 hover:text-white"
@@ -245,18 +275,47 @@ export function Navbar() {
             })}
           </nav>
 
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setAuthModalOpen(true);
-              }}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 text-xs font-bold text-[#0B1734] shadow-md"
-            >
-              <Lock className="h-3.5 w-3.5" />
-              <span>{language === 'hi' ? 'लॉगिन / स्पॉन्सर कोड से पंजीकरण' : 'Login / Register with Sponsor Code'}</span>
-            </button>
-          </div>
+          {currentUser ? (
+            <div className="mt-4 rounded-xl border border-[#C7A35A]/30 bg-[#050A17] p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-white">{currentUser.fullName}</p>
+                  <p className="text-[10px] text-[#DFC382]">{roleLabels[currentUser.role]}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-950/30 px-2 py-1 text-[11px] text-red-300"
+                >
+                  <LogOut className="h-3 w-3" />
+                  <span>{language === 'hi' ? 'लॉगआउट' : 'Sign Out'}</span>
+                </button>
+              </div>
+              <Link
+                href={getDashboardPath(currentUser.role)}
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 text-xs font-bold text-[#0B1734]"
+              >
+                <User className="h-3.5 w-3.5" />
+                <span>{t.nav.dashboard}</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-4 border-t border-white/10 pt-4">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setAuthModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 text-xs font-bold text-[#0B1734] shadow-md"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                <span>{language === 'hi' ? 'लॉगिन / स्पॉन्सर कोड से पंजीकरण' : 'Login / Register with Sponsor Code'}</span>
+              </button>
+            </div>
+          )}
 
           <div className="mt-4 border-t border-white/10 pt-4">
             <div className="mb-2 text-xs font-medium text-gray-400">Language:</div>

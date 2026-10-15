@@ -26,6 +26,7 @@ import {
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { ProfilePhotoStudioModal } from '@/components/common/ProfilePhotoStudioModal';
+import { AuthBarrier } from '@/components/auth/AuthBarrier';
 
 export default function BuyerPortalPage() {
   const {
@@ -46,6 +47,10 @@ export default function BuyerPortalPage() {
   const [txRef, setTxRef] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE'>('UPI_QR');
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
+
+  if (!currentUser) {
+    return <AuthBarrier requiredRole="buyer" />;
+  }
 
   // Filter records for current user
   const myBookings = bookings.filter((b) => b.buyerId === currentUser.id || currentUser.role === 'super_admin');

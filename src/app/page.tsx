@@ -31,7 +31,7 @@ import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { TrustAndLegalSection } from '@/components/home/TrustAndLegalSection';
 
 export default function HomePage() {
-  const { t, language } = useApp();
+  const { t, language, cmsContent } = useApp();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
   const faqs = t.faqs;
@@ -46,6 +46,24 @@ export default function HomePage() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-5xl text-center space-y-4 sm:space-y-6">
+          {/* Dynamic Announcement Banner from CMS */}
+          {cmsContent?.announcementBanner?.isActive && (
+            <div className="flex justify-center">
+              <Link
+                href={cmsContent.announcementBanner.linkUrl || '/master-plan'}
+                className="inline-flex items-center gap-2 rounded-full border border-amber-500/50 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-300 shadow-md hover:bg-amber-500/20 transition"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+                <span>
+                  {language === 'hi'
+                    ? cmsContent.announcementBanner.textHi
+                    : cmsContent.announcementBanner.textEn}
+                </span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          )}
+
           {/* Top Badge */}
           <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-[#C7A35A]/50 bg-[#0B1734]/90 px-3 py-1 sm:px-4 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-[#DFC382] shadow-lg backdrop-blur">
             <Sparkles className="h-3.5 w-3.5 text-[#C7A35A]" />

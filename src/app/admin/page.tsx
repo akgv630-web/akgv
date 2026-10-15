@@ -47,6 +47,7 @@ import { useApp } from '@/context/AppContext';
 import { KycStatus, Plot, PlotStatus, Profile, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { PlotManagementModal } from '@/components/admin/PlotManagementModal';
+import { AuthBarrier, UnauthorizedBarrier } from '@/components/auth/AuthBarrier';
 
 function formatTenure(dateStr?: string): { joinedFormatted: string; tenureFormatted: string } {
   if (!dateStr) return { joinedFormatted: 'Recent', tenureFormatted: 'Active' };
@@ -299,7 +300,7 @@ export default function SuperAdminPage() {
 
   const handleConfirmDelete = () => {
     if (!deletingMember) return;
-    if (deletingMember.id === currentUser.id) {
+    if (currentUser && deletingMember.id === currentUser.id) {
       alert('Security Protection: You cannot delete your own logged-in administrator account.');
       setDeletingMember(null);
       return;
@@ -333,6 +334,14 @@ export default function SuperAdminPage() {
         return { label: role, bg: 'bg-gray-500/20 text-gray-300 border-gray-500/40' };
     }
   };
+
+  if (!currentUser) {
+    return <AuthBarrier requiredRole="admin" />;
+  }
+
+  if (currentUser.role !== 'super_admin' && currentUser.role !== 'sub_admin') {
+    return <UnauthorizedBarrier currentRole={currentUser.role} requiredRole="Super Admin or Sub Admin" />;
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">

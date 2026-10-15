@@ -63,8 +63,8 @@ export function JoiningKitLedger() {
       memberPhone,
       amountReceivedInr: COMPANY_DETAILS.joiningKitPriceInr,
       collectionDate,
-      collectorStaffName: currentUser.fullName,
-      collectorStaffId: currentUser.id,
+      collectorStaffName: currentUser?.fullName || 'Branch Officer',
+      collectorStaffId: currentUser?.id || 'staff-hq',
       itemsIncluded: {
         bag: hasBag,
         pen: hasPen,
