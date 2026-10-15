@@ -213,7 +213,16 @@ export function Navbar() {
             href={getDashboardPath(currentUser.role)}
             className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-4 py-2 text-xs font-bold text-[#0B1734] shadow-md transition hover:brightness-110 active:scale-95"
           >
-            <User className="h-3.5 w-3.5" />
+            {currentUser.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={currentUser.avatarUrl}
+                alt={currentUser.fullName}
+                className="h-4 w-4 rounded-full object-cover border border-[#0B1734]"
+              />
+            ) : (
+              <User className="h-3.5 w-3.5" />
+            )}
             <span>{t.nav.dashboard}</span>
           </Link>
         </div>

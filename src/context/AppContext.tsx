@@ -84,11 +84,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedLang && (savedLang === 'en' || savedLang === 'hi' || savedLang === 'hinglish')) {
         setLanguageState(savedLang);
       }
+      let loadedProfiles = DEMO_PROFILES;
       const savedProfiles = localStorage.getItem(`${STORAGE_KEY_PREFIX}profiles`);
       if (savedProfiles) {
         try {
           const parsed = JSON.parse(savedProfiles);
           if (Array.isArray(parsed) && parsed.length > 0) {
+            loadedProfiles = parsed;
             setAllProfiles(parsed);
           }
         } catch {
@@ -97,8 +99,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       const savedRole = localStorage.getItem(`${STORAGE_KEY_PREFIX}role`) as UserRole;
       if (savedRole) {
-        const found = DEMO_PROFILES.find((p) => p.role === savedRole);
+        const found = loadedProfiles.find((p) => p.role === savedRole) || DEMO_PROFILES.find((p) => p.role === savedRole);
         if (found) setCurrentUser(found);
+      } else if (loadedProfiles.length > 0) {
+        setCurrentUser(loadedProfiles[0]);
       }
       const savedPlots = localStorage.getItem(`${STORAGE_KEY_PREFIX}plots`);
       if (savedPlots) setPlots(JSON.parse(savedPlots));

@@ -20,10 +20,12 @@ import {
   ShieldCheck,
   Upload,
   User,
-  X
+  X,
+  Camera
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
+import { ProfilePhotoStudioModal } from '@/components/common/ProfilePhotoStudioModal';
 
 export default function BuyerPortalPage() {
   const {
@@ -33,10 +35,12 @@ export default function BuyerPortalPage() {
     submitPaymentProof,
     siteVisits,
     supportTickets,
+    updateMember,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'bookings' | 'payments' | 'visits' | 'support'>('bookings');
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState(150000);
   const [txRef, setTxRef] = useState('');
@@ -70,8 +74,26 @@ export default function BuyerPortalPage() {
       {/* Top Buyer Banner */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[#C7A35A]/40 bg-gradient-to-r from-[#0B1734] to-[#050A17] p-6 shadow-2xl">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#050A17] border border-[#C7A35A] text-[#DFC382]">
-            <User className="h-7 w-7" />
+          <div className="relative group">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#050A17] border border-[#C7A35A] text-[#DFC382] overflow-hidden shadow">
+              {currentUser.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentUser.avatarUrl}
+                  alt={currentUser.fullName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-7 w-7" />
+              )}
+            </div>
+            <button
+              onClick={() => setIsPhotoStudioOpen(true)}
+              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-lg bg-[#C7A35A] text-[#0B1734] shadow hover:brightness-110 border border-[#0B1734] transition active:scale-90"
+              title="Change Profile Photo"
+            >
+              <Camera className="h-3 w-3" />
+            </button>
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -520,6 +542,17 @@ export default function BuyerPortalPage() {
           </div>
         </div>
       )}
+
+      {/* Profile Photo Studio Modal */}
+      <ProfilePhotoStudioModal
+        isOpen={isPhotoStudioOpen}
+        onClose={() => setIsPhotoStudioOpen(false)}
+        currentAvatarUrl={currentUser.avatarUrl}
+        memberName={currentUser.fullName}
+        onSave={(newAvatarUrl) => {
+          updateMember(currentUser.id, { avatarUrl: newAvatarUrl });
+        }}
+      />
     </div>
   );
 }

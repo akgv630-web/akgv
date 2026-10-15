@@ -24,6 +24,8 @@ interface AssociateIdCardProps {
   email?: string;
   joinedDate?: string;
   kitStatus?: 'VERIFIED' | 'PENDING';
+  avatarUrl?: string;
+  onChangePhoto?: () => void;
 }
 
 export function AssociateIdCard({
@@ -33,7 +35,9 @@ export function AssociateIdCard({
   phone = '6306917991',
   email = 'associate@akgv.in',
   joinedDate = '15 Jan 2026',
-  kitStatus = 'VERIFIED'
+  kitStatus = 'VERIFIED',
+  avatarUrl,
+  onChangePhoto
 }: AssociateIdCardProps) {
   return (
     <div className="w-full max-w-md mx-auto space-y-4">
@@ -71,11 +75,26 @@ export function AssociateIdCard({
         {/* Associate Profile Body */}
         <div className="flex items-center gap-4">
           {/* Avatar / Photo Box */}
-          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-[#C7A35A] bg-[#070E20] flex items-center justify-center shadow-lg">
-            <User className="h-10 w-10 text-gray-400" />
+          <div className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 border-[#C7A35A] bg-[#070E20] flex items-center justify-center shadow-lg">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-10 w-10 text-gray-400" />
+            )}
             <div className="absolute bottom-0 inset-x-0 bg-[#C7A35A] text-[#0B1734] text-[8px] font-bold text-center py-0.5">
               VERIFIED
             </div>
+            {onChangePhoto && (
+              <button
+                type="button"
+                onClick={onChangePhoto}
+                className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white text-[9px] font-bold text-center p-1"
+                title="Change Photo"
+              >
+                <span>Edit Photo</span>
+              </button>
+            )}
           </div>
 
           {/* Details */}

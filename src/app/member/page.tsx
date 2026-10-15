@@ -24,10 +24,12 @@ import { calculateMemberLevel, DEMO_PROFILES } from '@/lib/store';
 import { COMMISSION_LEVELS_GROUND_TRUTH, COMPANY_DETAILS } from '@/data/groundTruth';
 import { FieldGpsCameraCapture } from '@/components/gps-camera/FieldGpsCameraCapture';
 import { AssociateIdCard } from '@/components/member/AssociateIdCard';
+import { ProfilePhotoStudioModal } from '@/components/common/ProfilePhotoStudioModal';
 
 export function MemberPortalPage() {
-  const { currentUser, kitIssues, language, allProfiles } = useApp();
+  const { currentUser, kitIssues, language, allProfiles, updateMember } = useApp();
   const [activeTab, setActiveTab] = useState<'id_card' | 'hierarchy' | 'commission' | 'rewards' | 'field_gps'>('id_card');
+  const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
 
   // Member Business Volume (Simulated/Calculated)
   const memberBusinessVolumeInr = 8500000; // ₹85 Lakh (Gold Star Level 3)
@@ -47,17 +49,48 @@ export function MemberPortalPage() {
       {/* Top Luxury Banner */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[#C7A35A]/40 bg-gradient-to-r from-[#0B1734] via-[#050A17] to-[#0B1734] p-6 shadow-2xl">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#050A17] border-2 border-[#C7A35A] text-[#DFC382] shadow-lg">
-            <Trophy className="h-8 w-8 text-[#C7A35A]" />
+          {/* Interactive Profile Avatar */}
+          <div className="relative group">
+            <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-[#050A17] border-2 border-[#C7A35A] text-[#DFC382] shadow-lg overflow-hidden">
+              {currentUser.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentUser.avatarUrl}
+                  alt={currentUser.fullName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="font-serif text-xl sm:text-2xl font-bold text-[#DFC382]">
+                  {currentUser.fullName.slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            {/* Camera Trigger Badge */}
+            <button
+              onClick={() => setIsPhotoStudioOpen(true)}
+              className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-xl bg-[#C7A35A] text-[#0B1734] shadow-md hover:brightness-110 active:scale-90 transition border-2 border-[#0B1734]"
+              title="Change Profile Photo & Filters"
+            >
+              <Camera className="h-3.5 w-3.5" />
+            </button>
           </div>
+
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-serif text-xl sm:text-2xl font-bold text-white">
                 {currentUser.fullName}
               </h1>
               <span className="rounded-full bg-[#C7A35A]/20 px-3 py-0.5 text-xs font-bold text-[#DFC382] border border-[#C7A35A]/40">
                 {currentLevel.rankTitleHi} ({currentLevel.rankTitleEn})
               </span>
+              <button
+                onClick={() => setIsPhotoStudioOpen(true)}
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#DFC382] border border-[#C7A35A]/30 transition"
+              >
+                <Camera className="h-3 w-3" />
+                <span>{currentUser.avatarUrl ? 'फोटो बदलें' : 'फोटो लगाएं'}</span>
+              </button>
             </div>
             <p className="text-xs text-gray-300 mt-1">
               Member ID: <strong className="font-mono text-[#DFC382]">{currentUser.memberId || 'AKGV0001'}</strong> • Sponsor: Vikram Singh (AKGV-HQ)
@@ -141,7 +174,7 @@ export function MemberPortalPage() {
       {activeTab === 'id_card' && (
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
           {/* Virtual Card Graphic */}
-          <div className="md:col-span-6 flex justify-center">
+          <div className="md:col-span-6 flex flex-col items-center gap-3">
             <AssociateIdCard
               name={currentUser.fullName}
               memberId={currentUser.memberId || 'AKGV0001'}
@@ -150,7 +183,21 @@ export function MemberPortalPage() {
               email={currentUser.email}
               joinedDate="15 Jan 2026"
               kitStatus="VERIFIED"
+              avatarUrl={currentUser.avatarUrl}
+              onChangePhoto={() => setIsPhotoStudioOpen(true)}
             />
+
+            <button
+              onClick={() => setIsPhotoStudioOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-[#C7A35A]/50 bg-[#0B1734] px-4 py-2 text-xs font-bold text-[#DFC382] shadow hover:bg-white/5 active:scale-95 transition"
+            >
+              <Camera className="h-4 w-4 text-[#C7A35A]" />
+              <span>
+                {currentUser.avatarUrl
+                  ? 'आईडी फोटो बदलें एवं फिल्टर लगाएं (Edit Photo & Filters)'
+                  : 'आईडी कार्ड में अपनी फोटो लगाएं (Upload ID Photo)'}
+              </span>
+            </button>
           </div>
 
           {/* Joining Kit Handover Verification */}
@@ -380,6 +427,17 @@ export function MemberPortalPage() {
           <FieldGpsCameraCapture />
         </div>
       )}
+
+      {/* Profile Photo Studio Modal */}
+      <ProfilePhotoStudioModal
+        isOpen={isPhotoStudioOpen}
+        onClose={() => setIsPhotoStudioOpen(false)}
+        currentAvatarUrl={currentUser.avatarUrl}
+        memberName={currentUser.fullName}
+        onSave={(newAvatarUrl) => {
+          updateMember(currentUser.id, { avatarUrl: newAvatarUrl });
+        }}
+      />
     </div>
   );
 }

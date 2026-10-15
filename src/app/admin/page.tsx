@@ -616,8 +616,17 @@ export default function SuperAdminPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-3">
                             {/* Avatar */}
-                            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-[#050A17] border border-[#C7A35A]/40 text-[#DFC382] font-bold text-sm shadow">
-                              {profile.fullName.slice(0, 2).toUpperCase()}
+                            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-[#050A17] border border-[#C7A35A]/40 text-[#DFC382] font-bold text-sm shadow overflow-hidden">
+                              {profile.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={profile.avatarUrl}
+                                  alt={profile.fullName}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                profile.fullName.slice(0, 2).toUpperCase()
+                              )}
                               {/* Online / Active Pulse */}
                               <span
                                 className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-[#0B1734] ${
@@ -1134,8 +1143,17 @@ export default function SuperAdminPage() {
                   {/* Top Profile Card */}
                   <div className="flex items-center justify-between rounded-xl border border-white/10 bg-[#0B1734] p-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#C7A35A] bg-[#050A17] font-serif text-lg font-bold text-[#DFC382]">
-                        {viewingMember.fullName.slice(0, 2).toUpperCase()}
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#C7A35A] bg-[#050A17] font-serif text-lg font-bold text-[#DFC382] overflow-hidden">
+                        {viewingMember.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={viewingMember.avatarUrl}
+                            alt={viewingMember.fullName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          viewingMember.fullName.slice(0, 2).toUpperCase()
+                        )}
                       </div>
                       <div>
                         <h4 className="font-serif text-base font-bold text-white">
