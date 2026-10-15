@@ -62,7 +62,6 @@ import {
   callVerifyPaymentAtomic,
   fetchGpsEvidenceFromSupabase,
   saveGpsEvidenceToSupabase,
-  uploadGpsEvidencePhoto,
   fetchEnquiriesFromSupabase,
   saveEnquiryToSupabase,
   fetchTargetsFromSupabase,
@@ -71,8 +70,7 @@ import {
   saveTaskToSupabase,
   fetchCmsContentFromSupabase,
   saveCmsContentToSupabase,
-  fetchOffersFromSupabase,
-  saveOfferToSupabase
+  fetchOffersFromSupabase
 } from '@/lib/supabase/syncService';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 
@@ -166,89 +164,57 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const STORAGE_KEY_PREFIX = 'akgv_infra_';
 
+function getInitialStorage<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${key}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(fallback)) {
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed as unknown as T;
+      } else if (parsed && typeof parsed === 'object') {
+        return parsed as unknown as T;
+      }
+    }
+  } catch {}
+  return fallback;
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('en');
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedLang = localStorage.getItem(`${STORAGE_KEY_PREFIX}lang`) as Language;
+        if (savedLang && (savedLang === 'en' || savedLang === 'hi' || savedLang === 'hinglish')) {
+          return savedLang;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return 'en';
+  });
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isSandboxMode, setIsSandboxMode] = useState<boolean>(false);
-  const [allProfiles, setAllProfiles] = useState<Profile[]>(DEMO_PROFILES);
-  const [plots, setPlots] = useState<Plot[]>(INITIAL_PLOTS);
-  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
-  const [payments, setPayments] = useState<PaymentRecord[]>(INITIAL_PAYMENTS);
-  const [kitIssues, setKitIssues] = useState<JoiningKitIssue[]>(INITIAL_KIT_ISSUES);
-  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(INITIAL_SITE_VISITS);
-  const [gpsEvidences, setGpsEvidences] = useState<FieldGpsEvidence[]>(INITIAL_GPS_EVIDENCE);
-  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(INITIAL_SUPPORT_TICKETS);
-  const [reviews, setReviews] = useState<ReviewRecord[]>(INITIAL_REVIEWS);
+  const [allProfiles, setAllProfiles] = useState<Profile[]>(() => getInitialStorage('profiles', DEMO_PROFILES));
+  const [plots, setPlots] = useState<Plot[]>(() => getInitialStorage('plots', INITIAL_PLOTS));
+  const [bookings, setBookings] = useState<Booking[]>(() => getInitialStorage('bookings', INITIAL_BOOKINGS));
+  const [payments, setPayments] = useState<PaymentRecord[]>(() => getInitialStorage('payments', INITIAL_PAYMENTS));
+  const [kitIssues, setKitIssues] = useState<JoiningKitIssue[]>(() => getInitialStorage('kit_issues', INITIAL_KIT_ISSUES));
+  const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(() => getInitialStorage('site_visits', INITIAL_SITE_VISITS));
+  const [gpsEvidences, setGpsEvidences] = useState<FieldGpsEvidence[]>(() => getInitialStorage('gps_evidence', INITIAL_GPS_EVIDENCE));
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(() => getInitialStorage('support_tickets', INITIAL_SUPPORT_TICKETS));
+  const [reviews, setReviews] = useState<ReviewRecord[]>(() => getInitialStorage('reviews', INITIAL_REVIEWS));
   const [selectedPlotForViewer, setSelectedPlotForViewer] = useState<Plot | null>(INITIAL_PLOTS[3]);
-  const [enquiries, setEnquiries] = useState<ClientEnquiry[]>(INITIAL_ENQUIRIES);
-  const [offers, setOffers] = useState<OfferIncentive[]>(INITIAL_OFFERS);
-  const [targets, setTargets] = useState<SalesTarget[]>(INITIAL_TARGETS);
-  const [tasks, setTasks] = useState<TaskReminder[]>(INITIAL_TASKS);
+  const [enquiries, setEnquiries] = useState<ClientEnquiry[]>(() => getInitialStorage('enquiries', INITIAL_ENQUIRIES));
+  const [offers, setOffers] = useState<OfferIncentive[]>(() => getInitialStorage('offers', INITIAL_OFFERS));
+  const [targets, setTargets] = useState<SalesTarget[]>(() => getInitialStorage('targets', INITIAL_TARGETS));
+  const [tasks, setTasks] = useState<TaskReminder[]>(() => getInitialStorage('tasks', INITIAL_TASKS));
   const [messages, setMessages] = useState<InAppMessage[]>([]);
-  const [cmsContent, setCmsContent] = useState<CmsContent>(INITIAL_CMS_CONTENT);
+  const [cmsContent, setCmsContent] = useState<CmsContent>(() => getInitialStorage('cms', INITIAL_CMS_CONTENT));
 
-  // Hydrate from localStorage first, then sync with Supabase in background
+  // Supabase Live Remote Sync (Non-blocking background sync)
   useEffect(() => {
-    try {
-      const savedLang = localStorage.getItem(`${STORAGE_KEY_PREFIX}lang`) as Language;
-      if (savedLang && (savedLang === 'en' || savedLang === 'hi' || savedLang === 'hinglish')) {
-        setLanguageState(savedLang);
-      }
-      let loadedProfiles = DEMO_PROFILES;
-      const savedProfiles = localStorage.getItem(`${STORAGE_KEY_PREFIX}profiles`);
-      if (savedProfiles) {
-        try {
-          const parsed = JSON.parse(savedProfiles);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            loadedProfiles = parsed;
-            setAllProfiles(parsed);
-          }
-        } catch {
-          // Ignore
-        }
-      }
-
-      const savedPlots = localStorage.getItem(`${STORAGE_KEY_PREFIX}plots`);
-      if (savedPlots) setPlots(JSON.parse(savedPlots));
-      const savedBookings = localStorage.getItem(`${STORAGE_KEY_PREFIX}bookings`);
-      if (savedBookings) setBookings(JSON.parse(savedBookings));
-      const savedPayments = localStorage.getItem(`${STORAGE_KEY_PREFIX}payments`);
-      if (savedPayments) setPayments(JSON.parse(savedPayments));
-      const savedKit = localStorage.getItem(`${STORAGE_KEY_PREFIX}kit_issues`);
-      if (savedKit) setKitIssues(JSON.parse(savedKit));
-      const savedReviews = localStorage.getItem(`${STORAGE_KEY_PREFIX}reviews`);
-      if (savedReviews) {
-        try {
-          const parsedRev = JSON.parse(savedReviews);
-          if (Array.isArray(parsedRev) && parsedRev.length > 0) setReviews(parsedRev);
-        } catch {}
-      }
-      const savedEnquiries = localStorage.getItem(`${STORAGE_KEY_PREFIX}enquiries`);
-      if (savedEnquiries) {
-        try {
-          const parsed = JSON.parse(savedEnquiries);
-          if (Array.isArray(parsed) && parsed.length > 0) setEnquiries(parsed);
-        } catch {}
-      }
-      const savedTasks = localStorage.getItem(`${STORAGE_KEY_PREFIX}tasks`);
-      if (savedTasks) {
-        try {
-          const parsed = JSON.parse(savedTasks);
-          if (Array.isArray(parsed) && parsed.length > 0) setTasks(parsed);
-        } catch {}
-      }
-      const savedCms = localStorage.getItem(`${STORAGE_KEY_PREFIX}cms`);
-      if (savedCms) {
-        try {
-          const parsed = JSON.parse(savedCms);
-          if (parsed && parsed.heroHeadlineEn) setCmsContent(parsed);
-        } catch {}
-      }
-    } catch {
-      // Ignore client hydration errors
-    }
-
-    // Supabase Live Remote Sync (Non-blocking background sync)
     async function syncWithSupabase() {
       try {
         const [
@@ -769,7 +735,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updatePlotStatus = (plotId: string, newStatus: PlotStatus, _reason: string) => {
+  const updatePlotStatus = (plotId: string, newStatus: PlotStatus, reason?: string) => {
     let targetPlot: Plot | null = null;
     setPlots((prev) => {
       const updated = prev.map((p) => {
@@ -785,6 +751,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     if (targetPlot) {
+      if (reason) {
+        console.info(`[PlotStatus] Plot ${plotId} status changed to ${newStatus}: ${reason}`);
+      }
       void savePlotToSupabase(targetPlot);
     }
   };
@@ -938,7 +907,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const cancelBooking = (bookingId: string, _reason: string) => {
+  const cancelBooking = (bookingId: string, reason?: string) => {
     let targetBooking: Booking | null = null;
     setBookings((prev) => {
       const next = prev.map((b) => {
@@ -955,8 +924,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (targetBooking) {
+      if (reason) {
+        console.info(`[Booking] Booking ${bookingId} cancelled: ${reason}`);
+      }
       void saveBookingToSupabase(targetBooking);
-      updatePlotStatus((targetBooking as Booking).plotId, 'available_green', 'Booking cancelled and released');
+      updatePlotStatus((targetBooking as Booking).plotId, 'available_green', reason || 'Booking cancelled and released');
     }
   };
 

@@ -2,13 +2,9 @@
 
 import React, { useRef, useState } from 'react';
 import {
-  AlertTriangle,
   Camera,
-  CheckCircle2,
   Crosshair,
-  Image as ImageIcon,
   MapPin,
-  RefreshCw,
   ShieldAlert,
   Upload,
   X
@@ -153,8 +149,9 @@ export function FieldGpsCameraCapture() {
         setCaptureMethod(null);
         setNotes('');
       }, 3000);
-    } catch (err: any) {
-      alert(err.message || 'Failed to submit field evidence.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit field evidence.';
+      alert(msg);
     }
   };
 

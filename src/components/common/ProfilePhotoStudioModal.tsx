@@ -77,14 +77,13 @@ const PRESET_AVATARS = [
   { id: 'pres-4', label: 'Director Crest', color: '#E11D48', bg: '#4C0519' },
 ];
 
-export function ProfilePhotoStudioModal({
-  isOpen,
+function ProfilePhotoStudioModalContent({
   onClose,
   currentAvatarUrl,
   memberName,
   onSave
 }: ProfilePhotoStudioModalProps) {
-  const [imageSrc, setImageSrc] = useState<string | null>(currentAvatarUrl || null);
+  const [imageSrc, setImageSrc] = useState<string | null>(() => currentAvatarUrl || null);
   const [zoom, setZoom] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -98,18 +97,6 @@ export function ProfilePhotoStudioModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Sync initial image when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setImageSrc(currentAvatarUrl || null);
-      setZoom(1);
-      setRotation(0);
-      setPosition({ x: 0, y: 0 });
-      setActivePreset('normal');
-      setCustomFilter(PRESET_FILTERS.normal.settings);
-    }
-  }, [isOpen, currentAvatarUrl]);
 
   // Handle Preset Change
   const handleSelectPreset = (preset: FilterPreset) => {
@@ -288,8 +275,6 @@ export function ProfilePhotoStudioModal({
       onClose();
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-3 sm:p-4 backdrop-blur-md overflow-y-auto">
@@ -621,4 +606,9 @@ export function ProfilePhotoStudioModal({
       </div>
     </div>
   );
+}
+
+export function ProfilePhotoStudioModal(props: ProfilePhotoStudioModalProps) {
+  if (!props.isOpen) return null;
+  return <ProfilePhotoStudioModalContent key={props.currentAvatarUrl || 'new'} {...props} />;
 }

@@ -1,12 +1,18 @@
 import { supabase, isSupabaseConfigured } from './client';
+import type { Session } from '@supabase/supabase-js';
 import {
   Booking,
+  ClientEnquiry,
+  CmsContent,
+  FieldGpsEvidence,
   OfferIncentive,
   PaymentRecord,
   Plot,
   Profile,
   ReviewRecord,
-  SiteVisit
+  SalesTarget,
+  SiteVisit,
+  TaskReminder
 } from '@/types';
 
 // ==============================================================================
@@ -590,8 +596,9 @@ export async function supabaseSignIn(identifier: string, password: string) {
       password: password,
     });
     return res;
-  } catch (err: any) {
-    return { data: null, error: err };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { data: null, error: { message } };
   }
 }
 
@@ -621,8 +628,9 @@ export async function supabaseSignUp(data: {
       },
     });
     return res;
-  } catch (err: any) {
-    return { data: null, error: err };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { data: null, error: { message } };
   }
 }
 
@@ -643,8 +651,9 @@ export async function supabaseResetPassword(email: string) {
     return await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/reset` : undefined,
     });
-  } catch (err: any) {
-    return { data: null, error: err };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { data: null, error: { message } };
   }
 }
 
@@ -658,7 +667,7 @@ export async function supabaseGetSession() {
   }
 }
 
-export function supabaseOnAuthStateChange(callback: (session: any) => void) {
+export function supabaseOnAuthStateChange(callback: (session: Session | null) => void) {
   if (!isSupabaseConfigured || !supabase) return () => {};
   try {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -672,6 +681,14 @@ export function supabaseOnAuthStateChange(callback: (session: any) => void) {
   }
 }
 
+export interface CreateBookingAtomicResult {
+  success: boolean;
+  error?: string;
+  booking_id?: string;
+  booking_number?: string;
+  hold_expires_at?: string;
+}
+
 export async function callCreatePlotBookingAtomic(params: {
   plotId: string;
   buyerId: string;
@@ -680,7 +697,7 @@ export async function callCreatePlotBookingAtomic(params: {
   totalAmount: number;
   sponsorId?: string;
   houseModelId?: string;
-}): Promise<{ data: any; error: any }> {
+}): Promise<{ data: CreateBookingAtomicResult | null; error: { message?: string } | null }> {
   if (!isSupabaseConfigured || !supabase) {
     return { data: null, error: new Error('Supabase database service is not configured') };
   }
@@ -695,17 +712,30 @@ export async function callCreatePlotBookingAtomic(params: {
       p_sponsor_id: params.sponsorId || null,
       p_house_model_id: params.houseModelId || null,
     });
-    return { data, error };
-  } catch (err) {
-    return { data: null, error: err };
+    return { data: (data as CreateBookingAtomicResult) || null, error };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { data: null, error: { message } };
   }
+}
+
+export interface VerifyPaymentAtomicResult {
+  success: boolean;
+  error?: string;
+  payment_id?: string;
+  receipt_number?: string;
+  total_paid?: number;
+  total_price?: number;
+  remaining_due?: number;
+  booking_status?: string;
+  plot_status?: string;
 }
 
 export async function callVerifyPaymentAtomic(params: {
   paymentId: string;
   approved: boolean;
   reason?: string;
-}): Promise<{ data: any; error: any }> {
+}): Promise<{ data: VerifyPaymentAtomicResult | null; error: { message?: string } | null }> {
   if (!isSupabaseConfigured || !supabase) {
     return { data: null, error: new Error('Supabase database service is not configured') };
   }
@@ -716,16 +746,17 @@ export async function callVerifyPaymentAtomic(params: {
       p_approved: params.approved,
       p_reason: params.reason || null,
     });
-    return { data, error };
-  } catch (err) {
-    return { data: null, error: err };
+    return { data: (data as VerifyPaymentAtomicResult) || null, error };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { data: null, error: { message } };
   }
 }
 
 export async function uploadGpsEvidencePhoto(
   fileOrBlob: Blob | File,
   path: string
-): Promise<{ data: any; error: any }> {
+): Promise<{ data: unknown; error: unknown }> {
   if (!isSupabaseConfigured || !supabase) {
     return { data: null, error: new Error('Supabase storage is not configured') };
   }
@@ -786,7 +817,7 @@ export async function fetchGpsEvidenceFromSupabase() {
   }
 }
 
-export async function saveGpsEvidenceToSupabase(evidence: any): Promise<boolean> {
+export async function saveGpsEvidenceToSupabase(evidence: FieldGpsEvidence): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
   try {
     const payload = {
@@ -854,7 +885,7 @@ export async function fetchEnquiriesFromSupabase() {
   }
 }
 
-export async function saveEnquiryToSupabase(enquiry: any): Promise<boolean> {
+export async function saveEnquiryToSupabase(enquiry: ClientEnquiry): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
   try {
     const payload = {
@@ -909,7 +940,7 @@ export async function fetchTargetsFromSupabase() {
   }
 }
 
-export async function saveTargetToSupabase(target: any): Promise<boolean> {
+export async function saveTargetToSupabase(target: SalesTarget): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
   try {
     const payload = {
@@ -958,7 +989,7 @@ export async function fetchTasksFromSupabase() {
   }
 }
 
-export async function saveTaskToSupabase(task: any): Promise<boolean> {
+export async function saveTaskToSupabase(task: TaskReminder): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
   try {
     const payload = {
@@ -1013,7 +1044,7 @@ export async function fetchCmsContentFromSupabase() {
   }
 }
 
-export async function saveCmsContentToSupabase(content: any): Promise<boolean> {
+export async function saveCmsContentToSupabase(content: CmsContent): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
   try {
     const payload = {

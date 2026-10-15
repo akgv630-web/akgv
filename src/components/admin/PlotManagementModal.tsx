@@ -1,14 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   AlertCircle,
-  Building,
   CheckCircle2,
-  Compass,
   DollarSign,
-  Layers,
-  MapPin,
   Maximize2,
   Ruler,
   ShieldCheck,
@@ -25,8 +21,51 @@ interface PlotManagementModalProps {
   onSuccessNotice?: (msg: string) => void;
 }
 
-export function PlotManagementModal({
-  isOpen,
+function getSuggestedPlotNumber(selectedBlk: string, plots: Plot[]): string {
+  const existingInBlock = plots.filter((p) => p.block.toUpperCase() === selectedBlk.toUpperCase());
+  let maxNum = 0;
+  for (const p of existingInBlock) {
+    const match = p.plotNumber.match(/(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  }
+  const nextNum = maxNum + 1;
+  return `${selectedBlk.toUpperCase()}-${nextNum < 10 ? `0${nextNum}` : nextNum}`;
+}
+
+function getSmartCoords(selectedBlk: string, plots: Plot[]) {
+  const existingInBlock = plots.filter((p) => p.block.toUpperCase() === selectedBlk.toUpperCase());
+  if (existingInBlock.length > 0) {
+    const lastPlot = existingInBlock[existingInBlock.length - 1];
+    if (selectedBlk === 'A') {
+      return {
+        x: Math.min((lastPlot.x || 100) + 80, 950),
+        y: lastPlot.y || 730,
+        width: lastPlot.width || 75,
+        height: lastPlot.height || 125,
+      };
+    } else if (selectedBlk === 'B') {
+      return {
+        x: Math.min((lastPlot.x || 100) + 80, 950),
+        y: lastPlot.y || 400,
+        width: lastPlot.width || 75,
+        height: lastPlot.height || 125,
+      };
+    } else {
+      return {
+        x: (lastPlot.x || 300) + 60,
+        y: lastPlot.y || 200,
+        width: lastPlot.width || 60,
+        height: lastPlot.height || 100,
+      };
+    }
+  }
+  return { x: 100, y: 730, width: 75, height: 125 };
+}
+
+function PlotManagementModalContent({
   onClose,
   plotToEdit,
   onSuccessNotice
@@ -34,125 +73,49 @@ export function PlotManagementModal({
   const { plots, addPlot, updatePlot } = useApp();
   const isEditing = !!plotToEdit;
 
+  const initialCoords = plotToEdit
+    ? {
+        x: plotToEdit.x || 100,
+        y: plotToEdit.y || 730,
+        width: plotToEdit.width || 75,
+        height: plotToEdit.height || 125,
+      }
+    : getSmartCoords('A', plots);
+
   // Form Fields
-  const [block, setBlock] = useState<'A' | 'B' | 'C' | string>('A');
-  const [plotNumber, setPlotNumber] = useState('');
-  const [locationId, setLocationId] = useState('loc-rampur');
+  const [block, setBlock] = useState<'A' | 'B' | 'C' | string>(() => plotToEdit?.block || 'A');
+  const [plotNumber, setPlotNumber] = useState(() => plotToEdit?.plotNumber || getSuggestedPlotNumber('A', plots));
+  const [locationId, setLocationId] = useState(() => plotToEdit?.locationId || 'loc-rampur');
   const [widthFt, setWidthFt] = useState<number>(20);
   const [lengthFt, setLengthFt] = useState<number>(50);
-  const [areaSqft, setAreaSqft] = useState<number>(1000);
+  const [areaSqft, setAreaSqft] = useState<number>(() => plotToEdit?.areaSqft || 1000);
   const [isCustomArea, setIsCustomArea] = useState(false);
-  const [dimensions, setDimensions] = useState("20' x 50'");
-  const [roadWidth, setRoadWidth] = useState("30'-0\" WIDE");
-  const [roadFacing, setRoadFacing] = useState('North');
-  const [isCornerPlot, setIsCornerPlot] = useState(false);
-  const [ratePerSqft, setRatePerSqft] = useState<number>(1200);
-  const [basePriceInr, setBasePriceInr] = useState<number>(1200000);
+  const [dimensions, setDimensions] = useState(() => plotToEdit?.dimensions || "20' x 50'");
+  const [roadWidth, setRoadWidth] = useState(() => plotToEdit?.roadWidth || "30'-0\" WIDE");
+  const [roadFacing, setRoadFacing] = useState(() => plotToEdit?.roadFacing || 'North');
+  const [isCornerPlot, setIsCornerPlot] = useState(() => !!plotToEdit?.isCornerPlot);
+  const [ratePerSqft, setRatePerSqft] = useState<number>(() => {
+    if (plotToEdit?.basePriceInr && plotToEdit.areaSqft) {
+      return Math.round(plotToEdit.basePriceInr / plotToEdit.areaSqft);
+    }
+    return 1200;
+  });
+  const [basePriceInr, setBasePriceInr] = useState<number>(() => plotToEdit?.basePriceInr || 1200000);
   const [isCustomPrice, setIsCustomPrice] = useState(false);
-  const [status, setStatus] = useState<PlotStatus>('available_green');
-  const [selectedHouseModels, setSelectedHouseModels] = useState<string[]>([
-    'model-royal-villa',
-    'model-emerald-duplex'
-  ]);
-  const [notes, setNotes] = useState('');
+  const [status, setStatus] = useState<PlotStatus>(() => plotToEdit?.status || 'available_green');
+  const [selectedHouseModels, setSelectedHouseModels] = useState<string[]>(() =>
+    plotToEdit?.suitableHouseModelIds || ['model-royal-villa', 'model-emerald-duplex']
+  );
+  const [notes, setNotes] = useState(() => plotToEdit?.notes || '');
 
   // Blueprint SVG Coordinates (Auto or Fine-Tuned)
   const [showAdvancedCoords, setShowAdvancedCoords] = useState(false);
-  const [coordX, setCoordX] = useState<number>(100);
-  const [coordY, setCoordY] = useState<number>(730);
-  const [coordWidth, setCoordWidth] = useState<number>(75);
-  const [coordHeight, setCoordHeight] = useState<number>(125);
+  const [coordX, setCoordX] = useState<number>(initialCoords.x);
+  const [coordY, setCoordY] = useState<number>(initialCoords.y);
+  const [coordWidth, setCoordWidth] = useState<number>(initialCoords.width);
+  const [coordHeight, setCoordHeight] = useState<number>(initialCoords.height);
 
   const [errorMsg, setErrorMsg] = useState('');
-
-  // When opening or changing plotToEdit
-  useEffect(() => {
-    if (!isOpen) return;
-    setErrorMsg('');
-
-    if (plotToEdit) {
-      setBlock(plotToEdit.block);
-      setPlotNumber(plotToEdit.plotNumber);
-      setLocationId(plotToEdit.locationId || 'loc-rampur');
-      setAreaSqft(plotToEdit.areaSqft);
-      setDimensions(plotToEdit.dimensions);
-      setRoadWidth(plotToEdit.roadWidth);
-      setRoadFacing(plotToEdit.roadFacing);
-      setIsCornerPlot(!!plotToEdit.isCornerPlot);
-      const price = plotToEdit.basePriceInr || 1200000;
-      setBasePriceInr(price);
-      setRatePerSqft(Math.round(price / (plotToEdit.areaSqft || 1000)));
-      setStatus(plotToEdit.status);
-      setSelectedHouseModels(plotToEdit.suitableHouseModelIds || []);
-      setNotes(plotToEdit.notes || '');
-      setCoordX(plotToEdit.x || 100);
-      setCoordY(plotToEdit.y || 730);
-      setCoordWidth(plotToEdit.width || 75);
-      setCoordHeight(plotToEdit.height || 125);
-    } else {
-      // Create Mode: Suggest smart next plot number for Block A
-      suggestNextPlotNumber('A');
-      setBlock('A');
-      setLocationId('loc-rampur');
-      setWidthFt(20);
-      setLengthFt(50);
-      setAreaSqft(1000);
-      setDimensions("20' x 50'");
-      setRoadWidth("30'-0\" WIDE");
-      setRoadFacing('North');
-      setIsCornerPlot(false);
-      setRatePerSqft(1200);
-      setBasePriceInr(1200000);
-      setStatus('available_green');
-      setSelectedHouseModels(['model-royal-villa', 'model-emerald-duplex']);
-      setNotes('');
-      // Auto-assign smart canvas position
-      calculateSmartCoords('A');
-    }
-  }, [isOpen, plotToEdit]);
-
-  const suggestNextPlotNumber = (selectedBlk: string) => {
-    const existingInBlock = plots.filter((p) => p.block.toUpperCase() === selectedBlk.toUpperCase());
-    let maxNum = 0;
-    for (const p of existingInBlock) {
-      const match = p.plotNumber.match(/(\d+)$/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxNum) maxNum = num;
-      }
-    }
-    const nextNum = maxNum + 1;
-    const formatted = `${selectedBlk.toUpperCase()}-${nextNum < 10 ? `0${nextNum}` : nextNum}`;
-    setPlotNumber(formatted);
-  };
-
-  const calculateSmartCoords = (selectedBlk: string) => {
-    const existingInBlock = plots.filter((p) => p.block.toUpperCase() === selectedBlk.toUpperCase());
-    if (existingInBlock.length > 0) {
-      const lastPlot = existingInBlock[existingInBlock.length - 1];
-      if (selectedBlk === 'A') {
-        setCoordX(Math.min((lastPlot.x || 100) + 80, 950));
-        setCoordY(lastPlot.y || 730);
-        setCoordWidth(lastPlot.width || 75);
-        setCoordHeight(lastPlot.height || 125);
-      } else if (selectedBlk === 'B') {
-        setCoordX(Math.min((lastPlot.x || 100) + 80, 950));
-        setCoordY(lastPlot.y || 400);
-        setCoordWidth(lastPlot.width || 75);
-        setCoordHeight(lastPlot.height || 125);
-      } else {
-        setCoordX((lastPlot.x || 300) + 60);
-        setCoordY(lastPlot.y || 200);
-        setCoordWidth(lastPlot.width || 60);
-        setCoordHeight(lastPlot.height || 100);
-      }
-    } else {
-      setCoordX(100);
-      setCoordY(730);
-      setCoordWidth(75);
-      setCoordHeight(125);
-    }
-  };
 
   // Recalculate dimensions & area when width or length changes
   const handleDimensionChange = (newWidth: number, newLength: number) => {
@@ -187,8 +150,12 @@ export function PlotManagementModal({
   const handleBlockChange = (newBlk: string) => {
     setBlock(newBlk);
     if (!isEditing) {
-      suggestNextPlotNumber(newBlk);
-      calculateSmartCoords(newBlk);
+      setPlotNumber(getSuggestedPlotNumber(newBlk, plots));
+      const coords = getSmartCoords(newBlk, plots);
+      setCoordX(coords.x);
+      setCoordY(coords.y);
+      setCoordWidth(coords.width);
+      setCoordHeight(coords.height);
     }
   };
 
@@ -256,8 +223,6 @@ export function PlotManagementModal({
 
     onClose();
   };
-
-  if (!isOpen) return null;
 
   const duplicateDetected = isDuplicatePlotNumber(plotNumber);
 
@@ -669,4 +634,9 @@ export function PlotManagementModal({
       </div>
     </div>
   );
+}
+
+export function PlotManagementModal(props: PlotManagementModalProps) {
+  if (!props.isOpen) return null;
+  return <PlotManagementModalContent key={props.plotToEdit?.id || 'create'} {...props} />;
 }

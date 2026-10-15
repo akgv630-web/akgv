@@ -54,7 +54,7 @@ export default function BuyerPortalPage() {
 
   // Filter records for current user
   const myBookings = bookings.filter((b) => b.buyerId === currentUser.id || currentUser.role === 'super_admin');
-  const myPayments = payments.filter((p) => p.payerName === currentUser.fullName || currentUser.role === 'super_admin');
+  const myPayments = payments.filter((p) => p.payerId === currentUser.id || p.payerPhone === currentUser.phone || p.payerName === currentUser.fullName || currentUser.role === 'super_admin');
   const myVisits = siteVisits.filter((v) => v.visitorPhone === currentUser.phone || currentUser.role === 'super_admin');
   const myTickets = supportTickets.filter((t) => t.userId === currentUser.id || currentUser.role === 'super_admin');
 
@@ -73,8 +73,9 @@ export default function BuyerPortalPage() {
         setPaymentSuccess(null);
         setTxRef('');
       }, 2500);
-    } catch (err: any) {
-      alert(err.message || 'Payment submission failed.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Payment submission failed.';
+      alert(msg);
     }
   };
 
@@ -495,7 +496,7 @@ export default function BuyerPortalPage() {
                     <label className="block text-gray-300 mb-1 font-medium">Payment Mode</label>
                     <select
                       value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value as any)}
+                      onChange={(e) => setPaymentMethod(e.target.value as 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE')}
                       className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                     >
                       <option value="UPI_QR">UPI QR Transfer</option>

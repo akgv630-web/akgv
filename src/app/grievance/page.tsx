@@ -52,7 +52,7 @@ export default function GrievancePage() {
                 <label className="block text-gray-300 mb-1 font-medium">Ticket Category</label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
+                  onChange={(e) => setCategory(e.target.value as 'booking' | 'payment' | 'plot_enquiry' | 'commission' | 'joining_kit' | 'general')}
                   className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                 >
                   <option value="booking">Plot Booking & Registry</option>

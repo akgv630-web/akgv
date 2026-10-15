@@ -2,18 +2,12 @@
 
 import React, { Suspense, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, ContactShadows, Float, Text, Html } from '@react-three/drei';
+import { OrbitControls, ContactShadows, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import {
-  Camera,
-  Compass,
-  Expand,
-  Eye,
   Layers,
-  Maximize2,
   Moon,
   Palette,
-  RotateCw,
   Ruler,
   ShieldAlert,
   Sun,
@@ -25,6 +19,19 @@ import { HouseModel, Plot } from '@/types';
 import { HOUSE_MODELS, INITIAL_PLOTS } from '@/data/groundTruth';
 import { PlotHoldCertificateModal } from '@/components/common/PlotHoldCertificateModal';
 import { useApp } from '@/context/AppContext';
+
+interface OrbitControlsTarget {
+  object: {
+    position: {
+      set: (x: number, y: number, z: number) => void;
+      multiplyScalar: (scalar: number) => void;
+    };
+  };
+  target: {
+    set: (x: number, y: number, z: number) => void;
+  };
+  update: () => void;
+}
 
 // Procedural 3D Architectural Villa Component with high detail
 function ProceduralVilla({
@@ -236,7 +243,7 @@ export function HouseViewer3D({
   const [showDimensions, setShowDimensions] = useState(true);
   const [showRoof, setShowRoof] = useState(true);
   const [holdModalOpen, setHoldModalOpen] = useState(false);
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
 
   const activeTheme = selectedHouse.exteriorThemes[selectedThemeIndex] || selectedHouse.exteriorThemes[0];
 

@@ -2308,8 +2308,9 @@ export default function SuperAdminPage() {
                                 await verifyPayment(p.id, true);
                                 setPaymentActionNotice(`Payment ${p.transactionRef} verified and official receipt issued!`);
                                 setTimeout(() => setPaymentActionNotice(null), 3000);
-                              } catch (err: any) {
-                                alert(err.message || 'Payment verification failed.');
+                              } catch (err: unknown) {
+                                const msg = err instanceof Error ? err.message : 'Payment verification failed.';
+                                alert(msg);
                               }
                             }}
                             className="rounded-lg bg-emerald-600 px-3 py-1 font-bold text-white hover:bg-emerald-500 text-xs"
@@ -2322,8 +2323,9 @@ export default function SuperAdminPage() {
                                 await verifyPayment(p.id, false, 'Invalid reference code or deposit not found');
                                 setPaymentActionNotice(`Payment ${p.transactionRef} rejected.`);
                                 setTimeout(() => setPaymentActionNotice(null), 3000);
-                              } catch (err: any) {
-                                alert(err.message || 'Payment rejection failed.');
+                              } catch (err: unknown) {
+                                const msg = err instanceof Error ? err.message : 'Payment rejection failed.';
+                                alert(msg);
                               }
                             }}
                             className="rounded-lg bg-red-600/30 text-red-400 border border-red-500/40 px-3 py-1 font-bold hover:bg-red-600 hover:text-white text-xs"
