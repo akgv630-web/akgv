@@ -119,7 +119,7 @@ export function FieldGpsCameraCapture() {
     }
   };
 
-  const handleSubmitEvidence = (e: React.FormEvent) => {
+  const handleSubmitEvidence = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!photoPreview) {
       alert('Please capture or select a photo.');
@@ -130,28 +130,32 @@ export function FieldGpsCameraCapture() {
       return;
     }
 
-    submitGpsEvidence({
-      plotNumber: selectedPlotNumber,
-      locationId: 'loc-rampur',
-      latitude: coords.lat,
-      longitude: coords.lng,
-      accuracyMeters: coords.accuracy,
-      captureTimestamp: new Date().toISOString(),
-      photoUrl: photoPreview,
-      capturedByMemberId: currentUser?.memberId || 'GUEST',
-      capturedByName: currentUser?.fullName || 'Field Inspector',
-      adminNotes: notes,
-      isLiveCamera: captureMethod === 'live_camera',
-      captureSource: captureMethod || 'live_camera',
-    });
+    try {
+      await submitGpsEvidence({
+        plotNumber: selectedPlotNumber,
+        locationId: 'loc-rampur',
+        latitude: coords.lat,
+        longitude: coords.lng,
+        accuracyMeters: coords.accuracy,
+        captureTimestamp: new Date().toISOString(),
+        photoUrl: photoPreview,
+        capturedByMemberId: currentUser?.memberId || 'GUEST',
+        capturedByName: currentUser?.fullName || 'Field Inspector',
+        adminNotes: notes,
+        isLiveCamera: captureMethod === 'live_camera',
+        captureSource: captureMethod || 'live_camera',
+      });
 
-    setSubmittedNotice(`Field GPS evidence for Plot ${selectedPlotNumber} submitted for administrative verification!`);
-    setTimeout(() => {
-      setSubmittedNotice(null);
-      setPhotoPreview(null);
-      setCaptureMethod(null);
-      setNotes('');
-    }, 3000);
+      setSubmittedNotice(`Field GPS evidence for Plot ${selectedPlotNumber} submitted for administrative verification!`);
+      setTimeout(() => {
+        setSubmittedNotice(null);
+        setPhotoPreview(null);
+        setCaptureMethod(null);
+        setNotes('');
+      }, 3000);
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit field evidence.');
+    }
   };
 
   return (

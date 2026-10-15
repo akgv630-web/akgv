@@ -346,7 +346,9 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       // record_audit_log procedure
       expect(schemaSql).toContain('CREATE OR REPLACE FUNCTION public.record_audit_log');
       expect(schemaSql).toContain('REVOKE EXECUTE ON FUNCTION public.record_audit_log FROM PUBLIC;');
-      expect(schemaSql).toContain('GRANT EXECUTE ON FUNCTION public.record_audit_log TO anon, authenticated;');
+      expect(schemaSql).toContain('REVOKE EXECUTE ON FUNCTION public.record_audit_log FROM anon;');
+      expect(schemaSql).toContain('GRANT EXECUTE ON FUNCTION public.record_audit_log TO authenticated;');
+      expect(schemaSql).not.toContain('GRANT EXECUTE ON FUNCTION public.record_audit_log TO anon, authenticated;');
     });
   });
 
@@ -397,7 +399,59 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
 
       expect(contextCode).toContain('Only administrators can approve field GPS evidence.');
       expect(contextCode).toContain('Only administrators can reject field GPS evidence.');
-      expect(contextCode).toContain('void saveGpsEvidenceToSupabase(updatedEvidence);');
+      expect(contextCode).toContain('saveGpsEvidenceToSupabase(updatedEvidence);');
+    });
+
+    it('must strictly resolve authenticated profiles from canonical database records and reject metadata role fallback', () => {
+      const appContextPath = path.join(__dirname, '../src/context/AppContext.tsx');
+      const contextCode = fs.readFileSync(appContextPath, 'utf8');
+
+      // Ensure fetchProfileByAuthId is invoked
+      expect(contextCode).toContain('await fetchProfileByAuthId');
+      // Ensure no client metadata role fallback
+      expect(contextCode).not.toContain('authUser.user_metadata?.role');
+      // Ensure fail-closed when profile is missing or inactive
+      expect(contextCode).toContain('Database profile not found for this authenticated user. Access denied.');
+    });
+  });
+
+  // 14. Server-Side Atomic Payment Verification & Separation of Duties
+  describe('Atomic Payment Verification RPC', () => {
+    it('must enforce row locks, separation of duties, and audit trail in verify_payment_atomic', () => {
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      expect(schemaSql).toContain('CREATE OR REPLACE FUNCTION public.verify_payment_atomic');
+      expect(schemaSql).toContain('FOR UPDATE');
+      expect(schemaSql).toContain('Separation of duties violation: Administrators cannot verify payments they submitted');
+      expect(schemaSql).toContain("SET status = 'verified'");
+      expect(schemaSql).toContain("SET status = 'rejected'");
+      expect(schemaSql).toContain('REVOKE EXECUTE ON FUNCTION public.verify_payment_atomic FROM PUBLIC;');
+      expect(schemaSql).toContain('GRANT EXECUTE ON FUNCTION public.verify_payment_atomic TO authenticated;');
+    });
+  });
+
+  // 15. Team Directory Privacy Protection
+  describe('Public Team Directory Privacy', () => {
+    it('must strictly exclude administrative roles from public directory views', () => {
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      expect(schemaSql).toContain('CREATE OR REPLACE VIEW public.public_team_directory');
+      expect(schemaSql).toContain("WHERE is_active = TRUE AND role IN ('senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member');");
+    });
+  });
+
+  // 16. Credential Leak Prevention
+  describe('Credential Leak Prevention', () => {
+    it('must not expose hardcoded passwords in client-facing authentication modal', () => {
+      const authModalPath = path.join(__dirname, '../src/components/auth/AuthModal.tsx');
+      const authModalCode = fs.readFileSync(authModalPath, 'utf8');
+
+      // Verify no default password or corporate account directory disclosing passwords
+      expect(authModalCode).not.toContain('Sandbox default password for test accounts: <code className="text-[#DFC382]">akgv@2026</code>');
+      expect(authModalCode).not.toContain("pass:{' '}\n                    <span className=\"font-mono text-[#DFC382]\">akgv@2026</span>");
+      expect(authModalCode).toContain('Authorized Access & IT Assistance');
     });
   });
 });

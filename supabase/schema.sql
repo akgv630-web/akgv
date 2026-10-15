@@ -461,6 +461,19 @@ BEGIN
     SET status = 'hold_pending', updated_at = now() 
     WHERE id = p_plot_id;
 
+    -- 6. Authoritative audit log
+    PERFORM public.record_audit_log(
+        'CREATE_PLOT_BOOKING',
+        'bookings',
+        v_new_booking_id,
+        jsonb_build_object(
+            'plot_id', p_plot_id,
+            'plot_number', v_plot.plot_number,
+            'booking_number', v_booking_number,
+            'total_amount', p_total_amount
+        )
+    );
+
     RETURN jsonb_build_object(
         'success', true,
         'booking_id', v_new_booking_id,
@@ -474,7 +487,166 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.create_plot_booking_atomic FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_plot_booking_atomic TO authenticated;
 
--- Public Team Directory View (Masks sensitive contact details and downline financials for non-admins)
+-- Authoritative Atomic Payment Verification Procedure with Row Locks & Separation of Duties
+CREATE OR REPLACE FUNCTION public.verify_payment_atomic(
+    p_payment_id TEXT,
+    p_approved BOOLEAN,
+    p_reason TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_payment RECORD;
+    v_booking RECORD;
+    v_plot RECORD;
+    v_receipt_number TEXT;
+    v_admin_id TEXT;
+    v_admin_name TEXT;
+BEGIN
+    -- 0. Authorization check: only administrators can verify payments
+    IF auth.uid() IS NULL OR NOT public.is_admin() THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Unauthorized: Only administrators can verify payments');
+    END IF;
+
+    -- 1. Lock payment record FOR UPDATE
+    SELECT * INTO v_payment FROM payment_records WHERE id = p_payment_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Payment record not found');
+    END IF;
+
+    -- Separation of duties: admin cannot verify payments they submitted
+    IF v_payment.payer_id = auth.uid()::text OR EXISTS (
+        SELECT 1 FROM profiles WHERE (auth_user_id = auth.uid() OR id = auth.uid()::text) AND (id = v_payment.payer_id OR member_id = v_payment.payer_id)
+    ) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Separation of duties violation: Administrators cannot verify payments they submitted');
+    END IF;
+
+    -- Check if already processed
+    IF v_payment.status IN ('verified', 'rejected') THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Payment has already been processed (status: ' || v_payment.status || ')');
+    END IF;
+
+    -- Lock booking record FOR UPDATE
+    SELECT * INTO v_booking FROM bookings WHERE id = v_payment.booking_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Associated booking not found');
+    END IF;
+
+    -- Lock plot record FOR UPDATE
+    SELECT * INTO v_plot FROM plots WHERE id = v_booking.plot_id FOR UPDATE;
+
+    SELECT COALESCE(full_name, 'Admin') INTO v_admin_name FROM profiles WHERE auth_user_id = auth.uid() OR id = auth.uid()::text LIMIT 1;
+    v_admin_id := auth.uid()::text;
+
+    IF p_approved THEN
+        v_receipt_number := 'REC-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substring(md5(random()::text) from 1 for 6));
+
+        -- Update payment record
+        UPDATE payment_records
+        SET status = 'verified',
+            verified_by = COALESCE(v_admin_name, 'Admin'),
+            verified_at = timezone('utc', now()),
+            receipt_number = v_receipt_number,
+            rejection_reason = NULL,
+            updated_at = timezone('utc', now())
+        WHERE id = p_payment_id;
+
+        -- Update booking paid amount and status
+        UPDATE bookings
+        SET paid_amount_inr = COALESCE(paid_amount_inr, 0) + v_payment.amount_inr,
+            status = 'confirmed',
+            updated_at = timezone('utc', now())
+        WHERE id = v_booking.id;
+
+        -- Update plot status to booked_yellow
+        IF v_plot.id IS NOT NULL THEN
+            UPDATE plots
+            SET status = 'booked_yellow',
+                updated_at = timezone('utc', now())
+            WHERE id = v_plot.id;
+        END IF;
+
+        -- Create receipt row in receipts table if exists
+        BEGIN
+            INSERT INTO receipts (
+                id,
+                receipt_number,
+                booking_id,
+                payment_record_id,
+                amount_inr,
+                issued_by,
+                created_at
+            ) VALUES (
+                'rec-' || extract(epoch from now())::bigint || '-' || floor(random() * 1000)::text,
+                v_receipt_number,
+                v_booking.id,
+                p_payment_id,
+                v_payment.amount_inr,
+                v_admin_id,
+                timezone('utc', now())
+            ) ON CONFLICT DO NOTHING;
+        EXCEPTION
+            WHEN undefined_table THEN NULL;
+        END;
+
+        -- Authoritative audit log
+        PERFORM public.record_audit_log(
+            'ADMIN_PAYMENT_VERIFIED',
+            'payment_records',
+            p_payment_id,
+            jsonb_build_object(
+                'amount_inr', v_payment.amount_inr,
+                'booking_id', v_booking.id,
+                'plot_id', v_plot.id,
+                'receipt_number', v_receipt_number
+            )
+        );
+
+        RETURN jsonb_build_object(
+            'success', true,
+            'payment_id', p_payment_id,
+            'status', 'verified',
+            'receipt_number', v_receipt_number,
+            'booking_status', 'confirmed',
+            'plot_status', 'booked_yellow'
+        );
+    ELSE
+        -- Rejected
+        UPDATE payment_records
+        SET status = 'rejected',
+            verified_by = COALESCE(v_admin_name, 'Admin'),
+            verified_at = timezone('utc', now()),
+            rejection_reason = COALESCE(p_reason, 'Verification failed by administrator'),
+            updated_at = timezone('utc', now())
+        WHERE id = p_payment_id;
+
+        PERFORM public.record_audit_log(
+            'ADMIN_PAYMENT_REJECTED',
+            'payment_records',
+            p_payment_id,
+            jsonb_build_object(
+                'reason', p_reason,
+                'booking_id', v_booking.id
+            )
+        );
+
+        RETURN jsonb_build_object(
+            'success', true,
+            'payment_id', p_payment_id,
+            'status', 'rejected',
+            'reason', p_reason
+        );
+    END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.verify_payment_atomic FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.verify_payment_atomic TO authenticated;
+
+-- Public Team Directory View (Masks sensitive contact details and downline financials for non-admins; excludes super_admin and sub_admin)
 CREATE OR REPLACE VIEW public.public_team_directory AS
 SELECT 
     id,
@@ -487,7 +659,7 @@ SELECT
     rank_title,
     joined_date
 FROM public.profiles
-WHERE is_active = TRUE AND role IN ('super_admin', 'sub_admin', 'member', 'channel_partner', 'field_officer');
+WHERE is_active = TRUE AND role IN ('senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member');
 
 GRANT SELECT ON public.public_team_directory TO anon, authenticated;
 
@@ -578,27 +750,35 @@ DECLARE
     v_actor_id TEXT;
     v_actor_name TEXT;
     v_actor_role TEXT;
+    v_clean_details JSONB;
 BEGIN
+    -- Require authenticated caller
     IF auth.uid() IS NULL THEN
-        v_actor_id := 'system-or-anon';
-        v_actor_name := 'Anonymous / System';
-        v_actor_role := 'anonymous';
-    ELSE
-        SELECT 
-            COALESCE(p.id, auth.uid()::text),
-            COALESCE(p.full_name, 'Authenticated User'),
-            COALESCE(p.role, 'buyer')
-        INTO v_actor_id, v_actor_name, v_actor_role
-        FROM profiles p
-        WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text
-        LIMIT 1;
-
-        IF v_actor_id IS NULL THEN
-            v_actor_id := auth.uid()::text;
-            v_actor_name := 'Authenticated User';
-            v_actor_role := 'buyer';
-        END IF;
+        RAISE EXCEPTION 'Unauthorized: audit logging requires authenticated session';
     END IF;
+
+    SELECT 
+        COALESCE(p.id, auth.uid()::text),
+        COALESCE(p.full_name, 'Authenticated User'),
+        COALESCE(p.role, 'buyer')
+    INTO v_actor_id, v_actor_name, v_actor_role
+    FROM profiles p
+    WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text
+    LIMIT 1;
+
+    IF v_actor_id IS NULL THEN
+        v_actor_id := auth.uid()::text;
+        v_actor_name := 'Authenticated User';
+        v_actor_role := 'buyer';
+    END IF;
+
+    -- Block non-admin callers from recording administrative or system actions
+    IF (p_action LIKE 'ADMIN_%' OR p_action LIKE 'SYSTEM_%') AND NOT public.is_admin() THEN
+        RAISE EXCEPTION 'Unauthorized: non-administrators cannot record administrative or system audit events';
+    END IF;
+
+    -- Sanitize details to prevent sensitive data leakage (passwords, tokens, secret keys)
+    v_clean_details := p_details - 'password' - 'token' - 'secret' - 'apiKey' - 'access_token';
 
     INSERT INTO audit_logs (
         id,
@@ -619,7 +799,7 @@ BEGIN
         p_action,
         p_entity_type,
         p_entity_id,
-        p_details,
+        v_clean_details,
         p_ip_address,
         timezone('utc', now())
     );
@@ -627,11 +807,44 @@ END;
 $$;
 
 REVOKE EXECUTE ON FUNCTION public.record_audit_log FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.record_audit_log TO anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.record_audit_log FROM anon;
+GRANT EXECUTE ON FUNCTION public.record_audit_log TO authenticated;
 
--- Drop obsolete open access policies
+-- Drop obsolete and legacy policies
 DO $$
 BEGIN
+    -- Drop 20261011 legacy policies that could bypass fine-grained checks via PostgreSQL OR
+    DROP POLICY IF EXISTS "Public can book site visits" ON site_visits;
+    DROP POLICY IF EXISTS "Staff can view site visits" ON site_visits;
+    DROP POLICY IF EXISTS "Staff can update site visits" ON site_visits;
+    DROP POLICY IF EXISTS "Members upload gps evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Members view own gps evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Admins manage gps evidence" ON field_gps_evidence;
+    DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+    DROP POLICY IF EXISTS "Admins can update profiles" ON profiles;
+    DROP POLICY IF EXISTS "Public can view plots" ON plots;
+    DROP POLICY IF EXISTS "Admins can modify plots" ON plots;
+    DROP POLICY IF EXISTS "Buyers can view own bookings" ON bookings;
+    DROP POLICY IF EXISTS "Buyers can create booking requests" ON bookings;
+    DROP POLICY IF EXISTS "Admins can manage bookings" ON bookings;
+    DROP POLICY IF EXISTS "Payer can view own payment records" ON payment_records;
+    DROP POLICY IF EXISTS "Payers can submit payments" ON payment_records;
+    DROP POLICY IF EXISTS "Admins can verify payments" ON payment_records;
+    DROP POLICY IF EXISTS "Members view own commission" ON commission_ledger;
+    DROP POLICY IF EXISTS "Admins manage commission ledger" ON commission_ledger;
+    DROP POLICY IF EXISTS "Members view own kit issue" ON kit_issues;
+    DROP POLICY IF EXISTS "Admins manage kit issues" ON kit_issues;
+    DROP POLICY IF EXISTS "Payers can view own receipts" ON receipts;
+    DROP POLICY IF EXISTS "Admins can issue receipts" ON receipts;
+    DROP POLICY IF EXISTS "Users can view own tickets" ON support_tickets;
+    DROP POLICY IF EXISTS "Users can create tickets" ON support_tickets;
+    DROP POLICY IF EXISTS "Admins can manage tickets" ON support_tickets;
+    DROP POLICY IF EXISTS "Users can view customer-visible messages" ON ticket_messages;
+    DROP POLICY IF EXISTS "Users can reply to own tickets" ON ticket_messages;
+    DROP POLICY IF EXISTS "Admins manage all ticket messages" ON ticket_messages;
+    DROP POLICY IF EXISTS "Members view own reward claims" ON reward_claims;
+    DROP POLICY IF EXISTS "Members submit reward claims" ON reward_claims;
+    DROP POLICY IF EXISTS "Admins manage reward claims" ON reward_claims;
     DROP POLICY IF EXISTS "Public access to locations" ON locations;
     DROP POLICY IF EXISTS "Public access to projects" ON projects;
     DROP POLICY IF EXISTS "Public access to profiles" ON profiles;
@@ -780,6 +993,52 @@ CREATE POLICY "Admin delete gps evidence" ON field_gps_evidence FOR DELETE TO au
 
 CREATE POLICY "Admin read audit_logs" ON audit_logs FOR SELECT TO authenticated USING (public.is_admin());
 CREATE POLICY "Admin insert audit_logs" ON audit_logs FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+
+-- Storage bucket for field GPS inspection evidence (Private bucket)
+DO $$
+BEGIN
+    INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    VALUES (
+        'evidence',
+        'evidence',
+        false,
+        10485760,
+        ARRAY['image/jpeg', 'image/png', 'image/webp']
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        public = false,
+        file_size_limit = 10485760,
+        allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp'];
+
+    DROP POLICY IF EXISTS "Authenticated members upload evidence" ON storage.objects;
+    DROP POLICY IF EXISTS "Users and admins view evidence" ON storage.objects;
+    DROP POLICY IF EXISTS "Admins delete evidence" ON storage.objects;
+
+    CREATE POLICY "Authenticated members upload evidence" ON storage.objects
+    FOR INSERT TO authenticated
+    WITH CHECK (
+        bucket_id = 'evidence'
+    );
+
+    CREATE POLICY "Users and admins view evidence" ON storage.objects
+    FOR SELECT TO authenticated
+    USING (
+        bucket_id = 'evidence'
+        AND (
+            (storage.foldername(name))[1] = auth.uid()::text
+            OR public.is_admin()
+        )
+    );
+
+    CREATE POLICY "Admins delete evidence" ON storage.objects
+    FOR DELETE TO authenticated
+    USING (
+        bucket_id = 'evidence'
+        AND public.is_admin()
+    );
+EXCEPTION
+    WHEN undefined_table THEN NULL;
+END $$;
 
 -- ==============================================================================
 -- SEED DATA INSERTION
@@ -1348,3 +1607,19 @@ VALUES
   ('task-01', 'usr-sponsor-01', 'Vikram Singh', 'Rampur Site Visit for Mr. Suresh Chandra Gupta', 'Cantt station vehicle pickup coordination at 10:30 AM', 'site_visit', CURRENT_DATE + INTERVAL '2 days', '10:30 AM', 'high', FALSE, 'Director Office'),
   ('task-02', 'usr-admin-01', 'Rajesh Kumar Patel', 'Verify Bank UTR for Plot A-03 Token', 'Check HDFC corporate statement for ₹1.5L NEFT transaction', 'payment_verification', CURRENT_DATE, '04:00 PM', 'urgent', FALSE, 'System')
 ON CONFLICT (id) DO NOTHING;
+
+-- 9. Insert Initial Offer Incentives
+INSERT INTO offer_incentives (id, title_en, title_hi, description, min_plot_count, min_sales_value_inr, reward_description, reward_type, start_date, end_date, eligible_roles, status, claimed_count)
+VALUES ('off-navratri-2026', 'Navratri Mahotsav: Freehold Registry Subsidy', 'नवरात्रि महोत्सव: ₹50,000 निःशुल्क रजिस्ट्री छूट', 'Special corporate festival incentive: Instant ₹50,000 registry fee subsidy on direct token booking of any Block A or Block B residential plot.', NULL, NULL, '₹50,000 Registry Stamp Duty Adjustment Voucher', 'cash_bonus', '2026-10-01', '2026-10-31', '["senior_member","junior_member","buyer"]'::jsonb, 'active', 4)
+ON CONFLICT (id) DO UPDATE SET
+  title_en = EXCLUDED.title_en,
+  title_hi = EXCLUDED.title_hi,
+  reward_description = EXCLUDED.reward_description,
+  status = EXCLUDED.status;
+INSERT INTO offer_incentives (id, title_en, title_hi, description, min_plot_count, min_sales_value_inr, reward_description, reward_type, start_date, end_date, eligible_roles, status, claimed_count)
+VALUES ('off-star-bike-2026', 'Mega Associate Volume Challenge', 'मेगा एसोसिएट वॉल्यूम चैलेंज (Sports Bike)', 'Achieve ₹1.5 Crore cumulative team sales volume in Q4 2026 and receive an official company-funded Sports Bike experience reward.', 12, 15000000, 'Sports Bike / ₹1.5 Lakh Cash Equivalent', 'vehicle', '2026-10-01', '2026-12-31', '["senior_member","junior_member"]'::jsonb, 'active', 1)
+ON CONFLICT (id) DO UPDATE SET
+  title_en = EXCLUDED.title_en,
+  title_hi = EXCLUDED.title_hi,
+  reward_description = EXCLUDED.reward_description,
+  status = EXCLUDED.status;

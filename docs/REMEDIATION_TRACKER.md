@@ -150,12 +150,77 @@
   1. Extended `saveGpsEvidenceToSupabase()` payload to persist `reviewed_by`, `reviewed_at`, and `rejection_reason`.
   2. In `approveFieldGpsEvidence()` and `rejectFieldGpsEvidence()`, enforced admin authorization and invoked `saveGpsEvidenceToSupabase(updatedEvidence)`.
 
+### VULN-19: Canonical Database Profile Resolution & Zero Trust Client Metadata
+- **Severity**: Critical
+- **Location**: `src/context/AppContext.tsx`, `src/lib/supabase/syncService.ts`
+- **Root Cause**: Authenticated user session was deriving role from `authUser.user_metadata?.role` or falling back to synthesized profile objects when no canonical row was found in PostgreSQL.
+- **Fix**:
+  1. Implemented `fetchProfileByAuthId(authUserId: string)` in `syncService.ts` querying `profiles.auth_user_id = auth.uid()`.
+  2. In `syncWithSupabase`, `supabaseOnAuthStateChange`, and `loginWithCredentials`, strictly resolved profiles from `fetchProfileByAuthId`.
+  3. Completely removed client metadata fallback (`authUser.user_metadata?.role`).
+  4. Fails closed (`currentUser = null`, error response) if profile row does not exist or `is_active = FALSE`.
+
+### VULN-20: Server-Side Atomic Payment Verification Procedure (`verify_payment_atomic`)
+- **Severity**: Critical
+- **Location**: `scripts/build_supabase_schema.js`, `supabase/schema.sql`, `supabase/migrations/20261016_security_data_integrity_hardening.sql`, `src/lib/supabase/syncService.ts`, `src/context/AppContext.tsx`
+- **Root Cause**: Payment verification previously performed client-side updates across payments, bookings, and plots without transactional database boundaries or separation of duties enforcement.
+- **Fix**:
+  1. Authored PostgreSQL stored procedure `public.verify_payment_atomic(p_payment_id, p_approved, p_reason)` with `SECURITY DEFINER` and `SET search_path = public, pg_temp`.
+  2. Enforced row-level locking (`FOR UPDATE`) across `payment_records`, `bookings`, and `plots`.
+  3. Enforced strict Separation of Duties (`payer_id <> auth.uid()`), preventing admins from verifying payments they submitted.
+  4. Atomically issued official receipt numbers (`REC-YYYYMMDD-XXXXXX`), updated booking paid amounts, adjusted plot statuses, and emitted authoritative audit logs (`ADMIN_PAYMENT_VERIFIED` / `ADMIN_PAYMENT_REJECTED`).
+  5. Revoked execute from `PUBLIC` and granted strictly to `authenticated`.
+  6. Connected client `verifyPayment` in `AppContext.tsx` to `callVerifyPaymentAtomic` with UI error handling in `src/app/admin/page.tsx`.
+
+### VULN-21: Audit Logging Execution Restriction & Action Tampering Prevention
+- **Severity**: High
+- **Location**: `scripts/build_supabase_schema.js`, `supabase/schema.sql`, `supabase/migrations/20261016_security_data_integrity_hardening.sql`
+- **Root Cause**: `public.record_audit_log` was previously granted to `anon` and allowed arbitrary action strings, risking spoofed system logs.
+- **Fix**:
+  1. Revoked `EXECUTE` on `record_audit_log` from `anon` and `PUBLIC`; granted strictly to `authenticated`.
+  2. Enforced caller authentication (`auth.uid() IS NOT NULL`).
+  3. Prohibited non-admin users from generating audit logs with `ADMIN_*` or `SYSTEM_*` action prefixes.
+  4. Stripped sensitive keys (`password`, `token`, `secret`, `apiKey`, etc.) from audit payload JSON before writing to disk.
+
+### VULN-22: Team Directory Privacy & Admin Profile Obfuscation
+- **Severity**: High
+- **Location**: `scripts/build_supabase_schema.js`, `supabase/schema.sql`, `supabase/migrations/20261016_security_data_integrity_hardening.sql`
+- **Root Cause**: Public directory views could potentially expose administrative identities, enabling targeted phishing or corporate profiling.
+- **Fix**:
+  1. Restructured `public.public_team_directory` view to strictly filter `role IN ('senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member')`.
+  2. Completely excluded `super_admin` and `sub_admin` records from public directory queries.
+
+### VULN-23: Credential Disclosure & Sandbox Default Password Elimination
+- **Severity**: Medium
+- **Location**: `src/components/auth/AuthModal.tsx`
+- **Root Cause**: The login UI rendered a "Sandbox default password: akgv@2026" note and a "Corporate Account Directory" listing phone numbers and plain passwords.
+- **Fix**:
+  1. Removed the plaintext sandbox default password note from the login form.
+  2. Replaced the Corporate Account Directory with an official authorized IT assistance advisory directing enterprise users to corporate support contacts (`support@akgv.in`, `+91 6306917991`).
+  3. Ensured sandbox quick-access features are strictly gated to development environments (`process.env.NODE_ENV !== 'production'`).
+
+### VULN-24: Dropping Legacy Permissive Policies (PostgreSQL `OR` Bypass Prevention)
+- **Severity**: High
+- **Location**: `scripts/build_supabase_schema.js`, `supabase/schema.sql`, `supabase/migrations/20261016_security_data_integrity_hardening.sql`
+- **Root Cause**: PostgreSQL evaluates multiple permissive RLS policies on the same table with logical `OR`. Legacy permissive policies (`WITH CHECK (true)` on `site_visits`, `reviews`, `gps_evidence`) from earlier schema iterations bypassed newer fine-grained policies.
+- **Fix**:
+  1. Added forward-only migration with explicit `DROP POLICY IF EXISTS` statements targeting all 20261011 permissive policies.
+  2. Unified all table policies in `schema.sql` to ensure strict, singular permissive rule evaluation.
+
+### VULN-25: Asynchronous Payment Submission & GPS Evidence Remote Sync
+- **Severity**: Medium
+- **Location**: `src/context/AppContext.tsx`, `src/app/buyer/page.tsx`, `src/components/gps-camera/FieldGpsCameraCapture.tsx`
+- **Root Cause**: Proof-of-payment and GPS field evidence submissions previously ran asynchronously in background fire-and-forget mode without returning execution promises to caller components.
+- **Fix**:
+  1. Made `submitPaymentProof` and `submitGpsEvidence` properly async functions that await remote persistence to Supabase.
+  2. Updated buyer payment submission modal and field GPS camera capture to `await` calls and display inline error states upon remote network/database failures.
+
 ---
 
 ## 3. Automated Test Verification Results
 
 All tests executed via Vitest:
-- `tests/securityHardening.test.ts`: **17 passed**
+- `tests/securityHardening.test.ts`: **21 passed** (including atomic payment RPC, public team directory role filtering, credential leak prevention, canonical profile resolution)
 - `tests/enterpriseGovernance.test.ts`: **6 passed**
 - `tests/reviews.test.ts`: **4 passed**
 - `tests/persistence.test.ts`: **1 passed**
@@ -167,5 +232,5 @@ All tests executed via Vitest:
 - `tests/authAndPages.test.ts`: **4 passed**
 - `tests/plots.test.ts`: **3 passed**
 
-**Total: 11 Test Suites Passed, 58 Tests Passed, 0 Failures.**  
+**Total: 11 Test Suites Passed, 62 Tests Passed, 0 Failures.**  
 **Production Build Status**: Next.js 16.4.0 (Turbopack) compiled 20/20 static pages successfully with zero TypeScript or lint errors.

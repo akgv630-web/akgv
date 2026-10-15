@@ -58,20 +58,24 @@ export default function BuyerPortalPage() {
   const myVisits = siteVisits.filter((v) => v.visitorPhone === currentUser.phone || currentUser.role === 'super_admin');
   const myTickets = supportTickets.filter((t) => t.userId === currentUser.id || currentUser.role === 'super_admin');
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBookingId || !txRef) {
       alert('Please select a booking and provide transaction reference.');
       return;
     }
 
-    const pay = submitPaymentProof(selectedBookingId, paymentAmount, txRef, paymentMethod);
-    setPaymentSuccess(`Payment reference ${pay.transactionRef} submitted successfully! Our supervisory finance staff will verify it shortly.`);
-    setTimeout(() => {
-      setPaymentModalOpen(false);
-      setPaymentSuccess(null);
-      setTxRef('');
-    }, 2500);
+    try {
+      const pay = await submitPaymentProof(selectedBookingId, paymentAmount, txRef, paymentMethod);
+      setPaymentSuccess(`Payment reference ${pay.transactionRef} submitted successfully! Our supervisory finance staff will verify it shortly.`);
+      setTimeout(() => {
+        setPaymentModalOpen(false);
+        setPaymentSuccess(null);
+        setTxRef('');
+      }, 2500);
+    } catch (err: any) {
+      alert(err.message || 'Payment submission failed.');
+    }
   };
 
   return (

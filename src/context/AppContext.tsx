@@ -49,6 +49,7 @@ import {
   savePaymentToSupabase,
   saveSiteVisitToSupabase,
   fetchProfilesFromSupabase,
+  fetchProfileByAuthId,
   saveProfileToSupabase,
   deleteProfileFromSupabase,
   supabaseSignIn,
@@ -58,8 +59,10 @@ import {
   supabaseGetSession,
   supabaseOnAuthStateChange,
   callCreatePlotBookingAtomic,
+  callVerifyPaymentAtomic,
   fetchGpsEvidenceFromSupabase,
   saveGpsEvidenceToSupabase,
+  uploadGpsEvidencePhoto,
   fetchEnquiriesFromSupabase,
   saveEnquiryToSupabase,
   fetchTargetsFromSupabase,
@@ -67,8 +70,11 @@ import {
   fetchTasksFromSupabase,
   saveTaskToSupabase,
   fetchCmsContentFromSupabase,
-  saveCmsContentToSupabase
+  saveCmsContentToSupabase,
+  fetchOffersFromSupabase,
+  saveOfferToSupabase
 } from '@/lib/supabase/syncService';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
 
 interface AppContextType {
   language: Language;
@@ -103,16 +109,16 @@ interface AppContextType {
   confirmBooking: (bookingId: string) => void;
   cancelBooking: (bookingId: string, reason: string) => void;
   payments: PaymentRecord[];
-  submitPaymentProof: (bookingId: string, amount: number, txRef: string, method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE') => PaymentRecord;
-  verifyPayment: (paymentId: string, approved: boolean, reason?: string) => void;
+  submitPaymentProof: (bookingId: string, amount: number, txRef: string, method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE') => Promise<PaymentRecord>;
+  verifyPayment: (paymentId: string, approved: boolean, reason?: string) => Promise<void>;
   kitIssues: JoiningKitIssue[];
   recordKitIssue: (data: Omit<JoiningKitIssue, 'id' | 'receiptNumber'>) => JoiningKitIssue;
   siteVisits: SiteVisit[];
   bookSiteVisit: (data: Omit<SiteVisit, 'id' | 'status' | 'createdAt'>) => SiteVisit;
   gpsEvidences: FieldGpsEvidence[];
-  submitGpsEvidence: (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>) => FieldGpsEvidence;
-  approveFieldGpsEvidence: (evidenceId: string, adminNotes?: string) => void;
-  rejectFieldGpsEvidence: (evidenceId: string, reason: string) => void;
+  submitGpsEvidence: (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>) => Promise<FieldGpsEvidence>;
+  approveFieldGpsEvidence: (evidenceId: string, adminNotes?: string) => Promise<void>;
+  rejectFieldGpsEvidence: (evidenceId: string, reason: string) => Promise<void>;
   supportTickets: SupportTicket[];
   createSupportTicket: (category: SupportTicket['category'], subject: string, description: string) => SupportTicket;
   replyToTicket: (ticketId: string, message: string, isInternalNote?: boolean) => void;
@@ -175,7 +181,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [reviews, setReviews] = useState<ReviewRecord[]>(INITIAL_REVIEWS);
   const [selectedPlotForViewer, setSelectedPlotForViewer] = useState<Plot | null>(INITIAL_PLOTS[3]);
   const [enquiries, setEnquiries] = useState<ClientEnquiry[]>(INITIAL_ENQUIRIES);
-  const [offers] = useState<OfferIncentive[]>(INITIAL_OFFERS);
+  const [offers, setOffers] = useState<OfferIncentive[]>(INITIAL_OFFERS);
   const [targets, setTargets] = useState<SalesTarget[]>(INITIAL_TARGETS);
   const [tasks, setTasks] = useState<TaskReminder[]>(INITIAL_TASKS);
   const [messages, setMessages] = useState<InAppMessage[]>([]);
@@ -255,6 +261,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           remoteTargets,
           remoteTasks,
           remoteCms,
+          remoteOffers,
           authSession
         ] = await Promise.all([
           fetchPlotsFromSupabase(),
@@ -266,6 +273,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           fetchTargetsFromSupabase(),
           fetchTasksFromSupabase(),
           fetchCmsContentFromSupabase(),
+          fetchOffersFromSupabase(),
           supabaseGetSession()
         ]);
 
@@ -300,19 +308,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (remoteCms && remoteCms.heroHeadlineEn) {
           setCmsContent(remoteCms);
         }
+        if (remoteOffers && remoteOffers.length > 0) {
+          setOffers(remoteOffers);
+        }
 
         // Authoritative Session Check: Authenticate strictly with active Supabase session
         if (authSession && authSession.user) {
-          const profilesList = remoteProfiles || allProfiles;
-          const userEmail = authSession.user.email?.toLowerCase();
-          const matched = profilesList.find(
-            (p) => (userEmail && p.email.toLowerCase() === userEmail) || p.id === authSession.user.id
-          );
-          if (matched && matched.isActive) {
-            setCurrentUser(matched);
-            try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(matched)); } catch {}
-          } else if (matched && !matched.isActive) {
-            console.warn('[Supabase Auth] Account is deactivated or suspended.');
+          const profile = await fetchProfileByAuthId(authSession.user.id);
+          if (profile && profile.isActive) {
+            setCurrentUser(profile);
+            try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile)); } catch {}
+          } else {
+            console.warn('[Supabase Auth] Profile not found or account deactivated.');
             setCurrentUser(null);
             try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
           }
@@ -328,23 +335,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     syncWithSupabase();
 
-    const unsubscribeAuth = supabaseOnAuthStateChange((session) => {
+    const unsubscribeAuth = supabaseOnAuthStateChange(async (session) => {
       if (!session || !session.user) {
         setCurrentUser(null);
         try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
       } else {
-        const userEmail = session.user.email?.toLowerCase();
-        setAllProfiles((prev) => {
-          const matched = prev.find((p) => (userEmail && p.email.toLowerCase() === userEmail) || p.id === session.user.id);
-          if (matched && matched.isActive) {
-            setCurrentUser(matched);
-            try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(matched)); } catch {}
-          } else if (matched && !matched.isActive) {
-            setCurrentUser(null);
-            try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
-          }
-          return prev;
-        });
+        const profile = await fetchProfileByAuthId(session.user.id);
+        if (profile && profile.isActive) {
+          setCurrentUser(profile);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile)); } catch {}
+        } else {
+          setCurrentUser(null);
+          try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
+        }
       }
     });
 
@@ -379,33 +382,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const res = await supabaseSignIn(trimmedId, password);
       if (res && res.data && res.data.user) {
         const authUser = res.data.user;
-        const userEmail = authUser.email?.toLowerCase();
-        const found = allProfiles.find(
-          (p) =>
-            (userEmail && p.email.toLowerCase() === userEmail) ||
-            p.phone === trimmedId ||
-            (p.memberId && p.memberId.toLowerCase() === trimmedId.toLowerCase())
-        );
+        const profile = await fetchProfileByAuthId(authUser.id);
 
-        if (found && !found.isActive) {
+        if (!profile) {
+          return { success: false, error: 'Database profile not found for this authenticated user. Access denied.' };
+        }
+
+        if (!profile.isActive) {
           return { success: false, error: 'Your account has been deactivated or suspended. Please contact company management.' };
         }
 
-        const profileToSet = found || {
-          id: authUser.id,
-          email: authUser.email || trimmedId,
-          fullName: authUser.user_metadata?.full_name || trimmedId.split('@')[0],
-          phone: authUser.user_metadata?.phone || '',
-          role: (authUser.user_metadata?.role as UserRole) || 'buyer',
-          kycStatus: 'pending' as const,
-          isActive: true,
-          createdAt: new Date().toISOString(),
-        };
-        setCurrentUser(profileToSet);
+        setCurrentUser(profile);
         try {
-          localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profileToSet));
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile));
         } catch {}
-        return { success: true, profile: profileToSet };
+        return { success: true, profile };
       } else if (isProduction && res?.error) {
         return { success: false, error: res.error.message || 'Invalid login credentials.' };
       }
@@ -852,6 +843,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     buyerPhone: string,
     houseModelId?: string
   ): Promise<Booking> => {
+    if (!currentUser?.id) {
+      throw new Error('Authentication required: You must be signed in to submit a plot booking request.');
+    }
+
     const plot = plots.find((p) => p.id === plotId);
     if (!plot) throw new Error('Plot not found');
 
@@ -866,7 +861,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw new Error(`Plot ${plot.plotNumber} already has an active reservation (${existingActiveBooking.bookingNumber}).`);
     }
 
-    const buyerId = currentUser?.id || `buyer-${Date.now()}`;
+    const buyerId = currentUser.id;
     const totalAmount = plot.basePriceInr || 1500000;
 
     // Call atomic RPC if Supabase is connected
@@ -881,7 +876,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (rpcRes.error) {
-      if (rpcRes.error.message !== 'Supabase database service is not configured') {
+      if (isSupabaseConfigured) {
         throw new Error(rpcRes.error.message || 'Plot booking failed via server RPC.');
       }
     } else if (rpcRes.data && !rpcRes.data.success) {
@@ -965,21 +960,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const submitPaymentProof = (
+  const submitPaymentProof = async (
     bookingId: string,
     amount: number,
     txRef: string,
     method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE'
-  ): PaymentRecord => {
+  ): Promise<PaymentRecord> => {
+    if (!currentUser?.id) {
+      throw new Error('Authentication required: You must be logged in to submit payment proof.');
+    }
     const booking = bookings.find((b) => b.id === bookingId);
     const newPayment: PaymentRecord = {
       id: `pay-${Date.now()}`,
       transactionRef: txRef,
       bookingId,
       plotNumber: booking ? booking.plotNumber : 'A-01',
-      payerId: currentUser?.id,
-      payerName: currentUser?.fullName || 'Verified Buyer',
-      payerPhone: currentUser?.phone || '6306917991',
+      payerId: currentUser.id,
+      payerName: currentUser.fullName,
+      payerPhone: currentUser.phone,
       amountInr: amount,
       paymentMethod: method,
       status: 'under_review',
@@ -993,11 +991,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch {}
       return next;
     });
-    void savePaymentToSupabase(newPayment);
+    await savePaymentToSupabase(newPayment);
     return newPayment;
   };
 
-  const verifyPayment = (paymentId: string, approved: boolean, reason?: string) => {
+  const verifyPayment = async (paymentId: string, approved: boolean, reason?: string): Promise<void> => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     const canVerify = isAdmin || Boolean(currentUser?.permissions?.canVerifyPayments);
 
@@ -1020,19 +1018,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Separation of duties violation: An administrator or agent cannot approve their own payment proof.');
     }
 
-    let targetPay: PaymentRecord | null = null;
+    let receiptNum = existingPayment.receiptNumber;
+    if (approved && !receiptNum) {
+      receiptNum = `RCP-AKGV-${Date.now().toString().slice(-6)}`;
+    }
+
+    if (isSupabaseConfigured) {
+      const rpcRes = await callVerifyPaymentAtomic({
+        paymentId,
+        approved,
+        reason,
+      });
+
+      if (rpcRes.error) {
+        throw new Error(rpcRes.error.message || 'Payment verification failed on server.');
+      }
+      if (rpcRes.data && !rpcRes.data.success) {
+        throw new Error(rpcRes.data.error || 'Payment verification failed.');
+      }
+      if (rpcRes.data?.receipt_number) {
+        receiptNum = rpcRes.data.receipt_number;
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+
     setPayments((prev) => {
       const next = prev.map((p) => {
         if (p.id === paymentId) {
-          targetPay = {
+          return {
             ...p,
             status: approved ? ('verified' as const) : ('rejected' as const),
-            receiptNumber: approved ? `RCP-AKGV-${Date.now().toString().slice(-6)}` : undefined,
-            verifiedAt: new Date().toISOString(),
-            verifiedBy: currentUser?.id || 'admin',
+            receiptNumber: approved ? receiptNum : undefined,
+            verifiedAt: nowIso,
+            verifiedBy: currentUser?.fullName || currentUser?.id || 'admin',
             rejectionReason: !approved ? reason : undefined,
           };
-          return targetPay;
         }
         return p;
       });
@@ -1042,12 +1063,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    if (targetPay) {
-      void savePaymentToSupabase(targetPay);
-    }
+    if (approved) {
+      // Transition booking to confirmed and update paid amount
+      setBookings((prev) => {
+        const next = prev.map((b) => {
+          if (b.id === existingPayment.bookingId) {
+            return {
+              ...b,
+              status: 'confirmed' as const,
+              paidAmountInr: (b.paidAmountInr || 0) + existingPayment.amountInr,
+              confirmedAt: nowIso,
+            };
+          }
+          return b;
+        });
+        try {
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}bookings`, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
 
-    if (approved && targetPay) {
-      confirmBooking((targetPay as PaymentRecord).bookingId);
+      // Transition plot to booked_yellow
+      const booking = bookings.find((b) => b.id === existingPayment.bookingId);
+      if (booking) {
+        updatePlotStatus(booking.plotId, 'booked_yellow', `Payment verified and receipt ${receiptNum} issued`);
+      }
     }
   };
 
@@ -1079,18 +1119,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return newVisit;
   };
 
-  const submitGpsEvidence = (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>): FieldGpsEvidence => {
+  const submitGpsEvidence = async (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>): Promise<FieldGpsEvidence> => {
     const newEvidence: FieldGpsEvidence = {
       ...evidence,
       id: `gps-${Date.now()}`,
       status: 'pending_review',
     };
     setGpsEvidences((prev) => [newEvidence, ...prev]);
-    void saveGpsEvidenceToSupabase(newEvidence);
+    await saveGpsEvidenceToSupabase(newEvidence);
     return newEvidence;
   };
 
-  const approveFieldGpsEvidence = (evidenceId: string, adminNotes?: string) => {
+  const approveFieldGpsEvidence = async (evidenceId: string, adminNotes?: string): Promise<void> => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     if (!isAdmin) {
       throw new Error('Access denied: Only administrators can approve field GPS evidence.');
@@ -1112,11 +1152,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
     );
     if (updatedEvidence) {
-      void saveGpsEvidenceToSupabase(updatedEvidence);
+      await saveGpsEvidenceToSupabase(updatedEvidence);
     }
   };
 
-  const rejectFieldGpsEvidence = (evidenceId: string, reason: string) => {
+  const rejectFieldGpsEvidence = async (evidenceId: string, reason: string): Promise<void> => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     if (!isAdmin) {
       throw new Error('Access denied: Only administrators can reject field GPS evidence.');
@@ -1138,7 +1178,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
     );
     if (updatedEvidence) {
-      void saveGpsEvidenceToSupabase(updatedEvidence);
+      await saveGpsEvidenceToSupabase(updatedEvidence);
     }
   };
 

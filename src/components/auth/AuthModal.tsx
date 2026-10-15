@@ -374,7 +374,9 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                       />
                     </div>
                     <p className="mt-1 text-[10px] text-gray-400">
-                      Sandbox default password for test accounts: <code className="text-[#DFC382]">akgv@2026</code>
+                      {language === 'hi'
+                        ? 'सुरक्षित पोर्टल पहुंच के लिए अपना अधिकृत पासवर्ड दर्ज करें।'
+                        : 'Enter your authorized corporate or member password.'}
                     </p>
                   </div>
 
@@ -402,25 +404,21 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                 </form>
               )}
 
-              {/* Corporate Directory Hint */}
+              {/* Authorized Access & IT Assistance */}
               <div className="border-t border-white/10 pt-3.5 space-y-2 text-xs">
                 <div className="flex items-center gap-1.5 text-[#DFC382] font-semibold text-[11px]">
                   <ShieldCheck className="h-4 w-4 text-[#C7A35A]" />
-                  <span>{language === 'hi' ? 'आधिकारिक पोर्टल क्रेडेंशियल गाइड' : 'Corporate Account Directory'}</span>
+                  <span>{language === 'hi' ? 'आधिकारिक पोर्टल सहायता' : 'Authorized Access & IT Assistance'}</span>
                 </div>
-                <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 text-[11px] text-gray-300 space-y-1">
-                  <div>
-                    <strong className="text-white">Super Admin:</strong>{' '}
-                    <span className="font-mono text-[#DFC382]">6306917991</span>{' '}
-                    <span className="text-gray-400">|</span> pass:{' '}
-                    <span className="font-mono text-[#DFC382]">akgv@2026</span>
-                  </div>
-                  <div>
-                    <strong className="text-white">Senior Associate:</strong>{' '}
-                    <span className="font-mono text-[#DFC382]">AKGV-3498</span>{' '}
-                    <span className="text-gray-400">|</span> pass:{' '}
-                    <span className="font-mono text-[#DFC382]">akgv@2026</span>
-                  </div>
+                <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 text-[11px] text-gray-300 leading-relaxed space-y-1">
+                  <p>
+                    {language === 'hi'
+                      ? 'कॉर्पोरेट या सहयोगी पोर्टल क्रेडेंशियल सहायता के लिए, सीधे आधिकारिक आईटी डेस्क से संपर्क करें:'
+                      : 'For enterprise account access, member verification, or credential assistance, contact corporate administration:'}
+                  </p>
+                  <p className="font-mono text-[10px] text-[#DFC382]">
+                    support@akgv.in • +91 6306917991 • Head Office, Varanasi
+                  </p>
                 </div>
               </div>
             </div>

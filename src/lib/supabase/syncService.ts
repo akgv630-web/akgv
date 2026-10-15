@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './client';
 import {
   Booking,
+  OfferIncentive,
   PaymentRecord,
   Plot,
   Profile,
@@ -516,6 +517,49 @@ export async function deleteProfileFromSupabase(profileId: string): Promise<bool
   }
 }
 
+export async function fetchProfileByAuthId(authUserId: string): Promise<Profile | null> {
+  if (!isSupabaseConfigured || !supabase || !authUserId) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .or(`auth_user_id.eq.${authUserId},id.eq.${authUserId}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) {
+      if (error) console.warn('[Supabase Sync] fetchProfileByAuthId notice:', error.message);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      email: data.email,
+      fullName: data.full_name,
+      phone: data.phone,
+      role: data.role,
+      memberId: data.member_id || undefined,
+      sponsorId: data.sponsor_id || undefined,
+      kycStatus: data.kyc_status,
+      isActive: Boolean(data.is_active),
+      avatarUrl: data.avatar_url || undefined,
+      city: data.city || undefined,
+      branchLocation: data.branch_location || undefined,
+      address: data.address || undefined,
+      level: data.level ? Number(data.level) : undefined,
+      rankTitle: data.rank_title || undefined,
+      totalBusinessVolumeInr: data.total_business_volume_inr ? Number(data.total_business_volume_inr) : undefined,
+      plotsClosedCount: data.plots_closed_count ? Number(data.plots_closed_count) : undefined,
+      joinedDate: data.joined_date || undefined,
+      createdAt: data.created_at,
+    };
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception fetching profile by auth id:', err);
+    return null;
+  }
+}
+
 // ==============================================================================
 // 7. SUPABASE AUTH WRAPPER
 // ==============================================================================
@@ -651,6 +695,48 @@ export async function callCreatePlotBookingAtomic(params: {
       p_sponsor_id: params.sponsorId || null,
       p_house_model_id: params.houseModelId || null,
     });
+    return { data, error };
+  } catch (err) {
+    return { data: null, error: err };
+  }
+}
+
+export async function callVerifyPaymentAtomic(params: {
+  paymentId: string;
+  approved: boolean;
+  reason?: string;
+}): Promise<{ data: any; error: any }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: null, error: new Error('Supabase database service is not configured') };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('verify_payment_atomic', {
+      p_payment_id: params.paymentId,
+      p_approved: params.approved,
+      p_reason: params.reason || null,
+    });
+    return { data, error };
+  } catch (err) {
+    return { data: null, error: err };
+  }
+}
+
+export async function uploadGpsEvidencePhoto(
+  fileOrBlob: Blob | File,
+  path: string
+): Promise<{ data: any; error: any }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: null, error: new Error('Supabase storage is not configured') };
+  }
+
+  try {
+    const { data, error } = await supabase.storage
+      .from('evidence')
+      .upload(path, fileOrBlob, {
+        cacheControl: '3600',
+        upsert: false,
+      });
     return { data, error };
   } catch (err) {
     return { data: null, error: err };
@@ -948,4 +1034,71 @@ export async function saveCmsContentToSupabase(content: any): Promise<boolean> {
     return false;
   }
 }
+
+// ==============================================================================
+// 12. OFFERS & INCENTIVES SYNC
+// ==============================================================================
+
+export async function fetchOffersFromSupabase(): Promise<OfferIncentive[] | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('offer_incentives')
+      .select('*')
+      .order('start_date', { ascending: false });
+
+    if (error || !data || data.length === 0) return null;
+
+    return data.map((row) => ({
+      id: row.id,
+      titleEn: row.title_en,
+      titleHi: row.title_hi,
+      description: row.description,
+      minPlotCount: row.min_plot_count ? Number(row.min_plot_count) : undefined,
+      minSalesValueInr: row.min_sales_value_inr ? Number(row.min_sales_value_inr) : undefined,
+      rewardDescription: row.reward_description,
+      rewardType: row.reward_type,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      eligibleRoles: Array.isArray(row.eligible_roles) ? row.eligible_roles : [],
+      status: row.status,
+      claimedCount: Number(row.claimed_count || 0),
+    }));
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception fetching offers:', err);
+    return null;
+  }
+}
+
+export async function saveOfferToSupabase(offer: OfferIncentive): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+
+  try {
+    const payload = {
+      id: offer.id,
+      title_en: offer.titleEn,
+      title_hi: offer.titleHi,
+      description: offer.description,
+      min_plot_count: offer.minPlotCount,
+      min_sales_value_inr: offer.minSalesValueInr,
+      reward_description: offer.rewardDescription,
+      reward_type: offer.rewardType,
+      start_date: offer.startDate,
+      end_date: offer.endDate,
+      eligible_roles: offer.eligibleRoles,
+      status: offer.status,
+      claimed_count: offer.claimedCount,
+    };
+
+    const { error } = await supabase
+      .from('offer_incentives')
+      .upsert(payload, { onConflict: 'id' });
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 
