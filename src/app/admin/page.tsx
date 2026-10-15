@@ -124,9 +124,15 @@ export default function SuperAdminPage() {
     updateMember,
     deleteMember,
     toggleMemberStatus,
+    reviews,
+    updateReviewStatus,
+    replyToReview,
+    deleteReview,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'plots' | 'payments' | 'bookings' | 'kits' | 'support'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'plots' | 'payments' | 'bookings' | 'kits' | 'support' | 'reviews'>('overview');
+  const [reviewFilterStatus, setReviewFilterStatus] = useState<'ALL' | 'approved' | 'pending' | 'rejected'>('ALL');
+  const [reviewReplyInputs, setReviewReplyInputs] = useState<Record<string, string>>({});
   const [plotFilterBlock, setPlotFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C'>('ALL');
   const [plotFilterStatus, setPlotFilterStatus] = useState<'ALL' | PlotStatus>('ALL');
   const [paymentActionNotice, setPaymentActionNotice] = useState<string | null>(null);
@@ -423,6 +429,18 @@ export default function SuperAdminPage() {
         >
           <HelpCircle className="h-4 w-4" />
           <span>Support CRM ({openTickets.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('reviews')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'reviews'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Star className="h-4 w-4 text-amber-400" />
+          <span>Real Reviews ({reviews.length})</span>
         </button>
       </div>
 
@@ -2258,6 +2276,196 @@ export default function SuperAdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 7: Real Reviews Moderation & Corporate Responses */}
+      {activeTab === 'reviews' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <h2 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+                <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+                <span>Real Customer & Visitor Reviews Management</span>
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Approve, reject, or post official Director responses to public customer testimonials.
+              </p>
+            </div>
+
+            {/* Filter buttons */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <button
+                onClick={() => setReviewFilterStatus('ALL')}
+                className={`rounded-lg px-3 py-1.5 font-semibold transition ${
+                  reviewFilterStatus === 'ALL'
+                    ? 'bg-[#C7A35A] text-[#0B1734]'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                All ({reviews.length})
+              </button>
+              <button
+                onClick={() => setReviewFilterStatus('approved')}
+                className={`rounded-lg px-3 py-1.5 font-semibold transition ${
+                  reviewFilterStatus === 'approved'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                Approved ({reviews.filter((r) => r.status === 'approved').length})
+              </button>
+              <button
+                onClick={() => setReviewFilterStatus('pending')}
+                className={`rounded-lg px-3 py-1.5 font-semibold transition ${
+                  reviewFilterStatus === 'pending'
+                    ? 'bg-amber-500 text-[#0B1734]'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                Pending Review ({reviews.filter((r) => r.status === 'pending').length})
+              </button>
+              <button
+                onClick={() => setReviewFilterStatus('rejected')}
+                className={`rounded-lg px-3 py-1.5 font-semibold transition ${
+                  reviewFilterStatus === 'rejected'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                }`}
+              >
+                Rejected ({reviews.filter((r) => r.status === 'rejected').length})
+              </button>
+            </div>
+          </div>
+
+          {/* Reviews List */}
+          <div className="space-y-4">
+            {reviews
+              .filter((r) => (reviewFilterStatus === 'ALL' ? true : r.status === reviewFilterStatus))
+              .map((rev) => (
+                <div
+                  key={rev.id}
+                  className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-4 text-xs shadow-xl"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#050A17] border border-[#C7A35A]/30 text-[#DFC382] font-serif font-bold text-sm">
+                        {rev.authorName ? rev.authorName.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <strong className="text-white text-sm">{rev.authorName}</strong>
+                          {rev.authorPhone && (
+                            <span className="text-[11px] text-gray-400 font-mono">
+                              ({rev.authorPhone})
+                            </span>
+                          )}
+                          <span className="rounded bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] text-gray-300 capitalize">
+                            {rev.authorRole}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          {rev.plotNumber ? `Plot: ${rev.plotNumber} • ` : ''}
+                          {rev.branchLocation} • Category: {rev.category.replace('_', ' ')}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 self-start sm:self-auto">
+                      <div className="flex text-amber-400">
+                        {[...Array(rev.rating || 5)].map((_, i) => (
+                          <Star key={i} className="h-3.5 w-3.5 fill-amber-400" />
+                        ))}
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
+                          rev.status === 'approved'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            : rev.status === 'pending'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                            : 'bg-red-500/10 text-red-400 border-red-500/30'
+                        }`}
+                      >
+                        {rev.status ? rev.status.toUpperCase() : 'APPROVED'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-serif font-bold text-white text-sm">{rev.title}</h4>
+                    <p className="text-gray-300 leading-relaxed">&ldquo;{rev.comment}&rdquo;</p>
+                  </div>
+
+                  {/* Existing Admin Reply */}
+                  {rev.adminReply && (
+                    <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17] p-3 space-y-1 text-xs">
+                      <div className="flex items-center justify-between text-[10px] text-[#DFC382] font-semibold">
+                        <span>Corporate Reply from {rev.adminReply.replierName}</span>
+                        <span>{new Date(rev.adminReply.repliedAt).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-gray-200">{rev.adminReply.replyText}</p>
+                    </div>
+                  )}
+
+                  {/* Actions & Reply Form */}
+                  <div className="border-t border-white/10 pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div className="flex-1 flex gap-2">
+                      <input
+                        type="text"
+                        value={reviewReplyInputs[rev.id] || ''}
+                        onChange={(e) =>
+                          setReviewReplyInputs((prev) => ({ ...prev, [rev.id]: e.target.value }))
+                        }
+                        placeholder={
+                          rev.adminReply
+                            ? 'Update official corporate response...'
+                            : 'Write official Director response to this review...'
+                        }
+                        className="flex-1 rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                      />
+                      <button
+                        onClick={() => {
+                          const replyTxt = reviewReplyInputs[rev.id];
+                          if (replyTxt && replyTxt.trim()) {
+                            replyToReview(rev.id, replyTxt.trim());
+                            setReviewReplyInputs((prev) => ({ ...prev, [rev.id]: '' }));
+                          }
+                        }}
+                        className="rounded-xl bg-[#C7A35A] px-4 py-2 font-bold text-[#0B1734] text-xs hover:brightness-110 whitespace-nowrap"
+                      >
+                        Post Reply
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {rev.status !== 'approved' && (
+                        <button
+                          onClick={() => updateReviewStatus(rev.id, 'approved')}
+                          className="rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-2 font-semibold hover:bg-emerald-500 hover:text-white transition"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {rev.status !== 'rejected' && (
+                        <button
+                          onClick={() => updateReviewStatus(rev.id, 'rejected')}
+                          className="rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-2 font-semibold hover:bg-amber-500 hover:text-white transition"
+                        >
+                          Reject
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteReview(rev.id)}
+                        className="rounded-xl bg-red-500/20 text-red-300 border border-red-500/40 px-3 py-2 font-semibold hover:bg-red-500 hover:text-white transition"
+                        title="Delete review permanently"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}

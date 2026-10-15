@@ -13,6 +13,7 @@ import {
   RewardClaim,
   SiteVisit,
   SupportTicket,
+  ReviewRecord,
   UserRole
 } from '@/types';
 import {
@@ -299,3 +300,90 @@ export function calculateMemberLevel(totalBusinessInr: number) {
     .find((rule) => totalBusinessInr >= rule.minBusinessInr);
   return match || COMMISSION_LEVELS_GROUND_TRUTH[0];
 }
+
+export const INITIAL_REVIEWS: ReviewRecord[] = [
+  {
+    id: 'rev-2026-001',
+    authorName: 'Pradeep Verma',
+    authorRole: 'buyer',
+    rating: 5,
+    title: '100% Freehold Registry & Clear Demarcation',
+    comment: 'Registered deed verification completed at Sub-Registrar office Varanasi. The 30ft entrance road and demarcated stone boundary pillars were verified on site. Very transparent transaction with zero broker interference.',
+    plotNumber: 'A-03',
+    branchLocation: 'Rampur Head Office',
+    category: 'plot_purchase',
+    isVerified: true,
+    status: 'approved',
+    createdAt: '2026-04-15T11:20:00Z',
+    helpfulCount: 14,
+    adminReply: {
+      replyText: 'Thank you Mr. Pradeep Verma. It was our pleasure assisting with your registered deed and demarcation at the Varanasi Sub-Registrar office.',
+      repliedAt: '2026-04-16T10:00:00Z',
+      replierName: 'Rajesh Kumar Patel (Director)'
+    }
+  },
+  {
+    id: 'rev-2026-002',
+    authorName: 'Suresh Chandra Gupta',
+    authorRole: 'visitor',
+    rating: 5,
+    title: 'Professional Accompanied Site Inspection',
+    comment: 'Took the company vehicle pickup from Cantt railway station for a physical site inspection at Rampur. The scale 1:500 blueprint layout matched the ground markers exactly. Impressed by the 27.82% road area dedication.',
+    branchLocation: 'Lahartara Branch',
+    category: 'site_visit',
+    isVerified: true,
+    status: 'approved',
+    createdAt: '2026-05-18T14:45:00Z',
+    helpfulCount: 9
+  },
+  {
+    id: 'rev-2026-003',
+    authorName: 'Dr. Anand Kumar Mishra',
+    authorRole: 'buyer',
+    rating: 5,
+    title: 'Direct Developer Purchase with Dakhil-Kharij Assistance',
+    comment: 'Booked plot B-03 directly with AKGV Infra City. Complete revenue department guidance was provided for mutation documentation. No hidden fees or unexpected brokerage.',
+    plotNumber: 'B-03',
+    branchLocation: 'Rampur Head Office',
+    category: 'legal_registry',
+    isVerified: true,
+    status: 'approved',
+    createdAt: '2026-06-02T16:10:00Z',
+    helpfulCount: 11,
+    adminReply: {
+      replyText: 'Heartiest congratulations Dr. Mishra on your plot booking. Your Dakhil-Kharij administrative record is actively coordinated by our corporate legal desk.',
+      repliedAt: '2026-06-03T11:30:00Z',
+      replierName: 'Rajesh Kumar Patel (Director)'
+    }
+  },
+  {
+    id: 'rev-2026-004',
+    authorName: 'Mahesh Narayan Tiwari',
+    authorRole: 'visitor',
+    rating: 5,
+    title: 'Prime Highway Access Near NH-19',
+    comment: 'Visited the Mirza Murad branch on GT Road / NH-19 corridor. Very accessible location and courteous staff. They clearly walked through the layout master plan and future Ring Road connectivity.',
+    branchLocation: 'Mirza Murad Branch',
+    category: 'staff_support',
+    isVerified: true,
+    status: 'approved',
+    createdAt: '2026-07-22T09:30:00Z',
+    helpfulCount: 6
+  },
+  {
+    id: 'rev-2026-005',
+    authorName: 'Kamlesh Chandra Upadhyay',
+    authorRole: 'buyer',
+    rating: 5,
+    title: 'Clear Pillar Demarcation & Fast Registry Support',
+    comment: 'Verified the 25ft sector internal road and stone boundary markers in Block A. The legal registry team gave clear stamp duty calculation without any inflated charges.',
+    plotNumber: 'A-08',
+    branchLocation: 'Rampur Head Office',
+    category: 'plot_purchase',
+    isVerified: true,
+    status: 'approved',
+    createdAt: '2026-08-11T13:15:00Z',
+    helpfulCount: 8
+  }
+];
+

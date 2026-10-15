@@ -257,3 +257,26 @@ export interface SupportTicket {
     timestamp: string;
   }[];
 }
+
+export interface ReviewRecord {
+  id: string;
+  authorName: string;
+  authorPhone?: string;
+  authorRole: 'buyer' | 'visitor' | 'associate' | 'public';
+  rating: number; // 1 to 5
+  title: string;
+  comment: string;
+  plotNumber?: string;
+  branchLocation: string;
+  category: 'plot_purchase' | 'site_visit' | 'legal_registry' | 'staff_support' | 'corporate_trust';
+  isVerified: boolean;
+  status: 'approved' | 'pending' | 'rejected';
+  createdAt: string;
+  helpfulCount: number;
+  adminReply?: {
+    replyText: string;
+    repliedAt: string;
+    replierName: string;
+  };
+}
+

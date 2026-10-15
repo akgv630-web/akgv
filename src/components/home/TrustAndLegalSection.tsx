@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
+import { ReviewsLiveSection } from '@/components/reviews/ReviewsLiveSection';
+
 export function TrustAndLegalSection() {
   const { t } = useApp();
   const pillarIcons = [Layers, ShieldCheck, Zap, Trees, Compass, Building2];
@@ -105,10 +107,10 @@ export function TrustAndLegalSection() {
         </div>
       </div>
 
-      {/* 3. VERIFIED CUSTOMER REVIEWS & CONFIDENCE */}
+      {/* 3. OFFICIAL STATUTORY CORPORATE GUARANTEES */}
       <div className="space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
-          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+          <span className="text-xs font-bold text-[#C7A35A] uppercase tracking-wider">
             {t.trust.reviewsBadge}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
@@ -123,37 +125,43 @@ export function TrustAndLegalSection() {
           {t.trust.reviews.map((rev, idx) => (
             <div
               key={idx}
-              className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 shadow-xl flex flex-col justify-between space-y-4"
+              className="rounded-2xl border border-[#C7A35A]/30 bg-gradient-to-b from-[#0B1734] to-[#050A17] p-5 shadow-xl flex flex-col justify-between space-y-4 hover:border-[#C7A35A]/60 transition"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex text-amber-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-amber-400" />
-                    ))}
+                  <div className="flex text-[#DFC382]">
+                    <ShieldCheck className="h-5 w-5 text-[#C7A35A]" />
                   </div>
-                  <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">
+                  <span className="rounded bg-[#C7A35A]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#DFC382] border border-[#C7A35A]/30">
                     {t.trust.verifiedBuyer}
                   </span>
                 </div>
 
-                <p className="text-xs text-gray-300 italic leading-relaxed">
-                  &ldquo;{rev.review}&rdquo;
+                <h3 className="font-serif font-bold text-white text-sm">
+                  {rev.name}
+                </h3>
+
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  {rev.review}
                 </p>
               </div>
 
               <div className="border-t border-white/10 pt-3 flex items-center justify-between">
                 <div>
-                  <div className="font-serif font-bold text-white text-xs">{rev.name}</div>
-                  <div className="text-[10px] text-gray-400">{rev.role}</div>
-                  <div className="text-[10px] font-semibold text-[#DFC382]">{rev.plot}</div>
+                  <div className="text-[11px] font-semibold text-[#DFC382]">{rev.role}</div>
+                  <div className="text-[10px] text-gray-400">{rev.plot}</div>
                 </div>
-                <span className="text-[10px] text-gray-500">{rev.date}</span>
+                <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] text-gray-400 border border-white/10 font-mono">
+                  {rev.date}
+                </span>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* 4. REAL INTERACTIVE CUSTOMER & VISITOR REVIEW REGISTRY */}
+      <ReviewsLiveSection />
     </div>
   );
 }

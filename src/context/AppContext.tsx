@@ -9,6 +9,7 @@ import {
   Plot,
   PlotStatus,
   Profile,
+  ReviewRecord,
   SiteVisit,
   SupportTicket,
   UserRole
@@ -20,6 +21,7 @@ import {
   INITIAL_KIT_ISSUES,
   INITIAL_PAYMENTS,
   INITIAL_PLOTS,
+  INITIAL_REVIEWS,
   INITIAL_SITE_VISITS,
   INITIAL_SUPPORT_TICKETS
 } from '@/lib/store';
@@ -69,6 +71,12 @@ interface AppContextType {
   updateMember: (id: string, data: Partial<Profile>) => void;
   deleteMember: (id: string) => void;
   toggleMemberStatus: (id: string) => void;
+  reviews: ReviewRecord[];
+  addReview: (review: Omit<ReviewRecord, 'id' | 'createdAt' | 'helpfulCount' | 'status'>) => ReviewRecord;
+  voteHelpful: (reviewId: string) => void;
+  updateReviewStatus: (reviewId: string, status: 'approved' | 'pending' | 'rejected') => void;
+  replyToReview: (reviewId: string, replyText: string) => void;
+  deleteReview: (reviewId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -86,6 +94,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [siteVisits, setSiteVisits] = useState<SiteVisit[]>(INITIAL_SITE_VISITS);
   const [gpsEvidences, setGpsEvidences] = useState<FieldGpsEvidence[]>(INITIAL_GPS_EVIDENCE);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>(INITIAL_SUPPORT_TICKETS);
+  const [reviews, setReviews] = useState<ReviewRecord[]>(INITIAL_REVIEWS);
   const [selectedPlotForViewer, setSelectedPlotForViewer] = useState<Plot | null>(INITIAL_PLOTS[3]); // default A-04
 
   // Hydrate from localStorage if available
@@ -123,6 +132,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedPayments) setPayments(JSON.parse(savedPayments));
       const savedKit = localStorage.getItem(`${STORAGE_KEY_PREFIX}kit_issues`);
       if (savedKit) setKitIssues(JSON.parse(savedKit));
+      const savedReviews = localStorage.getItem(`${STORAGE_KEY_PREFIX}reviews`);
+      if (savedReviews) {
+        try {
+          const parsedRev = JSON.parse(savedReviews);
+          if (Array.isArray(parsedRev) && parsedRev.length > 0) {
+            setReviews(parsedRev);
+          }
+        } catch {
+          // Ignore
+        }
+      }
     } catch {
       // Ignore client hydration errors
     }
@@ -559,6 +579,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const saveReviews = (updated: ReviewRecord[]) => {
+    setReviews(updated);
+    try {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}reviews`, JSON.stringify(updated));
+    } catch {
+      // Ignore
+    }
+  };
+
+  const addReview = (data: Omit<ReviewRecord, 'id' | 'createdAt' | 'helpfulCount' | 'status'>): ReviewRecord => {
+    const newReview: ReviewRecord = {
+      ...data,
+      id: `rev-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      helpfulCount: 0,
+      status: 'approved',
+    };
+    const updated = [newReview, ...reviews];
+    saveReviews(updated);
+    return newReview;
+  };
+
+  const voteHelpful = (reviewId: string) => {
+    const updated = reviews.map((r) =>
+      r.id === reviewId ? { ...r, helpfulCount: (r.helpfulCount || 0) + 1 } : r
+    );
+    saveReviews(updated);
+  };
+
+  const updateReviewStatus = (reviewId: string, status: 'approved' | 'pending' | 'rejected') => {
+    const updated = reviews.map((r) => (r.id === reviewId ? { ...r, status } : r));
+    saveReviews(updated);
+  };
+
+  const replyToReview = (reviewId: string, replyText: string) => {
+    const updated = reviews.map((r) =>
+      r.id === reviewId
+        ? {
+            ...r,
+            adminReply: {
+              replyText,
+              repliedAt: new Date().toISOString(),
+              replierName: currentUser.fullName
+                ? `${currentUser.fullName} (${currentUser.rankTitle || 'Director'})`
+                : 'Rajesh Kumar Patel (Director)'
+            }
+          }
+        : r
+    );
+    saveReviews(updated);
+  };
+
+  const deleteReview = (reviewId: string) => {
+    const updated = reviews.filter((r) => r.id !== reviewId);
+    saveReviews(updated);
+  };
+
   const t = DICTIONARY[language] || DICTIONARY.en;
 
   return (
@@ -596,6 +673,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateMember,
         deleteMember,
         toggleMemberStatus,
+        reviews,
+        addReview,
+        voteHelpful,
+        updateReviewStatus,
+        replyToReview,
+        deleteReview,
       }}
     >
       {children}
