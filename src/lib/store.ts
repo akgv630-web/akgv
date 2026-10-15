@@ -29,7 +29,7 @@ export const DEMO_PROFILES: Profile[] = [
   {
     id: 'usr-admin-01',
     email: 'admin@akgvinfacity.com',
-    fullName: 'Rajesh Kumar Patel (Super Admin)',
+    fullName: 'Rajesh Kumar Patel',
     phone: '6306917991',
     role: 'super_admin',
     memberId: 'AKGV-HQ-001',
@@ -48,7 +48,7 @@ export const DEMO_PROFILES: Profile[] = [
   {
     id: 'usr-subadmin-01',
     email: 'suresh.yadav@akgvinfacity.com',
-    fullName: 'Suresh Yadav (Sub-Admin / Area Coordinator)',
+    fullName: 'Suresh Yadav',
     phone: '9838012345',
     role: 'sub_admin',
     memberId: 'AKGV-SUB-101',
@@ -67,7 +67,7 @@ export const DEMO_PROFILES: Profile[] = [
   {
     id: 'usr-sponsor-01',
     email: 'vikram.singh@akgvinfacity.com',
-    fullName: 'Vikram Singh (Senior Manager)',
+    fullName: 'Vikram Singh',
     phone: '9876543210',
     role: 'senior_member',
     memberId: 'AKGV-3498',
@@ -86,7 +86,7 @@ export const DEMO_PROFILES: Profile[] = [
   {
     id: 'usr-junior-01',
     email: 'amit.sharma@akgvinfacity.com',
-    fullName: 'Amit Sharma (Star Member)',
+    fullName: 'Amit Sharma',
     phone: '9123456789',
     role: 'junior_member',
     memberId: 'AKGV0042',
@@ -106,7 +106,7 @@ export const DEMO_PROFILES: Profile[] = [
   {
     id: 'usr-buyer-01',
     email: 'pradeep.verma@gmail.com',
-    fullName: 'Pradeep Verma (Buyer)',
+    fullName: 'Pradeep Verma',
     phone: '9812345678',
     role: 'buyer',
     kycStatus: 'verified',
@@ -237,7 +237,7 @@ export const INITIAL_GPS_EVIDENCE: FieldGpsEvidence[] = [
     longitude: 82.98732,
     accuracyMeters: 3.2,
     captureTimestamp: '2026-10-09T14:22:10Z',
-    photoUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+    photoUrl: '/assets/layout_plan_brochure.png',
     capturedByMemberId: 'AKGV-3498',
     capturedByName: 'Vikram Singh',
     status: 'approved',

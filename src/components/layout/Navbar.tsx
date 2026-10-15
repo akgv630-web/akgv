@@ -161,43 +161,16 @@ export function Navbar() {
 
         {/* Right Action Bar */}
         <div className="hidden items-center gap-3 sm:flex">
-          {/* Active Role Simulator Switcher */}
-          <div className="relative">
-            <button
-              onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-              className="flex items-center gap-2 rounded-lg border border-[#C7A35A]/40 bg-[#050A17] px-3 py-1.5 text-xs text-gray-200 shadow-sm hover:border-[#C7A35A] transition"
-              title="Test multi-role permissions"
-            >
-              <div className="h-2 w-2 rounded-full bg-[#1EA275]"></div>
-              <span className="text-gray-400">{t.nav.roleSimulator}</span>
-              <span className="font-semibold text-[#DFC382]">{roleLabels[currentUser.role]}</span>
-              <ChevronDown className="h-3 w-3 text-gray-400" />
-            </button>
-            {roleDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-52 rounded-xl border border-[#C7A35A]/30 bg-[#0B1734] p-2 shadow-2xl z-50">
-                <div className="px-2 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
-                  {t.nav.switchRoleTitle}
-                </div>
-                {(['super_admin', 'senior_member', 'junior_member', 'buyer'] as UserRole[]).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => {
-                      switchUserRole(r);
-                      setRoleDropdownOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition ${
-                      currentUser.role === r
-                        ? 'bg-[#C7A35A] text-[#0B1734] font-bold'
-                        : 'text-gray-200 hover:bg-white/10'
-                    }`}
-                  >
-                    <span>{roleLabels[r]}</span>
-                    {currentUser.role === r && <span className="text-[10px]">✓</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Active Account Status Pill */}
+          <Link
+            href={getDashboardPath(currentUser.role)}
+            className="flex items-center gap-2 rounded-lg border border-[#C7A35A]/40 bg-[#050A17] px-3 py-1.5 text-xs text-gray-200 shadow-sm hover:border-[#C7A35A] transition"
+            title={`Signed in as ${currentUser.fullName}`}
+          >
+            <div className="h-2 w-2 rounded-full bg-[#1EA275]" />
+            <span className="text-gray-400">{language === 'hi' ? 'खाता:' : 'Account:'}</span>
+            <span className="font-semibold text-[#DFC382]">{roleLabels[currentUser.role]}</span>
+          </Link>
 
           {/* Sign In / Register Modal Trigger */}
           <button
@@ -306,21 +279,6 @@ export function Navbar() {
               >
                 Hinglish
               </button>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2">
-            <div className="text-xs font-medium text-gray-400">Active Role (Demo):</div>
-            <div className="grid grid-cols-2 gap-2">
-              {(['super_admin', 'senior_member', 'junior_member', 'buyer'] as UserRole[]).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => switchUserRole(r)}
-                  className={`rounded p-1.5 text-left text-xs ${currentUser.role === r ? 'bg-[#C7A35A] text-[#0B1734] font-bold' : 'bg-white/5 text-gray-300'}`}
-                >
-                  {roleLabels[r]}
-                </button>
-              ))}
             </div>
           </div>
         </div>

@@ -280,31 +280,31 @@ export const DICTIONARY = {
           "type": "Signal-Free Corridor"
         }
       ],
-      "reviewsBadge": "Real Experiences",
-      "reviewsTitle": "Verified Varanasi Plot Owners Speak",
-      "reviewsSub": "Real testimonials from esteemed academicians, railway officers, and professionals who secured plots with AKGV Infra City.",
-      "verifiedBuyer": "Verified Plot Buyer",
+      "reviewsBadge": "Corporate Guarantees",
+      "reviewsTitle": "Our 100% Legal & Possession Commitments",
+      "reviewsSub": "Direct statutory guarantees provided by AKGV Infra City Private Limited under approved Master Plan.",
+      "verifiedBuyer": "Official Guarantee",
       "reviews": [
         {
-          "name": "Dr. Alok Nath Tripathy",
-          "role": "Associate Professor, BHU Varanasi",
-          "plot": "Plot #A-04 (Rampur Front Row)",
-          "date": "Booked Feb 2026",
-          "review": "The transparency of AKGV Infra City is unmatched in Varanasi. I personally checked the 30ft road width and physical demarcation on site before placing the 72-hour online hold. Registry paperwork was handled smoothly."
+          "name": "100% Freehold Title & Immediate Registry",
+          "role": "Legal Registry Department, Varanasi",
+          "plot": "Sub-Registrar Office Varanasi",
+          "date": "Statutory Commitment",
+          "review": "All 55 demarcated plots feature 100% clear freehold title with zero bank liens or litigation. Complete legal assistance provided for sub-registrar deed execution and administrative Dakhil-Kharij (Mutation) certification."
         },
         {
-          "name": "Er. Manoj Srivastava",
-          "role": "Senior Engineer, BLW (DLW) Varanasi",
-          "plot": "Plot #C-12 (35 Plot Enclave)",
-          "date": "Booked Jan 2026",
-          "review": "As an engineer, I was impressed by Er. Rajesh Patel’s layout design. 27.82% land dedicated to roads and botanical buffers is rare in private townships. Plot demarcation and registry are completely transparent."
+          "name": "Er. Rajesh Kumar Patel Certified Blueprint",
+          "role": "Chief Architect (R.P. Home Design)",
+          "plot": "Scale 1:500 Demarcated Layout",
+          "date": "Engineering Guarantee",
+          "review": "Directly executed on 77,550 sqft land parcel with 27.82% area dedicated to internal roads. Every plot has stone pillar boundary demarcation, 30ft entrance avenue, and 25ft sector corridors."
         },
         {
-          "name": "Smt. Rekha Pandey",
-          "role": "Education Officer, Lahartara",
-          "plot": "Plot #B-06 (Rampur Layout)",
-          "date": "Booked Mar 2026",
-          "review": "Being a female buyer, I availed the 1% stamp duty rebate in Uttar Pradesh as guided by AKGV Infra’s legal desk. The location near GT Road makes daily commute to central Varanasi extremely convenient."
+          "name": "3 Physical Offline Branch Offices in Varanasi",
+          "role": "Customer Support & Document Verification",
+          "plot": "Rampur • Lahartara • Mirza Murad",
+          "date": "Direct Branch Service",
+          "review": "Visit our registered head office in Rampur or branch offices in Lahartara (near Cantt) and Mirza Murad (NH-19) for physical document inspection, payment receipts, and accompanied site visits in company vehicles."
         }
       ]
     },
@@ -815,31 +815,31 @@ export const DICTIONARY = {
           "type": "सिग्नल-फ्री मार्ग"
         }
       ],
-      "reviewsBadge": "वास्तविक अनुभव",
-      "reviewsTitle": "संतुष्ट प्लॉट खरीदारों के विचार",
-      "reviewsSub": "बीएचयू प्रोफेसरों, रेलवे अधिकारियों और प्रतिष्ठित नागरिकों के वास्तविक विचार जिन्होंने प्लॉट बुक किए हैं।",
-      "verifiedBuyer": "प्रमाणित प्लॉट खरीदार",
+      "reviewsBadge": "आधिकारिक कॉर्पोरेट गारंटी",
+      "reviewsTitle": "हमारी 100% कानूनी एवं कब्ज़ा प्रतिबद्धताएं",
+      "reviewsSub": "स्वीकृत मास्टर प्लान के अंतर्गत एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड द्वारा दी जाने वाली प्रत्यक्ष वैधानिक गारंटी।",
+      "verifiedBuyer": "आधिकारिक गारंटी",
       "reviews": [
         {
-          "name": "डॉ. आलोक नाथ त्रिपाठी",
-          "role": "एसोसिएट प्रोफेसर, बीएचयू वाराणसी",
-          "plot": "प्लॉट #A-04 (रामपुर फ्रंट रो)",
-          "date": "फरवरी 2026 में बुक किया",
-          "review": "एकेजीवी इन्फ्रा सिटी की पारदर्शिता वाराणसी में सबसे बेहतरीन है। मैंने 72 घंटे का होल्ड लगाने से पहले साइट पर 30ft चौड़ी सड़क और पिलर खुद देखे। रजिस्ट्री की प्रक्रिया बहुत सहज रही।"
+          "name": "100% फ्रीहोल्ड मालिकाना हक एवं तत्काल रजिस्ट्री",
+          "role": "कानूनी रजिस्ट्री विभाग, वाराणसी",
+          "plot": "उप-निबंधक कार्यालय (सबरजिस्ट्रार), वाराणसी",
+          "date": "वैधानिक प्रतिबद्धता",
+          "review": "सभी 55 सीमांकित भूखंड 100% स्पष्ट फ्रीहोल्ड मालिकाना हक के साथ हैं, जिन पर कोई बैंक बंधक या विवाद नहीं है। उप-निबंधक विलेख निष्पादन एवं दाखिल-खारिज प्रमाणन हेतु संपूर्ण कानूनी सहायता प्रदान की जाती है।"
         },
         {
-          "name": "ई. मनोज श्रीवास्तव",
-          "role": "वरिष्ठ अभियंता, बीएलडब्ल्यू (डीएलडब्ल्यू) वाराणसी",
-          "plot": "प्लॉट #C-12 (35 प्लॉट एन्क्लेव)",
-          "date": "जनवरी 2026 में बुक किया",
-          "review": "एक इंजीनियर के रूप में मैं ई. राजेश पटेल के लेआउट डिज़ाइन से बहुत प्रभावित हुआ। 27.82% भूमि सड़कों और हरियाली के लिए छोड़ना बहुत सराहनीय है। प्लॉट सीमांकन एकदम स्पष्ट है।"
+          "name": "ई. राजेश कुमार पटेल द्वारा प्रमाणित ब्लूप्रिंट",
+          "role": "मुख्य वास्तुकार (आर.पी. होम डिज़ाइन)",
+          "plot": "पैमाना 1:500 सीमांकित लेआउट",
+          "date": "इंजीनियरिंग गारंटी",
+          "review": "77,550 वर्गफीट भूमि पर निर्मित, जिसका 27.82% हिस्सा आंतरिक सड़कों को समर्पित है। प्रत्येक प्लॉट पर पत्थर के खंभे का सीमांकन, 30 फीट चौड़ा प्रवेश मार्ग और 25 फीट चौड़ी सेक्टर सड़कें उपलब्ध हैं।"
         },
         {
-          "name": "श्रीमती रेखा पांडेय",
-          "role": "शिक्षा अधिकारी, लहरतारा",
-          "plot": "प्लॉट #B-06 (रामपुर लेआउट)",
-          "date": "मार्च 2026 में बुक किया",
-          "review": "महिला खरीदार होने के नाते मुझे उत्तर प्रदेश सरकार से 1% स्टाम्प छूट मिली जैसा कि एकेजीवी इन्फ्रा की कानूनी टीम ने समझाया था। जीटी रोड के पास होने से रोज का आवागमन बहुत आसान है।"
+          "name": "वाराणसी में 3 प्रत्यक्ष भौतिक शाखा कार्यालय",
+          "role": "ग्राहक सेवा एवं दस्तावेज़ सत्यापन",
+          "plot": "रामपुर • लहरतारा • मिर्ज़ा मुराद",
+          "date": "प्रत्यक्ष शाखा सेवा",
+          "review": "दस्तावेज़ों के भौतिक निरीक्षण, भुगतान रसीद और कंपनी के वाहनों में साइट विजिट के लिए रामपुर स्थित हमारे पंजीकृत मुख्य कार्यालय या लहरतारा (कैंट के पास) और मिर्ज़ा मुराद (एनएच-19) शाखाओं में पधारें।"
         }
       ]
     },
@@ -1350,31 +1350,31 @@ export const DICTIONARY = {
           "type": "Signal-Free Road"
         }
       ],
-      "reviewsBadge": "Real Experiences",
-      "reviewsTitle": "Verified Plot Buyers Kya Kehte Hain?",
-      "reviewsSub": "BHU professors, railway officers aur professionals ke real testimonials jinhone AKGV me plot book kiya.",
-      "verifiedBuyer": "Verified Plot Buyer",
+      "reviewsBadge": "Corporate Guarantees",
+      "reviewsTitle": "Hamari 100% Legal & Possession Commitments",
+      "reviewsSub": "Approved Master Plan ke tehat AKGV Infra City Private Limited dwara direct statutory guarantees.",
+      "verifiedBuyer": "Official Guarantee",
       "reviews": [
         {
-          "name": "Dr. Alok Nath Tripathy",
-          "role": "Associate Professor, BHU Varanasi",
-          "plot": "Plot #A-04 (Rampur Front Row)",
-          "date": "Booked Feb 2026",
-          "review": "AKGV Infra City ki transparency Varanasi me best hai. Maine 72 hours ka hold lagane se pehle site par 30ft road aur demarcation khud check kiya. Registry process bahut smooth tha."
+          "name": "100% Freehold Title & Immediate Registry",
+          "role": "Legal Registry Department, Varanasi",
+          "plot": "Sub-Registrar Office Varanasi",
+          "date": "Statutory Commitment",
+          "review": "Sabhi 55 demarcated plots 100% clear freehold title ke sath hain, jisme zero bank liens ya legal disputes hain. Sub-registrar deed execution aur administrative Dakhil-Kharij ke liye complete legal support uplabdh hai."
         },
         {
-          "name": "Er. Manoj Srivastava",
-          "role": "Senior Engineer, BLW (DLW) Varanasi",
-          "plot": "Plot #C-12 (35 Plot Enclave)",
-          "date": "Booked Jan 2026",
-          "review": "As an engineer, mujhe Er. Rajesh Patel ka layout design pasand aaya. 27.82% land roads aur green buffer me dena rare hai. Plot demarcation aur registry clear hai."
+          "name": "Er. Rajesh Kumar Patel Certified Blueprint",
+          "role": "Chief Architect (R.P. Home Design)",
+          "plot": "Scale 1:500 Demarcated Layout",
+          "date": "Engineering Guarantee",
+          "review": "Direct 77,550 sqft land parcel par based, jisme 27.82% area internal roads ko dedicated hai. Har plot par stone pillar boundary demarcation, 30ft entrance avenue aur 25ft sector corridors hain."
         },
         {
-          "name": "Smt. Rekha Pandey",
-          "role": "Education Officer, Lahartara",
-          "plot": "Plot #B-06 (Rampur Layout)",
-          "date": "Booked Mar 2026",
-          "review": "Female buyer hone ke naate mujhe UP government se 1% stamp duty rebate mila jaise AKGV legal team ne bataya tha. GT Road ke paas hone se commute bahut easy hai."
+          "name": "3 Physical Offline Branch Offices in Varanasi",
+          "role": "Customer Support & Document Verification",
+          "plot": "Rampur • Lahartara • Mirza Murad",
+          "date": "Direct Branch Service",
+          "review": "Document inspection, payment receipts lene aur company vehicles se accompanied site visits ke liye hamare Rampur registered head office ya Lahartara (near Cantt) aur Mirza Murad (NH-19) branch visit karein."
         }
       ]
     },

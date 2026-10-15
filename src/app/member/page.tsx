@@ -20,7 +20,7 @@ import {
   Users
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
-import { calculateMemberLevel, DEMO_PROFILES } from '@/lib/store';
+import { calculateMemberLevel } from '@/lib/store';
 import { COMMISSION_LEVELS_GROUND_TRUTH, COMPANY_DETAILS } from '@/data/groundTruth';
 import { FieldGpsCameraCapture } from '@/components/gps-camera/FieldGpsCameraCapture';
 import { AssociateIdCard } from '@/components/member/AssociateIdCard';

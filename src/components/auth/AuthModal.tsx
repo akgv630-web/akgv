@@ -86,10 +86,10 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     } else {
       setLoginError(
         language === 'hi'
-          ? 'कोई खाता नहीं मिला। क्या आप डेमो भूमिका स्विच करना चाहते हैं?'
+          ? 'यह मोबाइल नंबर, ईमेल या सदस्य आईडी पंजीकृत नहीं है। कृपया नया पंजीकरण करें या सहायता के लिए +91 6306917991 पर संपर्क करें।'
           : language === 'hinglish'
-          ? 'Account nahi mila. Aap quick demo profile use kar sakte hain.'
-          : 'User not found. You can also use the Quick Demo Role switcher below.'
+          ? 'Ye mobile number ya member ID registered nahi hai. Naya registration karein ya help desk 6306917991 par contact karein.'
+          : 'Account not found for this identifier. Please register as a new member or contact the corporate helpdesk at +91 6306917991.'
       );
     }
   };
@@ -127,15 +127,6 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           : 'Registration failed. Please try again.'
       );
     }
-  };
-
-  const handleQuickDemoSwitch = (role: UserRole) => {
-    switchUserRole(role);
-    setLoginSuccess(true);
-    setTimeout(() => {
-      setLoginSuccess(false);
-      onClose();
-    }, 800);
   };
 
   const handleSendWhatsappReset = () => {
@@ -302,44 +293,30 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
               </form>
             )}
 
-            {/* Quick Demo Switcher */}
-            <div className="border-t border-white/10 pt-4">
-              <span className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
-                {language === 'hi' ? 'तुरंत डेमो भूमिका चुनें:' : 'Instant Demo Role Switch:'}
-              </span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoSwitch('super_admin')}
-                  className="rounded-lg border border-red-500/30 bg-red-950/20 p-2 text-left hover:border-red-400 transition"
-                >
-                  <span className="block font-bold text-red-300">Super Admin</span>
-                  <span className="text-[10px] text-gray-400">Full Access (Rajesh Patel)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoSwitch('sub_admin')}
-                  className="rounded-lg border border-indigo-500/30 bg-indigo-950/20 p-2 text-left hover:border-indigo-400 transition"
-                >
-                  <span className="block font-bold text-indigo-300">Sub-Admin</span>
-                  <span className="text-[10px] text-gray-400">Area Manager (Suresh Yadav)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoSwitch('senior_member')}
-                  className="rounded-lg border border-[#C7A35A]/40 bg-[#C7A35A]/10 p-2 text-left hover:border-[#C7A35A] transition"
-                >
-                  <span className="block font-bold text-[#DFC382]">Senior Sponsor</span>
-                  <span className="text-[10px] text-gray-400">Vikram Singh (AKGV-3498)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickDemoSwitch('buyer')}
-                  className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-2 text-left hover:border-emerald-400 transition"
-                >
-                  <span className="block font-bold text-emerald-300">Plot Buyer</span>
-                  <span className="text-[10px] text-gray-400">Client (Pradeep Verma)</span>
-                </button>
+            {/* Official Corporate Help / Access Guide */}
+            <div className="border-t border-white/10 pt-3.5 space-y-2 text-xs">
+              <div className="flex items-center gap-1.5 text-[#DFC382] font-semibold text-[11px]">
+                <ShieldCheck className="h-4 w-4 text-[#C7A35A]" />
+                <span>{language === 'hi' ? 'आधिकारिक पोर्टल लॉगिन सहायता' : 'Corporate Account Access Assistance'}</span>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 text-[11px] text-gray-300 space-y-1">
+                <div>
+                  <strong className="text-white">Admin / Director:</strong>{' '}
+                  <span className="font-mono text-[#DFC382]">6306917991</span>{' '}
+                  <span className="text-gray-400">or</span>{' '}
+                  <span className="font-mono text-[#DFC382]">AKGV-HQ-001</span>
+                </div>
+                <div>
+                  <strong className="text-white">Senior Associate Code:</strong>{' '}
+                  <span className="font-mono text-[#DFC382]">AKGV-3498</span>{' '}
+                  <span className="text-gray-400">or</span>{' '}
+                  <span className="font-mono text-[#DFC382]">9876543210</span>
+                </div>
+                <div className="text-[10px] text-gray-400 pt-1 border-t border-white/5">
+                  {language === 'hi'
+                    ? 'प्लॉट खरीदार अपने पंजीकृत मोबाइल नंबर से सीधे लॉगिन या नया पंजीकरण कर सकते हैं।'
+                    : 'Plot buyers can log in or register directly with their registered mobile number.'}
+                </div>
               </div>
             </div>
           </div>
