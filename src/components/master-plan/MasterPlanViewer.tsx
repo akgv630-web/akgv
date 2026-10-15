@@ -141,7 +141,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
     setSearchQuery('');
   };
 
-  const handleBookingSubmit = (e: React.FormEvent) => {
+  const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPlot) return;
     if (!buyerName || !buyerPhone) {
@@ -150,7 +150,7 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
     }
 
     try {
-      const booking = createBookingRequest(
+      const booking = await createBookingRequest(
         selectedPlot.id,
         buyerName,
         buyerPhone
@@ -969,9 +969,9 @@ export function MasterPlanViewer({ onSelectPlotFor3D }: { onSelectPlotFor3D?: (p
         plot={selectedPlot}
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
-        onConfirmBooking={(name, phone) => {
+        onConfirmBooking={async (name, phone) => {
           if (selectedPlot) {
-            createBookingRequest(selectedPlot.id, name, phone);
+            await createBookingRequest(selectedPlot.id, name, phone);
           }
         }}
       />

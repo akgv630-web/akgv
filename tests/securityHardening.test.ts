@@ -275,4 +275,129 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(COMMISSION_LEVELS_GROUND_TRUTH[10].commissionPercent).toBe(14);
     });
   });
+
+  // 9. Atomic Booking Procedure Security & Caller Validation
+  describe('Atomic Plot Booking RPC Hardening', () => {
+    it('must enforce search_path, caller authentication, and proper grants', () => {
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      // Search path hijacking prevention
+      expect(schemaSql).toContain('SET search_path = public, pg_temp');
+
+      // Caller authentication check
+      expect(schemaSql).toContain('IF auth.uid() IS NULL THEN');
+      expect(schemaSql).toContain('Unauthorized: booking buyer identity must match authenticated user');
+
+      // Privilege restrictions
+      expect(schemaSql).toContain('REVOKE EXECUTE ON FUNCTION public.create_plot_booking_atomic FROM PUBLIC;');
+      expect(schemaSql).toContain('GRANT EXECUTE ON FUNCTION public.create_plot_booking_atomic TO authenticated;');
+    });
+  });
+
+  // 10. Profile Privacy & Public Team Directory
+  describe('Profile Privacy & Integrity Enforcement', () => {
+    it('must mask sensitive PII via public_team_directory and restrict private profiles table', () => {
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      // Public view creation
+      expect(schemaSql).toContain('CREATE OR REPLACE VIEW public.public_team_directory AS');
+      expect(schemaSql).toContain('GRANT SELECT ON public.public_team_directory TO anon, authenticated;');
+
+      // Verify that public_team_directory excludes sensitive columns
+      const viewDefinition = schemaSql.slice(schemaSql.indexOf('CREATE OR REPLACE VIEW public.public_team_directory'));
+      const viewSelect = viewDefinition.slice(0, viewDefinition.indexOf('FROM public.profiles'));
+      expect(viewSelect).not.toContain('phone');
+      expect(viewSelect).not.toContain('email');
+      expect(viewSelect).not.toContain('address');
+      expect(viewSelect).not.toContain('total_business_volume_inr');
+
+      // Private profiles table RLS: zero public/anon read
+      expect(schemaSql).toContain('CREATE POLICY "Private profiles read access" ON profiles FOR SELECT TO authenticated');
+      expect(schemaSql).not.toContain('CREATE POLICY "Public read active profiles" ON profiles FOR SELECT TO anon');
+    });
+
+    it('must define trigger enforcing profile update integrity against privilege escalation', () => {
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      expect(schemaSql).toContain('CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity()');
+      expect(schemaSql).toContain('trg_enforce_profile_update_integrity');
+      expect(schemaSql).toContain('Non-admin users cannot alter role');
+      expect(schemaSql).toContain('Non-admin users cannot alter active status');
+      expect(schemaSql).toContain('Non-admin users cannot alter kyc_status');
+      expect(schemaSql).toContain('Non-admin users cannot alter permissions');
+      expect(schemaSql).toContain('Non-admin users cannot alter total_business_volume_inr');
+      expect(schemaSql).toContain('Non-admin users cannot alter plots_closed_count');
+    });
+  });
+
+  // 11. Authoritative Audit Logging & Direct Insert Revocation
+  describe('Authoritative Audit Logging', () => {
+    it('must restrict direct audit_logs inserts to admin and provide secure record_audit_log procedure', () => {
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      // Direct insert restricted to admin only
+      expect(schemaSql).toContain('CREATE POLICY "Admin insert audit_logs" ON audit_logs FOR INSERT TO authenticated WITH CHECK (public.is_admin());');
+      expect(schemaSql).not.toContain('CREATE POLICY "Authenticated insert audit_logs" ON audit_logs FOR INSERT TO authenticated WITH CHECK (true);');
+
+      // record_audit_log procedure
+      expect(schemaSql).toContain('CREATE OR REPLACE FUNCTION public.record_audit_log');
+      expect(schemaSql).toContain('REVOKE EXECUTE ON FUNCTION public.record_audit_log FROM PUBLIC;');
+      expect(schemaSql).toContain('GRANT EXECUTE ON FUNCTION public.record_audit_log TO anon, authenticated;');
+    });
+  });
+
+  // 12. Spam Prevention & Integrity on Public Ingestion Forms
+  describe('Public Ingestion Spam Prevention', () => {
+    it('must enforce status and verification checks on reviews, enquiries, and site visits', () => {
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      // Reviews: forced pending and non-verified
+      expect(schemaSql).toContain('CREATE POLICY "Public insert reviews" ON reviews FOR INSERT TO anon, authenticated WITH CHECK (status = \'pending\' AND (is_verified = FALSE OR is_verified IS NULL));');
+
+      // Client enquiries: forced new with unassigned member
+      expect(schemaSql).toContain('CREATE POLICY "Public insert enquiries" ON client_enquiries FOR INSERT TO anon, authenticated WITH CHECK (status = \'new\' AND (assigned_member_id IS NULL OR assigned_member_id = \'\'));');
+
+      // Site visits: forced requested with unassigned staff
+      expect(schemaSql).toContain('CREATE POLICY "Public insert site visits" ON site_visits FOR INSERT TO anon, authenticated WITH CHECK (status = \'requested\' AND (assigned_staff_name IS NULL OR assigned_staff_name = \'\'));');
+
+      // Payment records: admin update check enforcing separation of duties
+      expect(schemaSql).toContain('CREATE POLICY "Admin update payments" ON payment_records FOR UPDATE TO authenticated USING (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text) WITH CHECK (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text);');
+    });
+  });
+
+  // 13. Application Context Session & Auth Hardening
+  describe('Application Context Authentication & Integrity', () => {
+    it('must never restore unverified session from localStorage on initial load', () => {
+      const appContextPath = path.join(__dirname, '../src/context/AppContext.tsx');
+      const contextCode = fs.readFileSync(appContextPath, 'utf8');
+
+      // Ensure that localStorage.getItem('...auth_user') is NOT used to initialize or restore currentUser on mount
+      expect(contextCode).not.toMatch(/const savedAuthUser = localStorage\.getItem\([^)]*auth_user[^)]*\);[\s\S]*?setCurrentUser/);
+
+      // Verify that syncWithSupabase explicitly verifies authSession
+      expect(contextCode).toContain('if (authSession && authSession.user)');
+      expect(contextCode).toContain('supabaseOnAuthStateChange');
+    });
+
+    it('must not fake registration success if provider returns an error', () => {
+      const appContextPath = path.join(__dirname, '../src/context/AppContext.tsx');
+      const contextCode = fs.readFileSync(appContextPath, 'utf8');
+
+      expect(contextCode).toContain('Registration failed on authentication provider.');
+    });
+
+    it('must enforce admin permission and persist reviews for GPS evidence', () => {
+      const appContextPath = path.join(__dirname, '../src/context/AppContext.tsx');
+      const contextCode = fs.readFileSync(appContextPath, 'utf8');
+
+      expect(contextCode).toContain('Only administrators can approve field GPS evidence.');
+      expect(contextCode).toContain('Only administrators can reject field GPS evidence.');
+      expect(contextCode).toContain('void saveGpsEvidenceToSupabase(updatedEvidence);');
+    });
+  });
 });

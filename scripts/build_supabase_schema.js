@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     branch_location TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'plot_purchase',
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    status TEXT NOT NULL DEFAULT 'approved',
+    status TEXT NOT NULL DEFAULT 'pending',
     helpful_count INT NOT NULL DEFAULT 0,
     admin_reply JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS payment_records (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     transaction_ref TEXT UNIQUE NOT NULL,
     booking_id TEXT NOT NULL,
+    payer_id TEXT,
     plot_number TEXT NOT NULL,
     payer_name TEXT NOT NULL,
     payer_phone TEXT NOT NULL,
@@ -230,8 +231,8 @@ CREATE TABLE IF NOT EXISTS client_enquiries (
     preferred_location_id TEXT,
     budget_inr NUMERIC,
     status TEXT NOT NULL DEFAULT 'new',
-    assigned_member_id TEXT NOT NULL,
-    assigned_member_name TEXT NOT NULL,
+    assigned_member_id TEXT,
+    assigned_member_name TEXT,
     notes TEXT,
     follow_ups JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
@@ -396,7 +397,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_plot_booking
 ON bookings (plot_id) 
 WHERE status IN ('confirmed', 'under_review', 'hold', 'pending');
 
--- Atomic Plot Booking Function with Row-Level Locking
+-- Atomic Plot Booking Function with Row-Level Locking, Search Path Protection & Caller Validation
 CREATE OR REPLACE FUNCTION create_plot_booking_atomic(
     p_plot_id TEXT,
     p_buyer_id TEXT,
@@ -409,6 +410,7 @@ CREATE OR REPLACE FUNCTION create_plot_booking_atomic(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_plot RECORD;
@@ -417,6 +419,17 @@ DECLARE
     v_booking_number TEXT;
     v_hold_expires TIMESTAMPTZ;
 BEGIN
+    -- 0. Caller authentication & identity verification
+    IF auth.uid() IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Authentication required to create a booking');
+    END IF;
+
+    IF NOT public.is_admin() AND auth.uid()::text <> p_buyer_id AND NOT EXISTS (
+        SELECT 1 FROM public.profiles WHERE (auth_user_id = auth.uid() OR id = auth.uid()::text) AND (id = p_buyer_id OR auth_user_id::text = p_buyer_id)
+    ) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Unauthorized: booking buyer identity must match authenticated user');
+    END IF;
+
     -- 1. Lock the plot row FOR UPDATE
     SELECT * INTO v_plot FROM plots WHERE id = p_plot_id FOR UPDATE;
     IF NOT FOUND THEN
@@ -489,6 +502,164 @@ BEGIN
 END;
 $$;
 
+REVOKE EXECUTE ON FUNCTION public.create_plot_booking_atomic FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_plot_booking_atomic TO authenticated;
+
+-- Public Team Directory View (Masks sensitive contact details and downline financials for non-admins)
+CREATE OR REPLACE VIEW public.public_team_directory AS
+SELECT 
+    id,
+    full_name,
+    role,
+    member_id,
+    avatar_url,
+    city,
+    branch_location,
+    rank_title,
+    joined_date
+FROM public.profiles
+WHERE is_active = TRUE AND role IN ('super_admin', 'sub_admin', 'member', 'channel_partner', 'field_officer');
+
+GRANT SELECT ON public.public_team_directory TO anon, authenticated;
+
+-- Trigger to enforce profile update integrity (Prevents non-admin role escalation and tampering with sensitive metrics)
+CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity()
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    -- Administrators retain full management authority
+    IF public.is_admin() THEN
+        NEW.updated_at := timezone('utc', now());
+        RETURN NEW;
+    END IF;
+
+    -- Non-admin callers cannot alter sensitive identity, role, or financial tracking attributes
+    IF NEW.role IS DISTINCT FROM OLD.role THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter role';
+    END IF;
+
+    IF NEW.is_active IS DISTINCT FROM OLD.is_active THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter active status';
+    END IF;
+
+    IF NEW.kyc_status IS DISTINCT FROM OLD.kyc_status THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter kyc_status';
+    END IF;
+
+    IF NEW.permissions IS DISTINCT FROM OLD.permissions THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter permissions';
+    END IF;
+
+    IF NEW.level IS DISTINCT FROM OLD.level THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter level';
+    END IF;
+
+    IF NEW.rank_title IS DISTINCT FROM OLD.rank_title THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter rank_title';
+    END IF;
+
+    IF NEW.sponsor_id IS DISTINCT FROM OLD.sponsor_id THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter sponsor_id';
+    END IF;
+
+    IF NEW.member_id IS DISTINCT FROM OLD.member_id THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter member_id';
+    END IF;
+
+    IF NEW.total_business_volume_inr IS DISTINCT FROM OLD.total_business_volume_inr THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter total_business_volume_inr';
+    END IF;
+
+    IF NEW.plots_closed_count IS DISTINCT FROM OLD.plots_closed_count THEN
+        RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter plots_closed_count';
+    END IF;
+
+    IF NEW.auth_user_id IS DISTINCT FROM OLD.auth_user_id THEN
+        RAISE EXCEPTION 'Unauthorized: Cannot alter auth_user_id binding';
+    END IF;
+
+    NEW.updated_at := timezone('utc', now());
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_enforce_profile_update_integrity ON public.profiles;
+CREATE TRIGGER trg_enforce_profile_update_integrity
+BEFORE UPDATE ON public.profiles
+FOR EACH ROW
+EXECUTE FUNCTION public.enforce_profile_update_integrity();
+
+-- Authoritative Audit Logging Procedure (Derives actor from auth.uid() securely)
+CREATE OR REPLACE FUNCTION public.record_audit_log(
+    p_action TEXT,
+    p_entity_type TEXT,
+    p_entity_id TEXT,
+    p_details JSONB DEFAULT '{}'::jsonb,
+    p_ip_address TEXT DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_actor_id TEXT;
+    v_actor_name TEXT;
+    v_actor_role TEXT;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        v_actor_id := 'system-or-anon';
+        v_actor_name := 'Anonymous / System';
+        v_actor_role := 'anonymous';
+    ELSE
+        SELECT 
+            COALESCE(p.id, auth.uid()::text),
+            COALESCE(p.full_name, 'Authenticated User'),
+            COALESCE(p.role, 'buyer')
+        INTO v_actor_id, v_actor_name, v_actor_role
+        FROM profiles p
+        WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text
+        LIMIT 1;
+
+        IF v_actor_id IS NULL THEN
+            v_actor_id := auth.uid()::text;
+            v_actor_name := 'Authenticated User';
+            v_actor_role := 'buyer';
+        END IF;
+    END IF;
+
+    INSERT INTO audit_logs (
+        id,
+        actor_id,
+        actor_name,
+        actor_role,
+        action,
+        entity_type,
+        entity_id,
+        details,
+        ip_address,
+        created_at
+    ) VALUES (
+        'log-' || extract(epoch from now())::bigint || '-' || floor(random() * 1000)::text,
+        v_actor_id,
+        v_actor_name,
+        v_actor_role,
+        p_action,
+        p_entity_type,
+        p_entity_id,
+        p_details,
+        p_ip_address,
+        timezone('utc', now())
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.record_audit_log FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_audit_log TO anon, authenticated;
+
 -- Drop obsolete open access policies
 DO $$
 BEGIN
@@ -535,6 +706,7 @@ BEGIN
     DROP POLICY IF EXISTS "Admin update site visits" ON site_visits;
     DROP POLICY IF EXISTS "Admin delete site visits" ON site_visits;
     DROP POLICY IF EXISTS "Public read active profiles" ON profiles;
+    DROP POLICY IF EXISTS "Private profiles read access" ON profiles;
     DROP POLICY IF EXISTS "Authenticated create profile" ON profiles;
     DROP POLICY IF EXISTS "Self or admin update profile" ON profiles;
     DROP POLICY IF EXISTS "Admin delete profile" ON profiles;
@@ -560,6 +732,7 @@ BEGIN
     DROP POLICY IF EXISTS "Admin delete gps evidence" ON field_gps_evidence;
     DROP POLICY IF EXISTS "Admin read audit_logs" ON audit_logs;
     DROP POLICY IF EXISTS "Authenticated insert audit_logs" ON audit_logs;
+    DROP POLICY IF EXISTS "Admin insert audit_logs" ON audit_logs;
 EXCEPTION
     WHEN undefined_object THEN NULL;
 END $$;
@@ -584,21 +757,28 @@ CREATE POLICY "Public read offer_incentives" ON offer_incentives FOR SELECT TO a
 CREATE POLICY "Admin write offer_incentives" ON offer_incentives FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 CREATE POLICY "Read approved reviews" ON reviews FOR SELECT TO anon, authenticated USING (status = 'approved' OR public.is_admin() OR author_id = auth.uid()::text);
-CREATE POLICY "Public insert reviews" ON reviews FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Public insert reviews" ON reviews FOR INSERT TO anon, authenticated WITH CHECK (status = 'pending' AND (is_verified = FALSE OR is_verified IS NULL));
 CREATE POLICY "Admin or author update reviews" ON reviews FOR UPDATE TO authenticated USING (public.is_admin() OR author_id = auth.uid()::text);
 CREATE POLICY "Admin delete reviews" ON reviews FOR DELETE TO authenticated USING (public.is_admin());
 
-CREATE POLICY "Public insert enquiries" ON client_enquiries FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Public insert enquiries" ON client_enquiries FOR INSERT TO anon, authenticated WITH CHECK (status = 'new' AND (assigned_member_id IS NULL OR assigned_member_id = ''));
 CREATE POLICY "Admin or assigned read enquiries" ON client_enquiries FOR SELECT TO authenticated USING (public.is_admin() OR assigned_member_id = auth.uid()::text);
 CREATE POLICY "Admin update enquiries" ON client_enquiries FOR UPDATE TO authenticated USING (public.is_admin());
 CREATE POLICY "Admin delete enquiries" ON client_enquiries FOR DELETE TO authenticated USING (public.is_admin());
 
-CREATE POLICY "Public insert site visits" ON site_visits FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Public insert site visits" ON site_visits FOR INSERT TO anon, authenticated WITH CHECK (status = 'requested' AND (assigned_staff_name IS NULL OR assigned_staff_name = ''));
 CREATE POLICY "Buyer or admin read site visits" ON site_visits FOR SELECT TO authenticated USING (public.is_admin() OR buyer_id = auth.uid()::text);
 CREATE POLICY "Admin update site visits" ON site_visits FOR UPDATE TO authenticated USING (public.is_admin());
 CREATE POLICY "Admin delete site visits" ON site_visits FOR DELETE TO authenticated USING (public.is_admin());
 
-CREATE POLICY "Public read active profiles" ON profiles FOR SELECT TO anon, authenticated USING (is_active = TRUE OR public.is_admin());
+-- Private profiles are restricted to Admins, self, downline team, and direct sponsor (Anonymous has zero read access to private profiles; public queries public_team_directory view)
+CREATE POLICY "Private profiles read access" ON profiles FOR SELECT TO authenticated USING (
+    public.is_admin() 
+    OR auth_user_id = auth.uid() 
+    OR id = auth.uid()::text
+    OR sponsor_id = (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) LIMIT 1)
+    OR member_id = (SELECT p.sponsor_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) LIMIT 1)
+);
 CREATE POLICY "Authenticated create profile" ON profiles FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR ((auth_user_id = auth.uid() OR id = auth.uid()::text) AND role = 'buyer'));
 CREATE POLICY "Self or admin update profile" ON profiles FOR UPDATE TO authenticated USING (public.is_admin() OR auth_user_id = auth.uid() OR id = auth.uid()::text) WITH CHECK (public.is_admin() OR ((auth_user_id = auth.uid() OR id = auth.uid()::text) AND role = (SELECT p2.role FROM profiles p2 WHERE p2.auth_user_id = auth.uid() OR p2.id = auth.uid()::text LIMIT 1)));
 CREATE POLICY "Admin delete profile" ON profiles FOR DELETE TO authenticated USING (public.is_admin());
@@ -610,7 +790,7 @@ CREATE POLICY "Admin delete bookings" ON bookings FOR DELETE TO authenticated US
 
 CREATE POLICY "Payer or admin read payments" ON payment_records FOR SELECT TO authenticated USING (public.is_admin() OR payer_id = auth.uid()::text OR booking_id IN (SELECT b.id FROM bookings b WHERE b.buyer_id = auth.uid()::text));
 CREATE POLICY "Payer create payment" ON payment_records FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR payer_id = auth.uid()::text);
-CREATE POLICY "Admin update payments" ON payment_records FOR UPDATE TO authenticated USING (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text);
+CREATE POLICY "Admin update payments" ON payment_records FOR UPDATE TO authenticated USING (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text) WITH CHECK (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text);
 CREATE POLICY "Admin delete payments" ON payment_records FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Member or admin read targets" ON sales_targets FOR SELECT TO authenticated USING (public.is_admin() OR member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
@@ -630,7 +810,7 @@ CREATE POLICY "Admin update gps evidence" ON field_gps_evidence FOR UPDATE TO au
 CREATE POLICY "Admin delete gps evidence" ON field_gps_evidence FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Admin read audit_logs" ON audit_logs FOR SELECT TO authenticated USING (public.is_admin());
-CREATE POLICY "Authenticated insert audit_logs" ON audit_logs FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Admin insert audit_logs" ON audit_logs FOR INSERT TO authenticated WITH CHECK (public.is_admin());
 
 -- ==============================================================================
 -- SEED DATA INSERTION

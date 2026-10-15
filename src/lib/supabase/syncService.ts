@@ -614,6 +614,49 @@ export async function supabaseGetSession() {
   }
 }
 
+export function supabaseOnAuthStateChange(callback: (session: any) => void) {
+  if (!isSupabaseConfigured || !supabase) return () => {};
+  try {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      callback(session);
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  } catch {
+    return () => {};
+  }
+}
+
+export async function callCreatePlotBookingAtomic(params: {
+  plotId: string;
+  buyerId: string;
+  buyerName: string;
+  buyerPhone: string;
+  totalAmount: number;
+  sponsorId?: string;
+  houseModelId?: string;
+}): Promise<{ data: any; error: any }> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: null, error: new Error('Supabase database service is not configured') };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('create_plot_booking_atomic', {
+      p_plot_id: params.plotId,
+      p_buyer_id: params.buyerId,
+      p_buyer_name: params.buyerName,
+      p_buyer_phone: params.buyerPhone,
+      p_total_amount: params.totalAmount,
+      p_sponsor_id: params.sponsorId || null,
+      p_house_model_id: params.houseModelId || null,
+    });
+    return { data, error };
+  } catch (err) {
+    return { data: null, error: err };
+  }
+}
+
 // ==============================================================================
 // 8. FIELD GPS EVIDENCE SYNC
 // ==============================================================================
@@ -679,6 +722,9 @@ export async function saveGpsEvidenceToSupabase(evidence: any): Promise<boolean>
       road_access_width: evidence.roadAccessWidth,
       proposed_rate_per_sqft: evidence.proposedRatePerSqft,
       expected_price_inr: evidence.expectedPriceInr,
+      reviewed_by: evidence.reviewedBy,
+      reviewed_at: evidence.reviewedAt,
+      rejection_reason: evidence.rejectionReason,
     };
     const { error } = await supabase
       .from('field_gps_evidence')

@@ -94,8 +94,8 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     if (!loginPassword.trim()) {
       setLoginError(
         language === 'hi'
-          ? 'कृपया पासवर्ड दर्ज करें (सैंडबॉक्स डिफ़ॉल्ट: akgv@2026)'
-          : 'Please enter your password (Sandbox default: akgv@2026)'
+          ? 'कृपया पासवर्ड दर्ज करें।'
+          : 'Please enter your password.'
       );
       return;
     }
@@ -138,25 +138,35 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
       return;
     }
 
+    if (!regPassword || regPassword.trim().length < 6) {
+      setRegError(
+        language === 'hi'
+          ? 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।'
+          : 'Password must be at least 6 characters long.'
+      );
+      return;
+    }
+
     setRegLoading(true);
     try {
       const res = await registerWithCredentials({
         fullName: regName.trim(),
         email: regEmail.trim(),
         phone: regPhone.trim(),
-        password: regPassword.trim() || 'akgv@2026',
+        password: regPassword.trim(),
         role: regRole,
-        sponsorId: regSponsorCode.trim() || 'AKGV-3498',
+        sponsorId: regSponsorCode.trim() || undefined,
       });
       setRegLoading(false);
       if (res.success && res.profile) {
         setRegisteredMemberCode(res.profile.memberId || 'AKGV-NEW');
       } else {
-        setRegError(res.error || 'Registration failed. Please try again.');
+        setRegError(res.error || 'Registration failed with authentication service. Please verify your details.');
       }
-    } catch {
+    } catch (err: unknown) {
       setRegLoading(false);
-      setRegError('Registration error. Please try again.');
+      const msg = err instanceof Error ? err.message : 'Registration error. Please try again.';
+      setRegError(msg);
     }
   };
 
@@ -193,6 +203,10 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   };
 
   const handleQuickSandboxLogin = async (role: UserRole, identifier: string) => {
+    if (process.env.NODE_ENV === 'production') {
+      setLoginError('Sandbox quick login is disabled in production.');
+      return;
+    }
     setLoginIdentifier(identifier);
     setLoginPassword('akgv@2026');
     const res = await loginWithCredentials(identifier, 'akgv@2026');

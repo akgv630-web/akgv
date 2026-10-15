@@ -56,6 +56,8 @@ import {
   supabaseSignOut,
   supabaseResetPassword,
   supabaseGetSession,
+  supabaseOnAuthStateChange,
+  callCreatePlotBookingAtomic,
   fetchGpsEvidenceFromSupabase,
   saveGpsEvidenceToSupabase,
   fetchEnquiriesFromSupabase,
@@ -97,7 +99,7 @@ interface AppContextType {
   updatePlot: (plotId: string, patch: Partial<Plot>) => void;
   deletePlot: (plotId: string) => void;
   bookings: Booking[];
-  createBookingRequest: (plotId: string, buyerName: string, buyerPhone: string, houseModelId?: string) => Booking;
+  createBookingRequest: (plotId: string, buyerName: string, buyerPhone: string, houseModelId?: string) => Promise<Booking>;
   confirmBooking: (bookingId: string) => void;
   cancelBooking: (bookingId: string, reason: string) => void;
   payments: PaymentRecord[];
@@ -194,20 +196,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (Array.isArray(parsed) && parsed.length > 0) {
             loadedProfiles = parsed;
             setAllProfiles(parsed);
-          }
-        } catch {
-          // Ignore
-        }
-      }
-
-      // Check saved authentication session
-      const savedAuthUser = localStorage.getItem(`${STORAGE_KEY_PREFIX}auth_user`);
-      if (savedAuthUser) {
-        try {
-          const parsedUser = JSON.parse(savedAuthUser);
-          if (parsedUser && parsedUser.id) {
-            const found = loadedProfiles.find((p) => p.id === parsedUser.id) || parsedUser;
-            setCurrentUser(found);
           }
         } catch {
           // Ignore
@@ -313,17 +301,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setCmsContent(remoteCms);
         }
 
-        // Restore verified profile from Supabase Auth session if active
+        // Authoritative Session Check: Authenticate strictly with active Supabase session
         if (authSession && authSession.user) {
           const profilesList = remoteProfiles || allProfiles;
           const userEmail = authSession.user.email?.toLowerCase();
           const matched = profilesList.find(
             (p) => (userEmail && p.email.toLowerCase() === userEmail) || p.id === authSession.user.id
           );
-          if (matched) {
+          if (matched && matched.isActive) {
             setCurrentUser(matched);
             try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(matched)); } catch {}
+          } else if (matched && !matched.isActive) {
+            console.warn('[Supabase Auth] Account is deactivated or suspended.');
+            setCurrentUser(null);
+            try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
           }
+        } else {
+          // If no active auth session exists, unauthenticate and clear local storage
+          setCurrentUser(null);
+          try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
         }
       } catch (err) {
         console.warn('[Supabase Sync] Remote hydration notice:', err);
@@ -331,6 +327,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     syncWithSupabase();
+
+    const unsubscribeAuth = supabaseOnAuthStateChange((session) => {
+      if (!session || !session.user) {
+        setCurrentUser(null);
+        try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
+      } else {
+        const userEmail = session.user.email?.toLowerCase();
+        setAllProfiles((prev) => {
+          const matched = prev.find((p) => (userEmail && p.email.toLowerCase() === userEmail) || p.id === session.user.id);
+          if (matched && matched.isActive) {
+            setCurrentUser(matched);
+            try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(matched)); } catch {}
+          } else if (matched && !matched.isActive) {
+            setCurrentUser(null);
+            try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
+          }
+          return prev;
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+    };
   }, []);
 
   const setLanguage = (lang: Language) => {
@@ -438,11 +458,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     branchLocation?: string;
   }): Promise<{ success: boolean; error?: string; profile?: Profile }> => {
     // Security Enforcement: Public registrations are strictly forced to 'buyer' role
+    const isProduction = process.env.NODE_ENV === 'production';
     const assignedRole: UserRole = 'buyer';
 
     // 1. Attempt Supabase Auth Registration
     try {
-      await supabaseSignUp({
+      const res = await supabaseSignUp({
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
@@ -450,8 +471,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         role: assignedRole,
         sponsorId: data.sponsorId,
       });
-    } catch {
-      // Proceed with local profile creation
+
+      if (res?.error) {
+        if (isProduction || res.error.message !== 'Supabase is not configured') {
+          return { success: false, error: res.error.message || 'Registration failed on authentication provider.' };
+        }
+      }
+    } catch (err: unknown) {
+      if (isProduction) {
+        const msg = err instanceof Error ? err.message : 'Registration failed on authentication provider.';
+        return { success: false, error: msg };
+      }
     }
 
     // Validate sponsor if provided
@@ -816,12 +846,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void deletePlotFromSupabase(plotId);
   };
 
-  const createBookingRequest = (
+  const createBookingRequest = async (
     plotId: string,
     buyerName: string,
     buyerPhone: string,
     houseModelId?: string
-  ): Booking => {
+  ): Promise<Booking> => {
     const plot = plots.find((p) => p.id === plotId);
     if (!plot) throw new Error('Plot not found');
 
@@ -836,20 +866,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       throw new Error(`Plot ${plot.plotNumber} already has an active reservation (${existingActiveBooking.bookingNumber}).`);
     }
 
+    const buyerId = currentUser?.id || `buyer-${Date.now()}`;
+    const totalAmount = plot.basePriceInr || 1500000;
+
+    // Call atomic RPC if Supabase is connected
+    const rpcRes = await callCreatePlotBookingAtomic({
+      plotId,
+      buyerId,
+      buyerName,
+      buyerPhone,
+      totalAmount,
+      sponsorId: currentUser?.sponsorId,
+      houseModelId,
+    });
+
+    if (rpcRes.error) {
+      if (rpcRes.error.message !== 'Supabase database service is not configured') {
+        throw new Error(rpcRes.error.message || 'Plot booking failed via server RPC.');
+      }
+    } else if (rpcRes.data && !rpcRes.data.success) {
+      throw new Error(rpcRes.data.error || 'Plot booking failed.');
+    }
+
+    const bookingId = rpcRes.data?.booking_id || `bk-${Date.now()}`;
+    const bookingNumber = rpcRes.data?.booking_number || `BK-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const holdExpiresAt = rpcRes.data?.hold_expires_at || new Date(Date.now() + 72 * 3600 * 1000).toISOString();
+
     const newBooking: Booking = {
-      id: `bk-${Date.now()}`,
-      bookingNumber: `BK-2026-${Math.floor(100 + Math.random() * 900)}`,
+      id: bookingId,
+      bookingNumber,
       plotId,
       plotNumber: plot.plotNumber,
-      buyerId: currentUser?.id || `buyer-${Date.now()}`,
+      buyerId,
       buyerName,
       buyerPhone,
       sponsorId: currentUser?.sponsorId,
       status: 'pending',
       houseModelId,
-      totalAmountInr: plot.basePriceInr || 1500000,
+      totalAmountInr: totalAmount,
       paidAmountInr: 0,
-      holdExpiresAt: new Date(Date.now() + 72 * 3600 * 1000).toISOString(),
+      holdExpiresAt,
       createdAt: new Date().toISOString(),
     };
 
@@ -861,7 +917,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    void saveBookingToSupabase(newBooking);
     updatePlotStatus(plotId, 'hold_pending', 'Booking request initiated by buyer');
     return newBooking;
   };
@@ -1036,35 +1091,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const approveFieldGpsEvidence = (evidenceId: string, adminNotes?: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can approve field GPS evidence.');
+    }
+    let updatedEvidence: FieldGpsEvidence | null = null;
     setGpsEvidences((prev) =>
-      prev.map((e) =>
-        e.id === evidenceId
-          ? {
-              ...e,
-              status: 'approved' as const,
-              adminNotes: adminNotes || e.adminNotes,
-              reviewedBy: currentUser?.fullName || 'Director',
-              reviewedAt: new Date().toISOString(),
-            }
-          : e
-      )
+      prev.map((e) => {
+        if (e.id === evidenceId) {
+          updatedEvidence = {
+            ...e,
+            status: 'approved' as const,
+            adminNotes: adminNotes || e.adminNotes,
+            reviewedBy: currentUser?.fullName || 'Director',
+            reviewedAt: new Date().toISOString(),
+          };
+          return updatedEvidence;
+        }
+        return e;
+      })
     );
+    if (updatedEvidence) {
+      void saveGpsEvidenceToSupabase(updatedEvidence);
+    }
   };
 
   const rejectFieldGpsEvidence = (evidenceId: string, reason: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can reject field GPS evidence.');
+    }
+    let updatedEvidence: FieldGpsEvidence | null = null;
     setGpsEvidences((prev) =>
-      prev.map((e) =>
-        e.id === evidenceId
-          ? {
-              ...e,
-              status: 'rejected' as const,
-              rejectionReason: reason,
-              reviewedBy: currentUser?.fullName || 'Director',
-              reviewedAt: new Date().toISOString(),
-            }
-          : e
-      )
+      prev.map((e) => {
+        if (e.id === evidenceId) {
+          updatedEvidence = {
+            ...e,
+            status: 'rejected' as const,
+            rejectionReason: reason,
+            reviewedBy: currentUser?.fullName || 'Director',
+            reviewedAt: new Date().toISOString(),
+          };
+          return updatedEvidence;
+        }
+        return e;
+      })
     );
+    if (updatedEvidence) {
+      void saveGpsEvidenceToSupabase(updatedEvidence);
+    }
   };
 
   const createSupportTicket = (
