@@ -48,7 +48,7 @@ BEGIN
             v_candidate_auth_id := p_candidate_id::uuid;
         EXCEPTION WHEN OTHERS THEN
             v_candidate_auth_id := NULL;
-        END IF;
+        END;
     END IF;
 
     -- Find matching active sponsor in profiles

@@ -904,7 +904,7 @@ BEGIN
             v_candidate_auth_id := p_candidate_id::uuid;
         EXCEPTION WHEN OTHERS THEN
             v_candidate_auth_id := NULL;
-        END IF;
+        END;
     END IF;
 
     SELECT id, auth_user_id, member_id, full_name, role, is_active
