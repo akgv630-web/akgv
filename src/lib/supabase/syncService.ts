@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './client';
 import type { Session } from '@supabase/supabase-js';
+import { DEMO_PROFILES } from '@/lib/store';
 import {
   Booking,
   ClientEnquiry,
@@ -1158,6 +1159,160 @@ export async function saveOfferToSupabase(offer: OfferIncentive): Promise<boolea
   } catch {
     return false;
   }
+}
+
+// ==============================================================================
+// 17. AUTHORITATIVE SPONSOR VALIDATION & RESOLUTION
+// ==============================================================================
+
+export interface SponsorValidationResult {
+  valid: boolean;
+  canonicalSponsorId?: string;
+  sponsorProfileId?: string;
+  sponsorMemberId?: string;
+  sponsorName?: string;
+  sponsorRole?: string;
+  error?: string;
+}
+
+export async function resolveAndValidateSponsor(
+  identifier: string,
+  candidateUserId?: string
+): Promise<SponsorValidationResult> {
+  const trimmed = identifier.trim();
+  if (!trimmed) {
+    return { valid: false, error: 'Sponsor identifier cannot be empty.' };
+  }
+
+  // Reject malformed identifiers
+  if (trimmed.length < 3 || trimmed.length > 100) {
+    return { valid: false, error: 'Invalid sponsor code format.' };
+  }
+
+  // Self-referral check if candidateUserId provided
+  if (candidateUserId && trimmed.toLowerCase() === candidateUserId.toLowerCase()) {
+    return { valid: false, error: 'Self-referral is strictly prohibited.' };
+  }
+
+  // 1. Authoritative check via Supabase RPC or Direct DB Query
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // First attempt RPC if installed in database
+      const { data, error } = await supabase.rpc('resolve_and_validate_sponsor', {
+        p_identifier: trimmed,
+        p_candidate_id: candidateUserId || null,
+      });
+
+      if (!error && data && typeof data === 'object') {
+        const res = data as {
+          valid: boolean;
+          canonical_sponsor_id?: string;
+          sponsor_profile_id?: string;
+          sponsor_member_id?: string;
+          sponsor_name?: string;
+          sponsor_role?: string;
+          error?: string;
+        };
+        if (res.valid) {
+          return {
+            valid: true,
+            canonicalSponsorId: res.canonical_sponsor_id,
+            sponsorProfileId: res.sponsor_profile_id,
+            sponsorMemberId: res.sponsor_member_id,
+            sponsorName: res.sponsor_name,
+            sponsorRole: res.sponsor_role,
+          };
+        } else {
+          return { valid: false, error: res.error || 'Sponsor verification failed.' };
+        }
+      }
+    } catch {
+      // Fall through to direct query fallback
+    }
+
+    try {
+      // Authoritative database fallback query
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, member_id, full_name, role, is_active, auth_user_id')
+        .or(`member_id.ilike.${trimmed},id.eq.${trimmed}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) {
+        return { valid: false, error: 'Sponsor identifier does not match any registered member.' };
+      }
+
+      if (!data.is_active) {
+        return { valid: false, error: 'The specified sponsor account is suspended or inactive.' };
+      }
+
+      const eligibleRoles = ['super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member'];
+      if (!eligibleRoles.includes(data.role)) {
+        return { valid: false, error: 'The specified account is not authorized to sponsor members or clients.' };
+      }
+
+      if (
+        candidateUserId &&
+        (data.id === candidateUserId ||
+          data.auth_user_id === candidateUserId ||
+          data.member_id?.toLowerCase() === candidateUserId.toLowerCase())
+      ) {
+        return { valid: false, error: 'Self-referral is strictly prohibited.' };
+      }
+
+      return {
+        valid: true,
+        canonicalSponsorId: data.member_id || data.id,
+        sponsorProfileId: data.id,
+        sponsorMemberId: data.member_id || undefined,
+        sponsorName: data.full_name,
+        sponsorRole: data.role,
+      };
+    } catch (err) {
+      console.warn('[Supabase Sync] Exception during sponsor validation:', err);
+      return { valid: false, error: 'Unable to verify sponsor against the database. Please try again.' };
+    }
+  }
+
+  // 2. Offline / Local Sandbox Fallback using DEMO_PROFILES directory
+  const eligibleRoles = ['super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member'];
+  const normalized = trimmed.toUpperCase().replace(/-/g, '');
+
+  const match = DEMO_PROFILES.find((p) => {
+    const memClean = (p.memberId || '').toUpperCase().replace(/-/g, '');
+    const idClean = p.id.toUpperCase();
+    return memClean === normalized || idClean === trimmed.toUpperCase();
+  });
+
+  if (!match) {
+    return { valid: false, error: 'Sponsor identifier not found in company directory.' };
+  }
+
+  if (!match.isActive) {
+    return { valid: false, error: 'The specified sponsor account is suspended or inactive.' };
+  }
+
+  if (!eligibleRoles.includes(match.role)) {
+    return { valid: false, error: 'The specified account is not authorized to sponsor members or clients.' };
+  }
+
+  if (
+    candidateUserId &&
+    (match.id.toLowerCase() === candidateUserId.toLowerCase() ||
+      (match.memberId && match.memberId.toLowerCase() === candidateUserId.toLowerCase()))
+  ) {
+    return { valid: false, error: 'Self-referral is strictly prohibited.' };
+  }
+
+  return {
+    valid: true,
+    canonicalSponsorId: match.memberId || match.id,
+    sponsorProfileId: match.id,
+    sponsorMemberId: match.memberId,
+    sponsorName: match.fullName,
+    sponsorRole: match.role,
+  };
 }
 
 

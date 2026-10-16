@@ -868,6 +868,106 @@ WHERE is_active = TRUE AND role IN ('senior_member', 'junior_member', 'channel_p
 
 GRANT SELECT ON public.public_team_directory TO anon, authenticated;
 
+-- Authoritative Sponsor Validation & Resolution RPC
+CREATE OR REPLACE FUNCTION public.resolve_and_validate_sponsor(
+    p_identifier TEXT,
+    p_candidate_id TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_clean_id TEXT;
+    v_sponsor RECORD;
+    v_candidate_auth_id UUID;
+BEGIN
+    IF p_identifier IS NULL OR trim(p_identifier) = '' THEN
+        RETURN jsonb_build_object(
+            'valid', false,
+            'error', 'Sponsor identifier cannot be empty.'
+        );
+    END IF;
+
+    v_clean_id := trim(p_identifier);
+
+    IF length(v_clean_id) < 3 OR length(v_clean_id) > 100 THEN
+        RETURN jsonb_build_object(
+            'valid', false,
+            'error', 'Invalid sponsor identifier format.'
+        );
+    END IF;
+
+    IF p_candidate_id IS NOT NULL AND trim(p_candidate_id) <> '' THEN
+        BEGIN
+            v_candidate_auth_id := p_candidate_id::uuid;
+        EXCEPTION WHEN OTHERS THEN
+            v_candidate_auth_id := NULL;
+        END IF;
+    END IF;
+
+    SELECT id, auth_user_id, member_id, full_name, role, is_active
+    INTO v_sponsor
+    FROM public.profiles
+    WHERE (
+        LOWER(member_id) = LOWER(v_clean_id)
+        OR id = v_clean_id
+        OR (auth_user_id::text = v_clean_id)
+        OR (
+            member_id IS NOT NULL
+            AND REPLACE(LOWER(member_id), '-', '') = REPLACE(LOWER(v_clean_id), '-', '')
+        )
+    )
+    LIMIT 1;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object(
+            'valid', false,
+            'error', 'Sponsor identifier does not match any registered member.'
+        );
+    END IF;
+
+    IF v_sponsor.is_active = FALSE THEN
+        RETURN jsonb_build_object(
+            'valid', false,
+            'error', 'The specified sponsor account is suspended or inactive.'
+        );
+    END IF;
+
+    IF v_sponsor.role NOT IN ('super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member') THEN
+        RETURN jsonb_build_object(
+            'valid', false,
+            'error', 'The specified account is not authorized to sponsor members or clients.'
+        );
+    END IF;
+
+    IF p_candidate_id IS NOT NULL AND trim(p_candidate_id) <> '' THEN
+        IF v_sponsor.id = trim(p_candidate_id)
+           OR (v_candidate_auth_id IS NOT NULL AND v_sponsor.auth_user_id = v_candidate_auth_id)
+           OR (v_sponsor.member_id IS NOT NULL AND LOWER(v_sponsor.member_id) = LOWER(trim(p_candidate_id)))
+        THEN
+            RETURN jsonb_build_object(
+                'valid', false,
+                'error', 'Self-referral is strictly prohibited.'
+            );
+        END IF;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'valid', true,
+        'canonical_sponsor_id', COALESCE(v_sponsor.member_id, v_sponsor.id),
+        'sponsor_profile_id', v_sponsor.id,
+        'sponsor_member_id', v_sponsor.member_id,
+        'sponsor_name', v_sponsor.full_name,
+        'sponsor_role', v_sponsor.role
+    );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT) TO anon, authenticated, service_role;
+
 -- Trigger to enforce profile update integrity (Prevents non-admin role escalation and tampering with sensitive metrics)
 CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity()
 RETURNS TRIGGER 
@@ -878,6 +978,7 @@ AS $$
 DECLARE
     v_new jsonb;
     v_old jsonb;
+    v_sponsor_validation jsonb;
 BEGIN
     -- Ensure trigger is strictly attached to profiles table
     IF TG_TABLE_NAME <> 'profiles' THEN
@@ -886,11 +987,57 @@ BEGIN
 
     -- Administrators retain full management authority
     IF public.is_admin() THEN
-        NEW.updated_at := timezone('utc', now());
+        IF TG_OP = 'UPDATE' THEN
+            NEW.updated_at := timezone('utc', now());
+        END IF;
         RETURN NEW;
     END IF;
 
     v_new := to_jsonb(NEW);
+
+    -- =========================================================================
+    -- INSERT VALIDATION (Blocks Direct API Bypasses)
+    -- =========================================================================
+    IF TG_OP = 'INSERT' THEN
+        -- Non-admins can strictly only register as 'buyer'
+        IF COALESCE(NEW.role, 'buyer') <> 'buyer' THEN
+            RAISE EXCEPTION 'Unauthorized: Public registrations are strictly limited to buyer role';
+        END IF;
+
+        -- Non-admins cannot assign member_id (MLM associate codes are reserved for staff)
+        IF NEW.member_id IS NOT NULL AND trim(NEW.member_id) <> '' THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign member_id';
+        END IF;
+
+        -- Non-admins cannot self-certify KYC status
+        IF COALESCE(NEW.kyc_status, 'pending') NOT IN ('pending', 'submitted') THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot set verified KYC status on registration';
+        END IF;
+
+        -- Non-admins cannot grant themselves permissions
+        IF NEW.permissions IS NOT NULL AND NEW.permissions <> '{}'::jsonb AND NEW.permissions <> '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": true, "canSubmitFieldReports": true, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign elevated permissions';
+        END IF;
+
+        NEW.level := 1;
+        NEW.total_business_volume_inr := 0;
+        NEW.plots_closed_count := 0;
+
+        -- Validate sponsor_id if provided
+        IF NEW.sponsor_id IS NOT NULL AND trim(NEW.sponsor_id) <> '' THEN
+            v_sponsor_validation := public.resolve_and_validate_sponsor(NEW.sponsor_id, NEW.id);
+            IF (v_sponsor_validation->>'valid')::boolean IS NOT TRUE THEN
+                RAISE EXCEPTION 'Invalid sponsor: %', (v_sponsor_validation->>'error');
+            END IF;
+            NEW.sponsor_id := (v_sponsor_validation->>'canonical_sponsor_id');
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+    -- =========================================================================
+    -- UPDATE VALIDATION
+    -- =========================================================================
     v_old := to_jsonb(OLD);
 
     -- Do not silently ignore missing security-critical columns on profiles
@@ -939,7 +1086,7 @@ BEGIN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter plots_closed_count';
     END IF;
 
-    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') THEN
+    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') AND (v_old->>'auth_user_id') IS NOT NULL THEN
         RAISE EXCEPTION 'Unauthorized: Cannot alter auth_user_id binding';
     END IF;
 
@@ -954,7 +1101,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_enforce_profile_update_integrity ON public.profiles;
 CREATE TRIGGER trg_enforce_profile_update_integrity
-BEFORE UPDATE ON public.profiles
+BEFORE INSERT OR UPDATE ON public.profiles
 FOR EACH ROW
 EXECUTE FUNCTION public.enforce_profile_update_integrity();
 

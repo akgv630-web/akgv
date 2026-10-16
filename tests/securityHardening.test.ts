@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { DEMO_PROFILES } from '@/lib/store';
 import { COMMISSION_LEVELS_GROUND_TRUTH } from '@/data/groundTruth';
 import { UserRole, Profile, Plot, Booking, PaymentRecord } from '@/types';
+import { resolveAndValidateSponsor } from '@/lib/supabase/syncService';
 
 describe('P0 Security Hardening & Remediation Verification Suite', () => {
   // 1. Authentication Invariants
@@ -722,8 +722,10 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(contextCode).toContain('setCurrentUser(newProfile);');
     });
 
-    it('resolves canonical sponsor ID/member_id from verified profiles', () => {
-      expect(contextCode).toContain('verifiedSponsorId = matchedSponsor.memberId || matchedSponsor.id;');
+    it('authoritatively validates sponsor code against database and rejects invalid sponsors during signup', () => {
+      expect(contextCode).toContain('const sponsorResult = await resolveAndValidateSponsor(sponsorTrimmed);');
+      expect(contextCode).toContain('verifiedSponsorId = sponsorResult.canonicalSponsorId;');
+      expect(contextCode).toContain('if (!sponsorResult.valid) {');
     });
 
     it('enforces self-healing profile reconciliation upon authenticated login with missing database record', () => {
@@ -743,6 +745,84 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(authModalCode).toContain('Buyer Account Active:');
       expect(authModalCode).toContain('Create Buyer Account');
       expect(authModalCode).not.toContain('Please collect your ₹999 physical joining kit');
+    });
+  });
+
+  // 18. Authoritative Sponsor Resolution & Database Integrity Trigger Hardening
+  describe('Authoritative Sponsor Resolution & Database Integrity Trigger Hardening', () => {
+    it('resolves valid registered sponsor by member_id or internal profile ID', async () => {
+      const resByMemberId = await resolveAndValidateSponsor('AKGV-3498');
+      expect(resByMemberId.valid).toBe(true);
+      expect(resByMemberId.canonicalSponsorId).toBe('AKGV-3498');
+      expect(resByMemberId.sponsorName).toBe('Vikram Singh');
+      expect(resByMemberId.sponsorRole).toBe('senior_member');
+
+      const resById = await resolveAndValidateSponsor('usr-sponsor-01');
+      expect(resById.valid).toBe(true);
+      expect(resById.canonicalSponsorId).toBe('AKGV-3498');
+    });
+
+    it('rejects nonexistent, invalid, or fake sponsor codes without silent fallback', async () => {
+      const fakeSponsor = await resolveAndValidateSponsor('AKGV-FAKE999');
+      expect(fakeSponsor.valid).toBe(false);
+      expect(fakeSponsor.error).toBeDefined();
+
+      const emptySponsor = await resolveAndValidateSponsor('');
+      expect(emptySponsor.valid).toBe(false);
+
+      const invalidCode = await resolveAndValidateSponsor('INVALID_CODE');
+      expect(invalidCode.valid).toBe(false);
+    });
+
+    it('prohibits self-referral when candidate ID matches the sponsor', async () => {
+      const selfReferralByMemberId = await resolveAndValidateSponsor('AKGV-3498', 'usr-sponsor-01');
+      expect(selfReferralByMemberId.valid).toBe(false);
+      expect(selfReferralByMemberId.error).toContain('Self-referral is strictly prohibited');
+
+      const selfReferralById = await resolveAndValidateSponsor('usr-sponsor-01', 'usr-sponsor-01');
+      expect(selfReferralById.valid).toBe(false);
+      expect(selfReferralById.error).toContain('Self-referral is strictly prohibited');
+    });
+
+    it('rejects buyer accounts as sponsors', async () => {
+      const buyerAsSponsor = await resolveAndValidateSponsor('usr-buyer-01');
+      expect(buyerAsSponsor.valid).toBe(false);
+      expect(buyerAsSponsor.error).toContain('not authorized to sponsor');
+    });
+
+    it('protects login-time reconciliation from forged metadata roles, permissions, and invalid sponsors', () => {
+      const appContextPath = path.join(__dirname, '../src/context/AppContext.tsx');
+      const contextCode = fs.readFileSync(appContextPath, 'utf8');
+
+      // Reconciliation must never trust user_metadata for role or permissions
+      expect(contextCode).toContain("role: 'buyer', // Reconciled public users are strictly assigned buyer role");
+      expect(contextCode).toContain('permissions: undefined, // Client metadata cannot grant permissions');
+      // Must validate sponsor_id before attaching to reconciled profile
+      expect(contextCode).toContain('const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id);');
+      expect(contextCode).toContain('verifiedSponsorId = sponsorCheck.canonicalSponsorId;');
+    });
+
+    it('verifies SQL migration and schema contain resolve_and_validate_sponsor and BEFORE INSERT OR UPDATE trigger', () => {
+      const migrationPath = path.join(__dirname, '../supabase/migrations/20261016_zzz_sponsor_integrity_hardening.sql');
+      const schemaPath = path.join(__dirname, '../supabase/schema.sql');
+
+      expect(fs.existsSync(migrationPath)).toBe(true);
+      const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      // Check migration SQL content
+      expect(migrationSql).toContain('CREATE OR REPLACE FUNCTION public.resolve_and_validate_sponsor');
+      expect(migrationSql).toContain('SECURITY DEFINER');
+      expect(migrationSql).toContain('SET search_path = public, pg_temp');
+      expect(migrationSql).toContain('v_sponsor.role NOT IN');
+      expect(migrationSql).toContain('Self-referral is strictly prohibited');
+      expect(migrationSql).toContain('CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity');
+      expect(migrationSql).toContain('BEFORE INSERT OR UPDATE ON public.profiles');
+      expect(migrationSql).toContain('trg_enforce_profile_update_integrity');
+
+      // Check schema.sql content
+      expect(schemaSql).toContain('CREATE OR REPLACE FUNCTION public.resolve_and_validate_sponsor');
+      expect(schemaSql).toContain('BEFORE INSERT OR UPDATE ON public.profiles');
     });
   });
 });

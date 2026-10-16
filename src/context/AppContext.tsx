@@ -70,7 +70,8 @@ import {
   saveTaskToSupabase,
   fetchCmsContentFromSupabase,
   saveCmsContentToSupabase,
-  fetchOffersFromSupabase
+  fetchOffersFromSupabase,
+  resolveAndValidateSponsor
 } from '@/lib/supabase/syncService';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 
@@ -366,7 +367,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             authUser.email?.split('@')[0] ||
             'Registered User';
           const fallbackPhone = (userMeta.phone as string) || '';
-          const fallbackSponsor = (userMeta.sponsor_id as string) || undefined;
+
+          // Authoritative sponsor validation: Never trust user_metadata sponsor_id without verification
+          let verifiedSponsorId: string | undefined = undefined;
+          const candidateSponsor = typeof userMeta.sponsor_id === 'string' ? userMeta.sponsor_id.trim() : undefined;
+          if (candidateSponsor) {
+            const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id);
+            if (sponsorCheck.valid) {
+              verifiedSponsorId = sponsorCheck.canonicalSponsorId;
+            } else {
+              console.warn('[Security Audit] Untrusted sponsor_id in user_metadata rejected during profile reconciliation:', candidateSponsor, sponsorCheck.error);
+            }
+          }
 
           const reconciledProfile: Profile = {
             id: authUser.id,
@@ -375,9 +387,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             fullName: fallbackName,
             phone: fallbackPhone,
             role: 'buyer', // Reconciled public users are strictly assigned buyer role
-            sponsorId: fallbackSponsor,
+            sponsorId: verifiedSponsorId,
             kycStatus: 'pending',
             isActive: true,
+            permissions: undefined, // Client metadata cannot grant permissions
             createdAt: authUser.created_at || new Date().toISOString(),
           };
 
@@ -498,18 +511,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    // Validate sponsor if provided - resolve canonical internal ID / memberId
+    // Authoritative sponsor validation against database - resolve canonical internal ID / memberId
     const sponsorTrimmed = data.sponsorId?.trim();
     let verifiedSponsorId: string | undefined = undefined;
     if (sponsorTrimmed) {
-      const matchedSponsor = allProfiles.find(
-        (p) =>
-          (p.memberId && p.memberId.toLowerCase() === sponsorTrimmed.toLowerCase()) ||
-          p.id.toLowerCase() === sponsorTrimmed.toLowerCase()
-      );
-      if (matchedSponsor) {
-        verifiedSponsorId = matchedSponsor.memberId || matchedSponsor.id;
+      const sponsorResult = await resolveAndValidateSponsor(sponsorTrimmed);
+      if (!sponsorResult.valid) {
+        return {
+          success: false,
+          error: sponsorResult.error || 'Invalid sponsor code. The specified sponsor ID does not exist or is inactive.',
+        };
       }
+      verifiedSponsorId = sponsorResult.canonicalSponsorId;
     }
 
     // 1. Attempt Supabase Auth Registration

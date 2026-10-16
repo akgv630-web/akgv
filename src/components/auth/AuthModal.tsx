@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertCircle,
   ArrowRight,
@@ -18,6 +18,7 @@ import {
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { UserRole } from '@/types';
+import { resolveAndValidateSponsor, SponsorValidationResult } from '@/lib/supabase/syncService';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -27,7 +28,6 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalProps) {
   const {
-    allProfiles,
     loginWithCredentials,
     registerWithCredentials,
     resetPasswordRequest,
@@ -73,17 +73,50 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     setRegisteredEmailSuccess(null);
   };
 
-  if (!isOpen) return null;
+  const [sponsorResult, setSponsorResult] = useState<SponsorValidationResult>({
+    valid: true,
+    canonicalSponsorId: 'AKGV-3498',
+    sponsorMemberId: 'AKGV-3498',
+    sponsorName: 'Vikram Singh',
+    sponsorRole: 'senior_member',
+  });
+  const [sponsorChecking, setSponsorChecking] = useState(false);
 
-  // Real-time sponsor verification
-  const normalizedSponsor = regSponsorCode.trim().toUpperCase();
-  const matchedSponsor = allProfiles.find(
-    (p) =>
-      p.memberId?.toUpperCase() === normalizedSponsor ||
-      p.id.toUpperCase() === normalizedSponsor ||
-      (normalizedSponsor === 'AKGV3498' && p.memberId === 'AKGV-3498') ||
-      (normalizedSponsor.startsWith('AKGV') && normalizedSponsor.length >= 6)
-  );
+  useEffect(() => {
+    const trimmed = regSponsorCode.trim();
+    let active = true;
+
+    const timer = setTimeout(async () => {
+      if (!trimmed) {
+        if (active) {
+          setSponsorResult({ valid: false, error: 'Sponsor ID / referral code is required.' });
+          setSponsorChecking(false);
+        }
+        return;
+      }
+
+      if (active) setSponsorChecking(true);
+      try {
+        const res = await resolveAndValidateSponsor(trimmed);
+        if (active) {
+          setSponsorResult(res);
+          setSponsorChecking(false);
+        }
+      } catch {
+        if (active) {
+          setSponsorResult({ valid: false, error: 'Unable to verify sponsor code.' });
+          setSponsorChecking(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [regSponsorCode]);
+
+  if (!isOpen) return null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +185,25 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
       return;
     }
 
+    if (sponsorChecking) {
+      setRegError(
+        language === 'hi'
+          ? 'स्पॉन्सर सत्यापन प्रगति पर है, कृपया एक क्षण प्रतीक्षा करें...'
+          : 'Sponsor verification is in progress, please wait a moment...'
+      );
+      return;
+    }
+
+    if (!sponsorResult.valid) {
+      setRegError(
+        sponsorResult.error ||
+          (language === 'hi'
+            ? 'अमान्य स्पॉन्सर कोड। कृपया सक्रिय सदस्य या सलाहकार आईडी दर्ज करें।'
+            : 'Invalid or inactive sponsor ID. Please verify the code.')
+      );
+      return;
+    }
+
     setRegLoading(true);
     try {
       const res = await registerWithCredentials({
@@ -160,7 +212,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
         phone: regPhone.trim(),
         password: regPassword.trim(),
         role: regRole,
-        sponsorId: regSponsorCode.trim() || undefined,
+        sponsorId: sponsorResult.canonicalSponsorId || regSponsorCode.trim() || undefined,
       });
       setRegLoading(false);
       if (res.success) {
@@ -479,9 +531,9 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                     <span className="text-[11px] text-emerald-300 block">
                       {language === 'hi' ? 'पोर्टल भूमिका: प्लॉट खरीदार / निवेशक' : 'Portal Role: Plot Buyer / Investor'}
                     </span>
-                    {matchedSponsor && (
+                    {sponsorResult.valid && (
                       <span className="text-[11px] text-gray-400 block">
-                        Assigned Branch Advisor: {matchedSponsor.fullName} ({matchedSponsor.memberId || 'AKGV-3498'})
+                        Assigned Branch Advisor: {sponsorResult.sponsorName || 'Authorized Associate'} ({sponsorResult.sponsorMemberId || sponsorResult.canonicalSponsorId || 'AKGV-3498'})
                       </span>
                     )}
                   </div>
@@ -515,12 +567,22 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                       onChange={(e) => setRegSponsorCode(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-xs font-mono font-bold text-white uppercase placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
                     />
-                    {matchedSponsor ? (
+                    {sponsorChecking ? (
+                      <div className="flex items-center gap-1.5 text-[11px] text-[#DFC382] font-medium">
+                        <RefreshCw className="h-3 w-3 shrink-0 animate-spin" />
+                        <span>Verifying sponsor in official registry...</span>
+                      </div>
+                    ) : sponsorResult.valid ? (
                       <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
                         <CheckCircle2 className="h-3 w-3 shrink-0" />
                         <span>
-                          Verified: {matchedSponsor.fullName} ({matchedSponsor.memberId || 'Active Associate'})
+                          Verified: {sponsorResult.sponsorName || 'Authorized Associate'} ({sponsorResult.sponsorMemberId || sponsorResult.canonicalSponsorId || 'Active Associate'})
                         </span>
+                      </div>
+                    ) : regSponsorCode.trim() ? (
+                      <div className="flex items-center gap-1.5 text-[11px] text-rose-400 font-medium">
+                        <AlertCircle className="h-3 w-3 shrink-0" />
+                        <span>{sponsorResult.error || 'Invalid sponsor ID. Must be an active associate or advisor.'}</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 text-[11px] text-amber-300">
