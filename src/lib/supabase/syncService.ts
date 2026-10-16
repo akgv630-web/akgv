@@ -436,6 +436,7 @@ export async function fetchProfilesFromSupabase(): Promise<Profile[] | null> {
 
     return data.map((row) => ({
       id: row.id,
+      authUserId: row.auth_user_id || undefined,
       email: row.email,
       fullName: row.full_name,
       phone: row.phone,
@@ -453,6 +454,7 @@ export async function fetchProfilesFromSupabase(): Promise<Profile[] | null> {
       totalBusinessVolumeInr: row.total_business_volume_inr ? Number(row.total_business_volume_inr) : undefined,
       plotsClosedCount: row.plots_closed_count ? Number(row.plots_closed_count) : undefined,
       joinedDate: row.joined_date || undefined,
+      permissions: row.permissions || undefined,
       createdAt: row.created_at
     }));
   } catch (err) {
@@ -461,32 +463,55 @@ export async function fetchProfilesFromSupabase(): Promise<Profile[] | null> {
   }
 }
 
-export async function saveProfileToSupabase(profile: Profile): Promise<boolean> {
-  if (!isSupabaseConfigured || !supabase) return false;
+export interface SaveProfileResult {
+  success: boolean;
+  error?: string;
+  profile?: Profile;
+}
+
+export async function saveProfileToSupabase(
+  profile: Profile,
+  authUserIdOverride?: string
+): Promise<SaveProfileResult> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Supabase is not configured' };
+  }
 
   try {
-    const payload = {
+    const effectiveAuthUserId =
+      authUserIdOverride ||
+      profile.authUserId ||
+      (profile.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ? profile.id : null);
+
+    const payload: Record<string, unknown> = {
       id: profile.id,
       email: profile.email,
       full_name: profile.fullName,
       phone: profile.phone,
       role: profile.role,
-      member_id: profile.memberId,
-      sponsor_id: profile.sponsorId,
+      member_id: profile.memberId || null,
+      sponsor_id: profile.sponsorId || null,
       kyc_status: profile.kycStatus,
       is_active: profile.isActive,
-      avatar_url: profile.avatarUrl,
-      city: profile.city,
-      branch_location: profile.branchLocation,
-      address: profile.address,
-      level: profile.level,
-      rank_title: profile.rankTitle,
-      total_business_volume_inr: profile.totalBusinessVolumeInr,
-      plots_closed_count: profile.plotsClosedCount,
-      joined_date: profile.joinedDate,
+      avatar_url: profile.avatarUrl || null,
+      city: profile.city || null,
+      branch_location: profile.branchLocation || null,
+      address: profile.address || null,
+      level: profile.level ?? 1,
+      rank_title: profile.rankTitle || null,
+      total_business_volume_inr: profile.totalBusinessVolumeInr ?? 0,
+      plots_closed_count: profile.plotsClosedCount ?? 0,
+      joined_date: profile.joinedDate || null,
       created_at: profile.createdAt,
       updated_at: new Date().toISOString()
     };
+
+    if (effectiveAuthUserId) {
+      payload.auth_user_id = effectiveAuthUserId;
+    }
+    if (profile.permissions) {
+      payload.permissions = profile.permissions;
+    }
 
     const { error } = await supabase
       .from('profiles')
@@ -494,12 +519,13 @@ export async function saveProfileToSupabase(profile: Profile): Promise<boolean> 
 
     if (error) {
       console.warn('[Supabase Sync] Error saving profile:', error.message);
-      return false;
+      return { success: false, error: error.message };
     }
-    return true;
+    return { success: true, profile };
   } catch (err) {
-    console.warn('[Supabase Sync] Exception saving profile:', err);
-    return false;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn('[Supabase Sync] Exception saving profile:', msg);
+    return { success: false, error: msg };
   }
 }
 
@@ -541,6 +567,7 @@ export async function fetchProfileByAuthId(authUserId: string): Promise<Profile 
 
     return {
       id: data.id,
+      authUserId: data.auth_user_id || data.id,
       email: data.email,
       fullName: data.full_name,
       phone: data.phone,
@@ -558,6 +585,7 @@ export async function fetchProfileByAuthId(authUserId: string): Promise<Profile 
       totalBusinessVolumeInr: data.total_business_volume_inr ? Number(data.total_business_volume_inr) : undefined,
       plotsClosedCount: data.plots_closed_count ? Number(data.plots_closed_count) : undefined,
       joinedDate: data.joined_date || undefined,
+      permissions: data.permissions || undefined,
       createdAt: data.created_at,
     };
   } catch (err) {
@@ -622,7 +650,7 @@ export async function supabaseSignUp(data: {
         data: {
           full_name: data.fullName,
           phone: data.phone,
-          role: data.role || 'junior_member',
+          role: data.role || 'buyer',
           sponsor_id: data.sponsorId,
         },
       },

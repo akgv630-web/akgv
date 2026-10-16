@@ -6,11 +6,8 @@ import {
   ArrowRight,
   CheckCircle2,
   ExternalLink,
-  KeyRound,
   Lock,
-  LogIn,
   Mail,
-  Phone,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -60,13 +57,21 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   const [regSponsorCode, setRegSponsorCode] = useState('AKGV-3498'); // default sponsor
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
-  const [registeredMemberCode, setRegisteredMemberCode] = useState<string | null>(null);
+  const [registeredBuyerName, setRegisteredBuyerName] = useState<string | null>(null);
+  const [emailConfirmationNotice, setEmailConfirmationNotice] = useState<boolean>(false);
+  const [registeredEmailSuccess, setRegisteredEmailSuccess] = useState<string | null>(null);
 
   // Forgot password state
   const [forgotIdentifier, setForgotIdentifier] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
+
+  const resetRegState = () => {
+    setRegisteredBuyerName(null);
+    setEmailConfirmationNotice(false);
+    setRegisteredEmailSuccess(null);
+  };
 
   if (!isOpen) return null;
 
@@ -158,8 +163,13 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
         sponsorId: regSponsorCode.trim() || undefined,
       });
       setRegLoading(false);
-      if (res.success && res.profile) {
-        setRegisteredMemberCode(res.profile.memberId || 'AKGV-NEW');
+      if (res.success) {
+        if (res.emailConfirmationRequired) {
+          setRegisteredEmailSuccess(regEmail.trim());
+          setEmailConfirmationNotice(true);
+        } else if (res.profile) {
+          setRegisteredBuyerName(res.profile.fullName);
+        }
       } else {
         setRegError(res.error || 'Registration failed with authentication service. Please verify your details.');
       }
@@ -256,7 +266,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           <button
             onClick={() => {
               setActiveTab('login');
-              setRegisteredMemberCode(null);
+              resetRegState();
             }}
             className={`flex-1 py-3 text-center transition border-b-2 ${
               activeTab === 'login'
@@ -269,7 +279,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           <button
             onClick={() => {
               setActiveTab('register');
-              setRegisteredMemberCode(null);
+              resetRegState();
             }}
             className={`flex-1 py-3 text-center transition border-b-2 ${
               activeTab === 'register'
@@ -287,7 +297,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
             <button
               onClick={() => {
                 setActiveTab('sandbox');
-                setRegisteredMemberCode(null);
+                resetRegState();
               }}
               className={`flex-1 py-3 text-center transition border-b-2 ${
                 activeTab === 'sandbox'
@@ -301,7 +311,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           <button
             onClick={() => {
               setActiveTab('forgot');
-              setRegisteredMemberCode(null);
+              resetRegState();
             }}
             className={`flex-1 py-3 text-center transition border-b-2 ${
               activeTab === 'forgot'
@@ -427,27 +437,62 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           {/* Tab 2: Register with Sponsor ID */}
           {activeTab === 'register' && (
             <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {registeredMemberCode ? (
+              {emailConfirmationNotice ? (
+                <div className="rounded-2xl border border-blue-500/40 bg-blue-950/20 p-6 text-center space-y-3">
+                  <Mail className="h-12 w-12 text-blue-400 mx-auto" />
+                  <h3 className="font-serif text-lg font-bold text-white">
+                    {language === 'hi' ? 'सत्यापन ईमेल भेजा गया!' : 'Verification Email Sent!'}
+                  </h3>
+                  <div className="rounded-xl bg-[#050A17] p-4 border border-[#C7A35A]/40 text-xs space-y-1">
+                    <span className="text-gray-300 block">
+                      {language === 'hi'
+                        ? 'आपके ईमेल पते पर एक सत्यापन लिंक भेजा गया है:'
+                        : 'A verification link has been sent to your email address:'}
+                    </span>
+                    <span className="font-mono text-sm font-bold text-[#DFC382] block">{registeredEmailSuccess}</span>
+                    <span className="text-[11px] text-gray-400 block mt-2">
+                      {language === 'hi'
+                        ? 'कृपया अपने इनबॉक्स (या स्पैम फ़ोल्डर) की जाँच करें और लॉगिन करने से पहले लिंक पर क्लिक करके अपने खाते की पुष्टि करें।'
+                        : 'Please check your inbox (and spam folder) and verify your email before signing in.'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEmailConfirmationNotice(false);
+                      setActiveTab('login');
+                      setLoginIdentifier(registeredEmailSuccess || '');
+                    }}
+                    className="rounded-xl bg-[#C7A35A] px-5 py-2 font-bold text-xs text-[#0B1734] hover:brightness-110 transition"
+                  >
+                    {language === 'hi' ? 'लॉगिन स्क्रीन पर जाएं' : 'Proceed to Sign In'}
+                  </button>
+                </div>
+              ) : registeredBuyerName ? (
                 <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-6 text-center space-y-3">
                   <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto" />
                   <h3 className="font-serif text-lg font-bold text-white">
                     {language === 'hi' ? 'पंजीकरण सफल!' : 'Registration Successful!'}
                   </h3>
-                  <div className="rounded-xl bg-[#050A17] p-4 border border-[#C7A35A]/40 text-xs space-y-1">
-                    <span className="text-gray-400 block">Your Unique AKGV Member Code:</span>
-                    <span className="font-mono text-xl font-bold text-[#DFC382] block">{registeredMemberCode}</span>
-                    <span className="text-[11px] text-emerald-300">
-                      Sponsor Verified: {regSponsorCode || 'AKGV-3498'}
+                  <div className="rounded-xl bg-[#050A17] p-4 border border-[#C7A35A]/40 text-xs space-y-2">
+                    <span className="text-gray-400 block">{language === 'hi' ? 'क्रेता खाता सक्रिय:' : 'Buyer Account Active:'}</span>
+                    <span className="font-serif text-base font-bold text-[#DFC382] block">{registeredBuyerName}</span>
+                    <span className="text-[11px] text-emerald-300 block">
+                      {language === 'hi' ? 'पोर्टल भूमिका: प्लॉट खरीदार / निवेशक' : 'Portal Role: Plot Buyer / Investor'}
                     </span>
+                    {matchedSponsor && (
+                      <span className="text-[11px] text-gray-400 block">
+                        Assigned Branch Advisor: {matchedSponsor.fullName} ({matchedSponsor.memberId || 'AKGV-3498'})
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-300">
                     {language === 'hi'
-                      ? 'कृपया अपने ₹999 जॉइनिंग किट (बैग, पेन, डायरी, प्रोजेक्ट फाइल) के लिए नजदीकी शाखा कार्यालय से संपर्क करें।'
-                      : 'Please collect your ₹999 physical joining kit (Bag, Pen, Diary, File) from the company offline branch.'}
+                      ? 'आपका सुरक्षित खरीदार खाता तैयार है। अब आप प्रमाणित आवासीय एवं व्यावसायिक प्लॉट देख सकते हैं, साइट विजिट बुक कर सकते हैं, तथा अपने निवेश का विवरण देख सकते हैं।'
+                      : 'Your secure buyer account is ready. You can now explore verified plots, schedule site visits, and manage your property bookings.'}
                   </p>
                   <button
                     onClick={onClose}
-                    className="rounded-xl bg-[#C7A35A] px-5 py-2 font-bold text-xs text-[#0B1734]"
+                    className="rounded-xl bg-[#C7A35A] px-5 py-2 font-bold text-xs text-[#0B1734] hover:brightness-110 transition"
                   >
                     {language === 'hi' ? 'डैशबोर्ड पर जाएं' : 'Proceed to Dashboard'}
                   </button>
@@ -572,7 +617,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                     disabled={regLoading}
                     className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 font-bold text-xs text-[#0B1734] shadow-lg hover:brightness-110 active:scale-[0.99] transition disabled:opacity-50"
                   >
-                    {regLoading ? 'Creating Account...' : language === 'hi' ? 'खाता बनाएं एवं कोड प्राप्त करें' : 'Create Account & Generate Member Code'}
+                    {regLoading ? 'Creating Account...' : language === 'hi' ? 'खरीदार खाता बनाएं' : 'Create Buyer Account'}
                   </button>
                 </form>
               )}
@@ -688,7 +733,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                 </div>
 
                 {forgotMsg && (
-                  <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/30 p-3 text-xs text-emerald-300">
+                  <div className={`rounded-xl border p-3 text-xs ${forgotSent ? 'border-emerald-500/40 bg-emerald-950/30 text-emerald-300' : 'border-amber-500/40 bg-amber-950/30 text-amber-300'}`}>
                     {forgotMsg}
                   </div>
                 )}

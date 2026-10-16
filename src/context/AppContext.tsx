@@ -92,7 +92,12 @@ interface AppContextType {
     sponsorId?: string;
     city?: string;
     branchLocation?: string;
-  }) => Promise<{ success: boolean; error?: string; profile?: Profile }>;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+    emailConfirmationRequired?: boolean;
+    profile?: Profile;
+  }>;
   logout: () => Promise<void>;
   resetPasswordRequest: (email: string) => Promise<{ success: boolean; error?: string }>;
   switchUserRole: (role: UserRole) => void;
@@ -348,7 +353,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const res = await supabaseSignIn(trimmedId, password);
       if (res && res.data && res.data.user) {
         const authUser = res.data.user;
-        const profile = await fetchProfileByAuthId(authUser.id);
+        let profile = await fetchProfileByAuthId(authUser.id);
+
+        // Self-healing profile reconciliation on login:
+        // If an authenticated user exists in Supabase Auth but their database profile row is missing
+        // (e.g. from an asynchronous registration flow or delayed email verification), reconstruct and persist it.
+        if (!profile) {
+          const userMeta = authUser.user_metadata || {};
+          const fallbackName =
+            (userMeta.full_name as string) ||
+            (userMeta.name as string) ||
+            authUser.email?.split('@')[0] ||
+            'Registered User';
+          const fallbackPhone = (userMeta.phone as string) || '';
+          const fallbackSponsor = (userMeta.sponsor_id as string) || undefined;
+
+          const reconciledProfile: Profile = {
+            id: authUser.id,
+            authUserId: authUser.id,
+            email: authUser.email || '',
+            fullName: fallbackName,
+            phone: fallbackPhone,
+            role: 'buyer', // Reconciled public users are strictly assigned buyer role
+            sponsorId: fallbackSponsor,
+            kycStatus: 'pending',
+            isActive: true,
+            createdAt: authUser.created_at || new Date().toISOString(),
+          };
+
+          const saveRes = await saveProfileToSupabase(reconciledProfile, authUser.id);
+          if (saveRes.success) {
+            profile = reconciledProfile;
+            setAllProfiles((prev) => {
+              const existingIdx = prev.findIndex(
+                (p) => p.id === reconciledProfile.id || p.email.toLowerCase() === reconciledProfile.email.toLowerCase()
+              );
+              if (existingIdx >= 0) {
+                const next = [...prev];
+                next[existingIdx] = reconciledProfile;
+                return next;
+              }
+              return [...prev, reconciledProfile];
+            });
+          }
+        }
 
         if (!profile) {
           return { success: false, error: 'Database profile not found for this authenticated user. Access denied.' };
@@ -413,71 +461,150 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     sponsorId?: string;
     city?: string;
     branchLocation?: string;
-  }): Promise<{ success: boolean; error?: string; profile?: Profile }> => {
+  }): Promise<{
+    success: boolean;
+    error?: string;
+    emailConfirmationRequired?: boolean;
+    profile?: Profile;
+  }> => {
     // Security Enforcement: Public registrations are strictly forced to 'buyer' role
+    // Associate member IDs, permissions, or admin/staff roles are prohibited
     const isProduction = process.env.NODE_ENV === 'production';
     const assignedRole: UserRole = 'buyer';
 
-    // 1. Attempt Supabase Auth Registration
-    try {
-      const res = await supabaseSignUp({
-        fullName: data.fullName,
-        email: data.email,
-        phone: data.phone,
-        password: data.password,
-        role: assignedRole,
-        sponsorId: data.sponsorId,
-      });
+    const trimmedName = data.fullName.trim();
+    const trimmedEmail = data.email.trim();
+    const trimmedPhone = data.phone.trim();
+    const trimmedPass = data.password.trim();
 
-      if (res?.error) {
-        if (isProduction || res.error.message !== 'Supabase is not configured') {
-          return { success: false, error: res.error.message || 'Registration failed on authentication provider.' };
-        }
-      }
-    } catch (err: unknown) {
-      if (isProduction) {
-        const msg = err instanceof Error ? err.message : 'Registration failed on authentication provider.';
-        return { success: false, error: msg };
-      }
+    if (!trimmedName || !trimmedEmail || !trimmedPhone || !trimmedPass) {
+      return { success: false, error: 'All fields (name, email, phone, and password) are required.' };
     }
 
-    // Validate sponsor if provided
+    if (trimmedPass.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+
+    if (!isSupabaseConfigured) {
+      if (isProduction) {
+        return {
+          success: false,
+          error: 'Registration is currently unavailable. Authentication service is unconfigured.',
+        };
+      }
+      return {
+        success: false,
+        error: 'Authentication provider is not configured. Please configure Supabase credentials.',
+      };
+    }
+
+    // Validate sponsor if provided - resolve canonical internal ID / memberId
     const sponsorTrimmed = data.sponsorId?.trim();
     let verifiedSponsorId: string | undefined = undefined;
     if (sponsorTrimmed) {
-      const sponsorExists = allProfiles.some(
-        (p) => (p.memberId && p.memberId.toLowerCase() === sponsorTrimmed.toLowerCase()) || p.id === sponsorTrimmed
+      const matchedSponsor = allProfiles.find(
+        (p) =>
+          (p.memberId && p.memberId.toLowerCase() === sponsorTrimmed.toLowerCase()) ||
+          p.id.toLowerCase() === sponsorTrimmed.toLowerCase()
       );
-      if (sponsorExists) {
-        verifiedSponsorId = sponsorTrimmed;
+      if (matchedSponsor) {
+        verifiedSponsorId = matchedSponsor.memberId || matchedSponsor.id;
       }
     }
 
-    const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
+    // 1. Attempt Supabase Auth Registration
+    let authUser: { id: string; email?: string } | null = null;
+    let authSession: unknown = null;
+
+    try {
+      const res = await supabaseSignUp({
+        fullName: trimmedName,
+        email: trimmedEmail,
+        phone: trimmedPhone,
+        password: trimmedPass,
+        role: assignedRole,
+        sponsorId: verifiedSponsorId,
+      });
+
+      if (res?.error) {
+        return {
+          success: false,
+          error: res.error.message || 'Registration failed on authentication provider.',
+        };
+      }
+
+      if (!res?.data?.user) {
+        return {
+          success: false,
+          error: 'Registration failed on authentication provider. No user returned.',
+        };
+      }
+
+      authUser = res.data.user;
+      authSession = res.data.session;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Registration failed on authentication provider.';
+      return { success: false, error: msg };
+    }
+
+    const authUserId = authUser.id;
+
+    // Buyer registrations NEVER assign an associate memberId, joining kit, or elevated permissions
     const newProfile: Profile = {
-      id: `usr-${Date.now()}`,
-      email: data.email,
-      fullName: data.fullName,
-      phone: data.phone,
+      id: authUserId,
+      authUserId: authUserId,
+      email: trimmedEmail,
+      fullName: trimmedName,
+      phone: trimmedPhone,
       role: assignedRole,
-      memberId: newMemberId,
+      memberId: undefined, // Buyers are customer accounts, not MLM network associates
       sponsorId: verifiedSponsorId,
       city: data.city || 'Varanasi',
       branchLocation: data.branchLocation || 'Rampur Head Office',
       kycStatus: 'pending',
       isActive: true,
+      permissions: undefined, // No elevated staff permissions
       createdAt: new Date().toISOString(),
     };
 
+    // Await and verify profile persistence in Supabase
+    const saveRes = await saveProfileToSupabase(newProfile, authUserId);
+    if (!saveRes.success) {
+      console.warn('[Supabase Sync] Profile persistence notice on signup:', saveRes.error);
+      return {
+        success: false,
+        error: saveRes.error || 'Account created in authentication service, but database profile creation failed. Please contact support.',
+      };
+    }
+
+    // Update local cached profiles list
     setAllProfiles((prev) => {
+      const existingIdx = prev.findIndex(
+        (p) => p.id === newProfile.id || p.email.toLowerCase() === newProfile.email.toLowerCase()
+      );
+      if (existingIdx >= 0) {
+        const next = [...prev];
+        next[existingIdx] = newProfile;
+        return next;
+      }
       const next = [...prev, newProfile];
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(next));
       } catch {}
       return next;
     });
-    void saveProfileToSupabase(newProfile);
 
+    // Check if email confirmation is required (session is null when email confirmation is enabled)
+    if (!authSession) {
+      // Do NOT set currentUser or write to localStorage without an active authenticated session!
+      return {
+        success: true,
+        emailConfirmationRequired: true,
+        profile: newProfile,
+      };
+    }
+
+    // Only set currentUser when there is an active authenticated session
     setCurrentUser(newProfile);
     try {
       localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(newProfile));

@@ -691,4 +691,58 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(authModalCode).toContain('Authorized Access & IT Assistance');
     });
   });
+
+  // 17. Public Signup & Profile Reconciliation Hardening Invariants
+  describe('Public Signup & Profile Reconciliation Hardening', () => {
+    const appContextPath = path.join(__dirname, '../src/context/AppContext.tsx');
+    const syncServicePath = path.join(__dirname, '../src/lib/supabase/syncService.ts');
+    const authModalPath = path.join(__dirname, '../src/components/auth/AuthModal.tsx');
+
+    const contextCode = fs.readFileSync(appContextPath, 'utf8');
+    const syncCode = fs.readFileSync(syncServicePath, 'utf8');
+    const authModalCode = fs.readFileSync(authModalPath, 'utf8');
+
+    it('enforces buyer role invariant and eliminates fake usr- client timestamp IDs in registerWithCredentials', () => {
+      // Must assign authentic auth provider UUID in registerWithCredentials
+      expect(contextCode).toContain('const authUserId = authUser.id;');
+      expect(contextCode).toContain('id: authUserId,');
+      expect(contextCode).toContain('authUserId: authUserId,');
+      // Public buyers must not receive MLM member IDs or permissions
+      expect(contextCode).toContain('memberId: undefined, // Buyers are customer accounts, not MLM network associates');
+      expect(contextCode).toContain('permissions: undefined, // No elevated staff permissions');
+      expect(contextCode).toContain("const assignedRole: UserRole = 'buyer';");
+    });
+
+    it('handles active session vs email confirmation required without assigning unauthenticated currentUser', () => {
+      // Must check if session exists
+      expect(contextCode).toContain('if (!authSession) {');
+      expect(contextCode).toContain('emailConfirmationRequired: true,');
+      // Must not set currentUser if email confirmation is required
+      expect(contextCode).toContain('// Only set currentUser when there is an active authenticated session');
+      expect(contextCode).toContain('setCurrentUser(newProfile);');
+    });
+
+    it('resolves canonical sponsor ID/member_id from verified profiles', () => {
+      expect(contextCode).toContain('verifiedSponsorId = matchedSponsor.memberId || matchedSponsor.id;');
+    });
+
+    it('enforces self-healing profile reconciliation upon authenticated login with missing database record', () => {
+      expect(contextCode).toContain('// Self-healing profile reconciliation on login:');
+      expect(contextCode).toContain('const reconciledProfile: Profile = {');
+      expect(contextCode).toContain('await saveProfileToSupabase(reconciledProfile, authUser.id);');
+    });
+
+    it('ensures syncService maps auth_user_id and defaults signup role to buyer', () => {
+      expect(syncCode).toContain('payload.auth_user_id = effectiveAuthUserId;');
+      expect(syncCode).toContain("role: data.role || 'buyer',");
+      expect(syncCode).toContain('authUserId: data.auth_user_id || data.id,');
+    });
+
+    it('renders email verification notice and buyer onboarding without associate joining kit prompt in AuthModal', () => {
+      expect(authModalCode).toContain('Verification Email Sent!');
+      expect(authModalCode).toContain('Buyer Account Active:');
+      expect(authModalCode).toContain('Create Buyer Account');
+      expect(authModalCode).not.toContain('Please collect your ₹999 physical joining kit');
+    });
+  });
 });

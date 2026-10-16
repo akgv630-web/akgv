@@ -12,6 +12,7 @@ export type KycStatus = 'pending' | 'submitted' | 'verified' | 'rejected';
 
 export interface Profile {
   id: string;
+  authUserId?: string; // Supabase auth.users UUID
   email: string;
   fullName: string;
   phone: string;
