@@ -807,6 +807,11 @@ DECLARE
     v_new jsonb;
     v_old jsonb;
 BEGIN
+    -- Ensure trigger is strictly attached to profiles table
+    IF TG_TABLE_NAME <> 'profiles' THEN
+        RAISE EXCEPTION 'Configuration error: enforce_profile_update_integrity trigger is only valid on public.profiles, but was invoked on %', TG_TABLE_NAME;
+    END IF;
+
     -- Administrators retain full management authority
     IF public.is_admin() THEN
         NEW.updated_at := timezone('utc', now());
@@ -815,6 +820,11 @@ BEGIN
 
     v_new := to_jsonb(NEW);
     v_old := to_jsonb(OLD);
+
+    -- Do not silently ignore missing security-critical columns on profiles
+    IF NOT (v_new ? 'role') OR NOT (v_new ? 'is_active') OR NOT (v_new ? 'kyc_status') OR NOT (v_new ? 'permissions') THEN
+        RAISE EXCEPTION 'Schema integrity error: profiles table is missing required security columns';
+    END IF;
 
     -- Non-admin callers cannot alter sensitive identity, role, or financial tracking attributes
     IF (v_new->>'role') IS DISTINCT FROM (v_old->>'role') THEN

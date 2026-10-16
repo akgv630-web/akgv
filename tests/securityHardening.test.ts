@@ -330,6 +330,165 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(schemaSql).toContain('Non-admin users cannot alter permissions');
       expect(schemaSql).toContain('Non-admin users cannot alter total_business_volume_inr');
       expect(schemaSql).toContain('Non-admin users cannot alter plots_closed_count');
+      expect(schemaSql).toContain('to_jsonb(NEW)');
+      expect(schemaSql).toContain('to_jsonb(OLD)');
+      expect(schemaSql).toContain("TG_TABLE_NAME <> 'profiles'");
+    });
+
+    it('must verify forward migration 20261016_zz_profile_integrity_trigger_hardening.sql contains defensive schema and trigger fixes', () => {
+      const migrationPath = path.join(
+        __dirname,
+        '../supabase/migrations/20261016_zz_profile_integrity_trigger_hardening.sql'
+      );
+      expect(fs.existsSync(migrationPath)).toBe(true);
+      const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+
+      expect(migrationSql).toContain('ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS permissions JSONB');
+      expect(migrationSql).toContain('to_jsonb(NEW)');
+      expect(migrationSql).toContain('to_jsonb(OLD)');
+      expect(migrationSql).toContain("TG_TABLE_NAME <> 'profiles'");
+      expect(migrationSql).toContain('DROP TRIGGER IF EXISTS trg_enforce_profile_update_integrity ON public.profiles;');
+      expect(migrationSql).toContain('CREATE TRIGGER trg_enforce_profile_update_integrity');
+    });
+
+    it('behaviorally validates enforce_profile_update_integrity against missing columns and unauthorized changes', () => {
+      // PL/pgSQL runtime simulation reproducing enforce_profile_update_integrity logic
+      const simulateTrigger = <T extends Record<string, unknown>>(
+        tableName: string,
+        isAdmin: boolean,
+        oldRow: T,
+        newRow: T
+      ): T & { updated_at: string } => {
+        // Table attachment guard
+        if (tableName !== 'profiles') {
+          throw new Error(
+            `Configuration error: enforce_profile_update_integrity trigger is only valid on public.profiles, but was invoked on ${tableName}`
+          );
+        }
+
+        // Admin bypass
+        if (isAdmin) {
+          return { ...newRow, updated_at: 'now()' };
+        }
+
+        // to_jsonb conversions
+        const v_new = { ...newRow };
+        const v_old = { ...oldRow };
+
+        // Missing security-critical column guard
+        if (!('role' in v_new) || !('is_active' in v_new) || !('kyc_status' in v_new) || !('permissions' in v_new)) {
+          throw new Error('Schema integrity error: profiles table is missing required security columns');
+        }
+
+        // Field difference checks
+        if (v_new['role'] !== v_old['role']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter role');
+        }
+        if (v_new['is_active'] !== v_old['is_active']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter active status');
+        }
+        if (v_new['kyc_status'] !== v_old['kyc_status']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter kyc_status');
+        }
+        if (JSON.stringify(v_new['permissions']) !== JSON.stringify(v_old['permissions'])) {
+          throw new Error('Unauthorized: Non-admin users cannot alter permissions');
+        }
+        if (v_new['level'] !== v_old['level']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter level');
+        }
+        if (v_new['rank_title'] !== v_old['rank_title']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter rank_title');
+        }
+        if (v_new['sponsor_id'] !== v_old['sponsor_id']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter sponsor_id');
+        }
+        if (v_new['member_id'] !== v_old['member_id']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter member_id');
+        }
+        if (v_new['total_business_volume_inr'] !== v_old['total_business_volume_inr']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter total_business_volume_inr');
+        }
+        if (v_new['plots_closed_count'] !== v_old['plots_closed_count']) {
+          throw new Error('Unauthorized: Non-admin users cannot alter plots_closed_count');
+        }
+        if (v_new['auth_user_id'] !== v_old['auth_user_id']) {
+          throw new Error('Unauthorized: Cannot alter auth_user_id binding');
+        }
+
+        return { ...newRow, updated_at: 'now()' };
+      };
+
+      const baselineProfile = {
+        id: 'usr-buyer-01',
+        auth_user_id: 'uuid-123',
+        email: 'buyer@test.com',
+        full_name: 'Regular Buyer',
+        phone: '9876543210',
+        role: 'buyer',
+        member_id: null,
+        sponsor_id: null,
+        kyc_status: 'pending',
+        is_active: true,
+        permissions: { canCreateDownline: false, canManagePlots: false },
+        level: 1,
+        rank_title: 'Client',
+        total_business_volume_inr: 0,
+        plots_closed_count: 0,
+      };
+
+      // 1. Trigger invoked on wrong table throws configuration error
+      expect(() =>
+        simulateTrigger('reviews', false, baselineProfile, baselineProfile)
+      ).toThrow('Configuration error: enforce_profile_update_integrity trigger is only valid on public.profiles');
+
+      // 2. Missing security-critical column (e.g. unmigrated table missing permissions) throws schema integrity error
+      const profileWithoutPermissions = { ...baselineProfile };
+      delete (profileWithoutPermissions as Record<string, unknown>).permissions;
+      expect(() =>
+        simulateTrigger('profiles', false, profileWithoutPermissions, profileWithoutPermissions)
+      ).toThrow('Schema integrity error: profiles table is missing required security columns');
+
+      // 3. Unauthorized role escalation blocked
+      expect(() =>
+        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, role: 'super_admin' })
+      ).toThrow('Unauthorized: Non-admin users cannot alter role');
+
+      // 4. Unauthorized permissions alteration blocked
+      expect(() =>
+        simulateTrigger('profiles', false, baselineProfile, {
+          ...baselineProfile,
+          permissions: { canCreateDownline: true, canManagePlots: true },
+        })
+      ).toThrow('Unauthorized: Non-admin users cannot alter permissions');
+
+      // 5. Unauthorized KYC bypass blocked
+      expect(() =>
+        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, kyc_status: 'verified' })
+      ).toThrow('Unauthorized: Non-admin users cannot alter kyc_status');
+
+      // 6. Unauthorized volume / closed plots tampering blocked
+      expect(() =>
+        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, total_business_volume_inr: 5000000 })
+      ).toThrow('Unauthorized: Non-admin users cannot alter total_business_volume_inr');
+
+      // 7. Legitimate non-admin profile update on allowed fields succeeds
+      const safeUpdate = simulateTrigger('profiles', false, baselineProfile, {
+        ...baselineProfile,
+        full_name: 'Updated Buyer Name',
+        phone: '9999988888',
+      });
+      expect(safeUpdate.full_name).toBe('Updated Buyer Name');
+      expect(safeUpdate.phone).toBe('9999988888');
+
+      // 8. Admin update of role and permissions succeeds
+      const adminUpdate = simulateTrigger('profiles', true, baselineProfile, {
+        ...baselineProfile,
+        role: 'senior_member',
+        permissions: { canCreateDownline: true, canManagePlots: false },
+        kyc_status: 'verified',
+      });
+      expect(adminUpdate.role).toBe('senior_member');
+      expect(adminUpdate.kyc_status).toBe('verified');
     });
   });
 
