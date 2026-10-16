@@ -449,6 +449,23 @@ ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ticket_messages ENABLE ROW LEVEL SECURITY;
 
 -- Defensive Column Upgrades (Ensures existing tables have all policy-required columns)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": true, "canSubmitFieldReports": true, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS level INT DEFAULT 1;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rank_title TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS total_business_volume_inr NUMERIC DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS plots_closed_count INT DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS city TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS branch_location TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS joined_date TEXT;
+ALTER TABLE plots ADD COLUMN IF NOT EXISTS canvas_x INT;
+ALTER TABLE plots ADD COLUMN IF NOT EXISTS canvas_y INT;
+ALTER TABLE plots ADD COLUMN IF NOT EXISTS canvas_w INT;
+ALTER TABLE plots ADD COLUMN IF NOT EXISTS canvas_h INT;
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS branch_type TEXT;
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS working_hours TEXT;
 ALTER TABLE reviews ADD COLUMN IF NOT EXISTS author_id TEXT;
 ALTER TABLE site_visits ADD COLUMN IF NOT EXISTS buyer_id TEXT;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS buyer_id TEXT;
@@ -786,6 +803,9 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+DECLARE
+    v_new jsonb;
+    v_old jsonb;
 BEGIN
     -- Administrators retain full management authority
     IF public.is_admin() THEN
@@ -793,48 +813,51 @@ BEGIN
         RETURN NEW;
     END IF;
 
+    v_new := to_jsonb(NEW);
+    v_old := to_jsonb(OLD);
+
     -- Non-admin callers cannot alter sensitive identity, role, or financial tracking attributes
-    IF NEW.role IS DISTINCT FROM OLD.role THEN
+    IF (v_new->>'role') IS DISTINCT FROM (v_old->>'role') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter role';
     END IF;
 
-    IF NEW.is_active IS DISTINCT FROM OLD.is_active THEN
+    IF (v_new->>'is_active') IS DISTINCT FROM (v_old->>'is_active') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter active status';
     END IF;
 
-    IF NEW.kyc_status IS DISTINCT FROM OLD.kyc_status THEN
+    IF (v_new->>'kyc_status') IS DISTINCT FROM (v_old->>'kyc_status') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter kyc_status';
     END IF;
 
-    IF NEW.permissions IS DISTINCT FROM OLD.permissions THEN
+    IF (v_new->'permissions') IS DISTINCT FROM (v_old->'permissions') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter permissions';
     END IF;
 
-    IF NEW.level IS DISTINCT FROM OLD.level THEN
+    IF (v_new->>'level') IS DISTINCT FROM (v_old->>'level') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter level';
     END IF;
 
-    IF NEW.rank_title IS DISTINCT FROM OLD.rank_title THEN
+    IF (v_new->>'rank_title') IS DISTINCT FROM (v_old->>'rank_title') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter rank_title';
     END IF;
 
-    IF NEW.sponsor_id IS DISTINCT FROM OLD.sponsor_id THEN
+    IF (v_new->>'sponsor_id') IS DISTINCT FROM (v_old->>'sponsor_id') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter sponsor_id';
     END IF;
 
-    IF NEW.member_id IS DISTINCT FROM OLD.member_id THEN
+    IF (v_new->>'member_id') IS DISTINCT FROM (v_old->>'member_id') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter member_id';
     END IF;
 
-    IF NEW.total_business_volume_inr IS DISTINCT FROM OLD.total_business_volume_inr THEN
+    IF (v_new->>'total_business_volume_inr') IS DISTINCT FROM (v_old->>'total_business_volume_inr') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter total_business_volume_inr';
     END IF;
 
-    IF NEW.plots_closed_count IS DISTINCT FROM OLD.plots_closed_count THEN
+    IF (v_new->>'plots_closed_count') IS DISTINCT FROM (v_old->>'plots_closed_count') THEN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter plots_closed_count';
     END IF;
 
-    IF NEW.auth_user_id IS DISTINCT FROM OLD.auth_user_id THEN
+    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') THEN
         RAISE EXCEPTION 'Unauthorized: Cannot alter auth_user_id binding';
     END IF;
 
