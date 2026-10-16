@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS plots (
 -- 6. REVIEWS TABLE (Verified Customer & Associate Reviews)
 CREATE TABLE IF NOT EXISTS reviews (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    author_id TEXT,
     author_name TEXT NOT NULL,
     author_phone TEXT,
     author_role TEXT NOT NULL DEFAULT 'visitor',
@@ -158,6 +159,7 @@ CREATE TABLE IF NOT EXISTS payment_records (
 -- 9. SITE VISITS TABLE
 CREATE TABLE IF NOT EXISTS site_visits (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    buyer_id TEXT,
     visitor_name TEXT NOT NULL,
     visitor_phone TEXT NOT NULL,
     visitor_email TEXT,
@@ -445,6 +447,21 @@ ALTER TABLE receipts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reward_claims ENABLE ROW LEVEL SECURITY;
 ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ticket_messages ENABLE ROW LEVEL SECURITY;
+
+-- Defensive Column Upgrades (Ensures existing tables have all policy-required columns)
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS author_id TEXT;
+ALTER TABLE site_visits ADD COLUMN IF NOT EXISTS buyer_id TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS buyer_id TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS sponsor_id TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS hold_expires_at TIMESTAMPTZ;
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS payer_id TEXT;
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS receipt_number TEXT;
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS verified_by TEXT;
+ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+ALTER TABLE field_gps_evidence ADD COLUMN IF NOT EXISTS captured_by_member_id TEXT;
+ALTER TABLE field_gps_evidence ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
+ALTER TABLE field_gps_evidence ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE client_enquiries ADD COLUMN IF NOT EXISTS assigned_member_id TEXT;
 
 -- Helper Functions for Role-Based Row Level Security
 CREATE OR REPLACE FUNCTION public.current_user_role()
