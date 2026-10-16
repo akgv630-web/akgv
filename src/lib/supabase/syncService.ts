@@ -1177,7 +1177,8 @@ export interface SponsorValidationResult {
 
 export async function resolveAndValidateSponsor(
   identifier: string,
-  candidateUserId?: string
+  candidateUserId?: string,
+  candidateAuthId?: string
 ): Promise<SponsorValidationResult> {
   const trimmed = identifier.trim();
   if (!trimmed) {
@@ -1189,8 +1190,11 @@ export async function resolveAndValidateSponsor(
     return { valid: false, error: 'Invalid sponsor code format.' };
   }
 
-  // Self-referral check if candidateUserId provided
-  if (candidateUserId && trimmed.toLowerCase() === candidateUserId.toLowerCase()) {
+  // Self-referral check if candidateUserId or candidateAuthId provided
+  if (
+    (candidateUserId && trimmed.toLowerCase() === candidateUserId.toLowerCase()) ||
+    (candidateAuthId && trimmed.toLowerCase() === candidateAuthId.toLowerCase())
+  ) {
     return { valid: false, error: 'Self-referral is strictly prohibited.' };
   }
 
@@ -1200,7 +1204,8 @@ export async function resolveAndValidateSponsor(
       // First attempt RPC if installed in database
       const { data, error } = await supabase.rpc('resolve_and_validate_sponsor', {
         p_identifier: trimmed,
-        p_candidate_id: candidateUserId || null,
+        p_candidate_profile_id: candidateUserId || null,
+        p_candidate_auth_id: candidateAuthId || candidateUserId || null,
       });
 
       if (!error && data && typeof data === 'object') {
@@ -1217,7 +1222,6 @@ export async function resolveAndValidateSponsor(
           return {
             valid: true,
             canonicalSponsorId: res.canonical_sponsor_id,
-            sponsorProfileId: res.sponsor_profile_id,
             sponsorMemberId: res.sponsor_member_id,
             sponsorName: res.sponsor_name,
             sponsorRole: res.sponsor_role,
@@ -1231,43 +1235,57 @@ export async function resolveAndValidateSponsor(
     }
 
     try {
-      // Authoritative database fallback query
-      const { data, error } = await supabase
+      // Authoritative database fallback query with duplicate detection
+      const { data, error, count } = await supabase
         .from('profiles')
-        .select('id, member_id, full_name, role, is_active, auth_user_id')
+        .select('id, member_id, full_name, role, is_active, auth_user_id', { count: 'exact' })
         .or(`member_id.ilike.${trimmed},id.eq.${trimmed}`)
-        .limit(1)
-        .maybeSingle();
+        .limit(2);
 
-      if (error || !data) {
+      if (error) {
+        return { valid: false, error: 'Database query error during sponsor lookup.' };
+      }
+
+      if (!data || data.length === 0) {
         return { valid: false, error: 'Sponsor identifier does not match any registered member.' };
       }
 
-      if (!data.is_active) {
+      if ((count && count > 1) || data.length > 1) {
+        return { valid: false, error: 'Ambiguous sponsor identifier. Multiple matching records found.' };
+      }
+
+      const row = data[0];
+
+      if (!row.is_active) {
         return { valid: false, error: 'The specified sponsor account is suspended or inactive.' };
       }
 
       const eligibleRoles = ['super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member'];
-      if (!eligibleRoles.includes(data.role)) {
+      if (!row.role || !eligibleRoles.includes(row.role)) {
         return { valid: false, error: 'The specified account is not authorized to sponsor members or clients.' };
       }
 
       if (
-        candidateUserId &&
-        (data.id === candidateUserId ||
-          data.auth_user_id === candidateUserId ||
-          data.member_id?.toLowerCase() === candidateUserId.toLowerCase())
+        (candidateUserId && (
+          row.id === candidateUserId ||
+          row.auth_user_id === candidateUserId ||
+          row.member_id?.toLowerCase() === candidateUserId.toLowerCase()
+        )) ||
+        (candidateAuthId && (
+          row.id === candidateAuthId ||
+          row.auth_user_id === candidateAuthId ||
+          row.member_id?.toLowerCase() === candidateAuthId.toLowerCase()
+        ))
       ) {
         return { valid: false, error: 'Self-referral is strictly prohibited.' };
       }
 
       return {
         valid: true,
-        canonicalSponsorId: data.member_id || data.id,
-        sponsorProfileId: data.id,
-        sponsorMemberId: data.member_id || undefined,
-        sponsorName: data.full_name,
-        sponsorRole: data.role,
+        canonicalSponsorId: row.member_id || row.id,
+        sponsorMemberId: row.member_id || undefined,
+        sponsorName: row.full_name,
+        sponsorRole: row.role,
       };
     } catch (err) {
       console.warn('[Supabase Sync] Exception during sponsor validation:', err);
@@ -1279,28 +1297,41 @@ export async function resolveAndValidateSponsor(
   const eligibleRoles = ['super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member'];
   const normalized = trimmed.toUpperCase().replace(/-/g, '');
 
-  const match = DEMO_PROFILES.find((p) => {
+  const matches = DEMO_PROFILES.filter((p) => {
     const memClean = (p.memberId || '').toUpperCase().replace(/-/g, '');
     const idClean = p.id.toUpperCase();
     return memClean === normalized || idClean === trimmed.toUpperCase();
   });
 
-  if (!match) {
+  if (matches.length === 0) {
     return { valid: false, error: 'Sponsor identifier not found in company directory.' };
   }
+
+  if (matches.length > 1) {
+    return { valid: false, error: 'Ambiguous sponsor identifier. Multiple matching records found.' };
+  }
+
+  const match = matches[0];
 
   if (!match.isActive) {
     return { valid: false, error: 'The specified sponsor account is suspended or inactive.' };
   }
 
-  if (!eligibleRoles.includes(match.role)) {
+  if (!match.role || !eligibleRoles.includes(match.role)) {
     return { valid: false, error: 'The specified account is not authorized to sponsor members or clients.' };
   }
 
   if (
-    candidateUserId &&
-    (match.id.toLowerCase() === candidateUserId.toLowerCase() ||
-      (match.memberId && match.memberId.toLowerCase() === candidateUserId.toLowerCase()))
+    (candidateUserId && (
+      match.id.toLowerCase() === candidateUserId.toLowerCase() ||
+      (match.memberId && match.memberId.toLowerCase() === candidateUserId.toLowerCase()) ||
+      (match.authUserId && match.authUserId.toLowerCase() === candidateUserId.toLowerCase())
+    )) ||
+    (candidateAuthId && (
+      match.id.toLowerCase() === candidateAuthId.toLowerCase() ||
+      (match.memberId && match.memberId.toLowerCase() === candidateAuthId.toLowerCase()) ||
+      (match.authUserId && match.authUserId.toLowerCase() === candidateAuthId.toLowerCase())
+    ))
   ) {
     return { valid: false, error: 'Self-referral is strictly prohibited.' };
   }
@@ -1308,7 +1339,6 @@ export async function resolveAndValidateSponsor(
   return {
     valid: true,
     canonicalSponsorId: match.memberId || match.id,
-    sponsorProfileId: match.id,
     sponsorMemberId: match.memberId,
     sponsorName: match.fullName,
     sponsorRole: match.role,

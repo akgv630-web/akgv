@@ -372,7 +372,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           let verifiedSponsorId: string | undefined = undefined;
           const candidateSponsor = typeof userMeta.sponsor_id === 'string' ? userMeta.sponsor_id.trim() : undefined;
           if (candidateSponsor) {
-            const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id);
+            const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id, authUser.id);
             if (sponsorCheck.valid) {
               verifiedSponsorId = sponsorCheck.canonicalSponsorId;
             } else {

@@ -358,13 +358,14 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
     });
 
     it('behaviorally validates enforce_profile_update_integrity against missing columns and unauthorized changes', () => {
-      // PL/pgSQL runtime simulation reproducing enforce_profile_update_integrity logic
+      // PL/pgSQL runtime simulation reproducing enforce_profile_update_integrity logic for BOTH INSERT and UPDATE
       const simulateTrigger = <T extends Record<string, unknown>>(
+        operation: 'INSERT' | 'UPDATE',
         tableName: string,
         isAdmin: boolean,
-        oldRow: T,
-        newRow: T
-      ): T & { updated_at: string } => {
+        newRow: T,
+        oldRow?: T
+      ): T & { updated_at?: string } => {
         // Table attachment guard
         if (tableName !== 'profiles') {
           throw new Error(
@@ -379,11 +380,89 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
 
         // to_jsonb conversions
         const v_new = { ...newRow };
-        const v_old = { ...oldRow };
 
-        // Missing security-critical column guard
-        if (!('role' in v_new) || !('is_active' in v_new) || !('kyc_status' in v_new) || !('permissions' in v_new)) {
+        // FAIL-CLOSED SCHEMA INTEGRITY CHECK (Enforced on BOTH INSERT & UPDATE)
+        if (!('role' in v_new) || !('is_active' in v_new) || !('kyc_status' in v_new) || !('permissions' in v_new) || !('sponsor_id' in v_new)) {
           throw new Error('Schema integrity error: profiles table is missing required security columns');
+        }
+
+        // =========================================================================
+        // INSERT PATH VALIDATION
+        // =========================================================================
+        if (operation === 'INSERT') {
+          // Non-admins can strictly only register as 'buyer'
+          if (v_new['role'] !== undefined && v_new['role'] !== null && v_new['role'] !== 'buyer') {
+            throw new Error('Unauthorized: Public registrations are strictly limited to buyer role');
+          }
+
+          // Non-admins cannot self-assign member_id
+          if (v_new['member_id'] !== undefined && v_new['member_id'] !== null && String(v_new['member_id']).trim() !== '') {
+            throw new Error('Unauthorized: Non-admin users cannot assign member_id');
+          }
+
+          // Non-admins cannot self-certify KYC status
+          if (v_new['kyc_status'] !== undefined && v_new['kyc_status'] !== null && !['pending', 'submitted'].includes(String(v_new['kyc_status']))) {
+            throw new Error('Unauthorized: Non-admin users cannot set verified KYC status on registration');
+          }
+
+          // Non-admins cannot assign any elevated staff permissions
+          const perms = v_new['permissions'] as Record<string, boolean> | undefined;
+          if (perms && typeof perms === 'object') {
+            if (
+              perms.canCreateDownline ||
+              perms.canManagePlots ||
+              perms.canRecordEnquiries ||
+              perms.canSubmitFieldReports ||
+              perms.canViewTeamSales ||
+              perms.canVerifyPayments ||
+              perms.canEditCms
+            ) {
+              throw new Error('Unauthorized: Elevated permissions cannot be granted to public buyer accounts');
+            }
+          }
+
+          // Non-admins cannot set rank or business volume
+          if (
+            (Number(v_new['level'] || 1) > 1) ||
+            v_new['rank_title'] ||
+            (Number(v_new['total_business_volume_inr'] || 0) > 0) ||
+            (Number(v_new['plots_closed_count'] || 0) > 0)
+          ) {
+            throw new Error('Unauthorized: Non-admin users cannot assign level, rank_title, or business volume');
+          }
+
+          return {
+            ...newRow,
+            role: 'buyer',
+            member_id: null,
+            kyc_status: 'pending',
+            permissions: {
+              canCreateDownline: false,
+              canManagePlots: false,
+              canRecordEnquiries: false,
+              canSubmitFieldReports: false,
+              canViewTeamSales: false,
+              canVerifyPayments: false,
+              canEditCms: false,
+            },
+            level: 1,
+            rank_title: null,
+            total_business_volume_inr: 0,
+            plots_closed_count: 0,
+          };
+        }
+
+        // =========================================================================
+        // UPDATE PATH VALIDATION
+        // =========================================================================
+        const v_old = { ...(oldRow || {}) };
+
+        // Primary key id and auth_user_id immutability
+        if (v_new['id'] !== v_old['id']) {
+          throw new Error('Unauthorized: Cannot alter profile primary key');
+        }
+        if (v_new['auth_user_id'] !== v_old['auth_user_id'] && v_old['auth_user_id'] !== null && v_old['auth_user_id'] !== undefined) {
+          throw new Error('Integrity violation: auth_user_id cannot be reassigned once established');
         }
 
         // Field difference checks
@@ -417,12 +496,6 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
         if (v_new['plots_closed_count'] !== v_old['plots_closed_count']) {
           throw new Error('Unauthorized: Non-admin users cannot alter plots_closed_count');
         }
-        if (v_new['auth_user_id'] !== v_old['auth_user_id']) {
-          throw new Error('Unauthorized: Cannot alter auth_user_id binding');
-        }
-        if (v_new['id'] !== v_old['id']) {
-          throw new Error('Unauthorized: Cannot alter profile primary key');
-        }
 
         return { ...newRow, updated_at: 'now()' };
       };
@@ -438,69 +511,98 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
         sponsor_id: null,
         kyc_status: 'pending',
         is_active: true,
-        permissions: { canCreateDownline: false, canManagePlots: false },
+        permissions: {
+          canCreateDownline: false,
+          canManagePlots: false,
+          canRecordEnquiries: false,
+          canSubmitFieldReports: false,
+          canViewTeamSales: false,
+          canVerifyPayments: false,
+          canEditCms: false,
+        },
         level: 1,
-        rank_title: 'Client',
+        rank_title: null,
         total_business_volume_inr: 0,
         plots_closed_count: 0,
       };
 
       // 1. Trigger invoked on wrong table throws configuration error
       expect(() =>
-        simulateTrigger('reviews', false, baselineProfile, baselineProfile)
+        simulateTrigger('UPDATE', 'reviews', false, baselineProfile, baselineProfile)
       ).toThrow('Configuration error: enforce_profile_update_integrity trigger is only valid on public.profiles');
 
-      // 2. Missing security-critical column (e.g. unmigrated table missing permissions) throws schema integrity error
+      // 2. Missing permissions column reproduction: Fails closed on both INSERT and UPDATE
       const profileWithoutPermissions = { ...baselineProfile };
       delete (profileWithoutPermissions as Record<string, unknown>).permissions;
+
       expect(() =>
-        simulateTrigger('profiles', false, profileWithoutPermissions, profileWithoutPermissions)
+        simulateTrigger('INSERT', 'profiles', false, profileWithoutPermissions)
       ).toThrow('Schema integrity error: profiles table is missing required security columns');
 
-      // 3. Unauthorized role escalation blocked
       expect(() =>
-        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, role: 'super_admin' })
-      ).toThrow('Unauthorized: Non-admin users cannot alter role');
+        simulateTrigger('UPDATE', 'profiles', false, profileWithoutPermissions, profileWithoutPermissions)
+      ).toThrow('Schema integrity error: profiles table is missing required security columns');
 
-      // 4. Unauthorized permissions alteration blocked
+      // 3. Direct API INSERT with forged privileged role blocked
       expect(() =>
-        simulateTrigger('profiles', false, baselineProfile, {
+        simulateTrigger('INSERT', 'profiles', false, { ...baselineProfile, role: 'super_admin' })
+      ).toThrow('Unauthorized: Public registrations are strictly limited to buyer role');
+
+      // 4. Direct API INSERT with forged elevated staff permissions blocked
+      expect(() =>
+        simulateTrigger('INSERT', 'profiles', false, {
           ...baselineProfile,
-          permissions: { canCreateDownline: true, canManagePlots: true },
+          permissions: { ...baselineProfile.permissions, canRecordEnquiries: true, canSubmitFieldReports: true },
         })
-      ).toThrow('Unauthorized: Non-admin users cannot alter permissions');
+      ).toThrow('Unauthorized: Elevated permissions cannot be granted to public buyer accounts');
 
-      // 5. Unauthorized KYC bypass blocked
+      // 5. Direct API INSERT with forged member_id blocked
       expect(() =>
-        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, kyc_status: 'verified' })
-      ).toThrow('Unauthorized: Non-admin users cannot alter kyc_status');
+        simulateTrigger('INSERT', 'profiles', false, { ...baselineProfile, member_id: 'AKGV-FORGED-01' })
+      ).toThrow('Unauthorized: Non-admin users cannot assign member_id');
 
-      // 6. Unauthorized volume / closed plots tampering blocked
+      // 6. Direct API INSERT with self-certified verified KYC blocked
       expect(() =>
-        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, total_business_volume_inr: 5000000 })
-      ).toThrow('Unauthorized: Non-admin users cannot alter total_business_volume_inr');
+        simulateTrigger('INSERT', 'profiles', false, { ...baselineProfile, kyc_status: 'verified' })
+      ).toThrow('Unauthorized: Non-admin users cannot set verified KYC status on registration');
 
-      // 7. Unauthorized primary key id tampering blocked
+      // 7. Direct API INSERT with forged business volume blocked
       expect(() =>
-        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, id: 'usr-admin-01' })
+        simulateTrigger('INSERT', 'profiles', false, { ...baselineProfile, total_business_volume_inr: 5000000 })
+      ).toThrow('Unauthorized: Non-admin users cannot assign level, rank_title, or business volume');
+
+      // 8. Legitimate public buyer registration on INSERT succeeds with least-privilege defaults
+      const validInsert = simulateTrigger('INSERT', 'profiles', false, baselineProfile);
+      expect(validInsert.role).toBe('buyer');
+      expect(validInsert.kyc_status).toBe('pending');
+      expect(validInsert.member_id).toBeNull();
+      expect((validInsert.permissions as Record<string, boolean>).canRecordEnquiries).toBe(false);
+      expect((validInsert.permissions as Record<string, boolean>).canSubmitFieldReports).toBe(false);
+
+      // 9. UPDATE path: Primary key id and auth_user_id immutability
+      expect(() =>
+        simulateTrigger('UPDATE', 'profiles', false, { ...baselineProfile, id: 'tampered-id' }, baselineProfile)
       ).toThrow('Unauthorized: Cannot alter profile primary key');
 
-      // 8. Legitimate non-admin profile update on allowed fields succeeds
-      const safeUpdate = simulateTrigger('profiles', false, baselineProfile, {
-        ...baselineProfile,
-        full_name: 'Updated Buyer Name',
-        phone: '9999988888',
-      });
-      expect(safeUpdate.full_name).toBe('Updated Buyer Name');
-      expect(safeUpdate.phone).toBe('9999988888');
+      expect(() =>
+        simulateTrigger('UPDATE', 'profiles', false, { ...baselineProfile, auth_user_id: 'uuid-tampered' }, baselineProfile)
+      ).toThrow('Integrity violation: auth_user_id cannot be reassigned once established');
 
-      // 9. Admin update of role and permissions succeeds
-      const adminUpdate = simulateTrigger('profiles', true, baselineProfile, {
+      // 10. UPDATE path: Role and permissions tampering blocked
+      expect(() =>
+        simulateTrigger('UPDATE', 'profiles', false, { ...baselineProfile, role: 'super_admin' }, baselineProfile)
+      ).toThrow('Unauthorized: Non-admin users cannot alter role');
+
+      expect(() =>
+        simulateTrigger('UPDATE', 'profiles', false, { ...baselineProfile, permissions: { ...baselineProfile.permissions, canManagePlots: true } }, baselineProfile)
+      ).toThrow('Unauthorized: Non-admin users cannot alter permissions');
+
+      // 11. Admin update succeeds
+      const adminUpdate = simulateTrigger('UPDATE', 'profiles', true, {
         ...baselineProfile,
         role: 'senior_member',
-        permissions: { canCreateDownline: true, canManagePlots: false },
         kyc_status: 'verified',
-      });
+      }, baselineProfile);
       expect(adminUpdate.role).toBe('senior_member');
       expect(adminUpdate.kyc_status).toBe('verified');
     });
@@ -798,31 +900,43 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(contextCode).toContain("role: 'buyer', // Reconciled public users are strictly assigned buyer role");
       expect(contextCode).toContain('permissions: undefined, // Client metadata cannot grant permissions');
       // Must validate sponsor_id before attaching to reconciled profile
-      expect(contextCode).toContain('const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id);');
+      expect(contextCode).toContain('const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id, authUser.id);');
       expect(contextCode).toContain('verifiedSponsorId = sponsorCheck.canonicalSponsorId;');
     });
 
-    it('verifies SQL migration and schema contain resolve_and_validate_sponsor and BEFORE INSERT OR UPDATE trigger', () => {
-      const migrationPath = path.join(__dirname, '../supabase/migrations/20261016_zzz_sponsor_integrity_hardening.sql');
+    it('prohibits self-referral when candidateAuthId matches the sponsor', async () => {
+      const selfReferralByCandidateAuthId = await resolveAndValidateSponsor('AKGV-3498', undefined, 'usr-sponsor-01');
+      expect(selfReferralByCandidateAuthId.valid).toBe(false);
+      expect(selfReferralByCandidateAuthId.error).toContain('Self-referral is strictly prohibited');
+    });
+
+    it('verifies SQL migrations and schema contain hardened resolve_and_validate_sponsor and fail-closed trigger', () => {
+      const migrationZzzPath = path.join(__dirname, '../supabase/migrations/20261016_zzz_sponsor_integrity_hardening.sql');
+      const migrationZzzzPath = path.join(__dirname, '../supabase/migrations/20261016_zzzz_security_integrity_final_hardening.sql');
       const schemaPath = path.join(__dirname, '../supabase/schema.sql');
 
-      expect(fs.existsSync(migrationPath)).toBe(true);
-      const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+      expect(fs.existsSync(migrationZzzPath)).toBe(true);
+      expect(fs.existsSync(migrationZzzzPath)).toBe(true);
+
+      const migrationSql = fs.readFileSync(migrationZzzzPath, 'utf8');
       const schemaSql = fs.readFileSync(schemaPath, 'utf8');
 
       // Check migration SQL content
       expect(migrationSql).toContain('CREATE OR REPLACE FUNCTION public.resolve_and_validate_sponsor');
       expect(migrationSql).toContain('SECURITY DEFINER');
-      expect(migrationSql).toContain('SET search_path = public, pg_temp');
-      expect(migrationSql).toContain('v_sponsor.role NOT IN');
+      expect(migrationSql).toContain("SET search_path = ''");
+      expect(migrationSql).toContain('Ambiguous sponsor identifier. Multiple matching records found.');
       expect(migrationSql).toContain('Self-referral is strictly prohibited');
       expect(migrationSql).toContain('CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity');
       expect(migrationSql).toContain('BEFORE INSERT OR UPDATE ON public.profiles');
-      expect(migrationSql).toContain('trg_enforce_profile_update_integrity');
+      expect(migrationSql).toContain('FAIL-CLOSED SCHEMA INTEGRITY CHECK');
+      expect(migrationSql).toContain('Elevated permissions cannot be granted to public buyer accounts');
+      expect(migrationSql).toContain('REVOKE ALL ON FUNCTION public.enforce_profile_update_integrity() FROM PUBLIC;');
 
       // Check schema.sql content
       expect(schemaSql).toContain('CREATE OR REPLACE FUNCTION public.resolve_and_validate_sponsor');
       expect(schemaSql).toContain('BEFORE INSERT OR UPDATE ON public.profiles');
+      expect(schemaSql).toContain("SET search_path = ''");
     });
   });
 });

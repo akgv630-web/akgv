@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     role TEXT NOT NULL DEFAULT 'buyer',
     member_id TEXT UNIQUE,
     sponsor_id TEXT,
-    kyc_status TEXT NOT NULL DEFAULT 'verified',
+    kyc_status TEXT NOT NULL DEFAULT 'pending',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     avatar_url TEXT,
     city TEXT,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     total_business_volume_inr NUMERIC DEFAULT 0,
     plots_closed_count INT DEFAULT 0,
     joined_date TEXT,
-    permissions JSONB DEFAULT '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": true, "canSubmitFieldReports": true, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb,
+    permissions JSONB DEFAULT '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": false, "canSubmitFieldReports": false, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
@@ -871,93 +871,154 @@ GRANT SELECT ON public.public_team_directory TO anon, authenticated;
 -- Authoritative Sponsor Validation & Resolution RPC
 CREATE OR REPLACE FUNCTION public.resolve_and_validate_sponsor(
     p_identifier TEXT,
-    p_candidate_id TEXT DEFAULT NULL
+    p_candidate_profile_id TEXT DEFAULT NULL,
+    p_candidate_auth_id TEXT DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
     v_clean_id TEXT;
     v_sponsor RECORD;
-    v_candidate_auth_id UUID;
+    v_cand_profile_id TEXT;
+    v_cand_auth_id TEXT;
+    v_parsed_cand_auth_uuid UUID;
+    v_session_auth_uid UUID;
+    v_match_count INT;
 BEGIN
-    IF p_identifier IS NULL OR trim(p_identifier) = '' THEN
-        RETURN jsonb_build_object(
+    IF p_identifier IS NULL OR pg_catalog.trim(p_identifier) = '' THEN
+        RETURN pg_catalog.jsonb_build_object(
             'valid', false,
             'error', 'Sponsor identifier cannot be empty.'
         );
     END IF;
 
-    v_clean_id := trim(p_identifier);
+    v_clean_id := pg_catalog.trim(p_identifier);
 
-    IF length(v_clean_id) < 3 OR length(v_clean_id) > 100 THEN
-        RETURN jsonb_build_object(
+    -- Reject malformed inputs (too short or excessively long)
+    IF pg_catalog.length(v_clean_id) < 3 OR pg_catalog.length(v_clean_id) > 100 THEN
+        RETURN pg_catalog.jsonb_build_object(
             'valid', false,
             'error', 'Invalid sponsor identifier format.'
         );
     END IF;
 
-    IF p_candidate_id IS NOT NULL AND trim(p_candidate_id) <> '' THEN
+    -- Normalize candidate identifiers
+    v_cand_profile_id := pg_catalog.nullif(pg_catalog.trim(pg_catalog.coalesce(p_candidate_profile_id, '')), '');
+    v_cand_auth_id := pg_catalog.nullif(pg_catalog.trim(pg_catalog.coalesce(p_candidate_auth_id, '')), '');
+
+    -- Safely parse candidate auth UUID
+    IF v_cand_auth_id IS NOT NULL THEN
         BEGIN
-            v_candidate_auth_id := p_candidate_id::uuid;
+            v_parsed_cand_auth_uuid := v_cand_auth_id::uuid;
         EXCEPTION WHEN OTHERS THEN
-            v_candidate_auth_id := NULL;
+            v_parsed_cand_auth_uuid := NULL;
         END;
     END IF;
 
-    SELECT id, auth_user_id, member_id, full_name, role, is_active
-    INTO v_sponsor
+    IF v_parsed_cand_auth_uuid IS NULL AND v_cand_profile_id IS NOT NULL THEN
+        BEGIN
+            v_parsed_cand_auth_uuid := v_cand_profile_id::uuid;
+        EXCEPTION WHEN OTHERS THEN
+            v_parsed_cand_auth_uuid := NULL;
+        END;
+    END IF;
+
+    -- Safely inspect session auth.uid()
+    BEGIN
+        v_session_auth_uid := auth.uid();
+    EXCEPTION WHEN OTHERS THEN
+        v_session_auth_uid := NULL;
+    END;
+
+    -- Count distinct matching sponsor records to detect ambiguity
+    SELECT pg_catalog.count(DISTINCT id)
+    INTO v_match_count
     FROM public.profiles
     WHERE (
-        LOWER(member_id) = LOWER(v_clean_id)
+        pg_catalog.lower(member_id) = pg_catalog.lower(v_clean_id)
         OR id = v_clean_id
-        OR (auth_user_id::text = v_clean_id)
+        OR (auth_user_id IS NOT NULL AND auth_user_id::text = v_clean_id)
         OR (
             member_id IS NOT NULL
-            AND REPLACE(LOWER(member_id), '-', '') = REPLACE(LOWER(v_clean_id), '-', '')
+            AND pg_catalog.replace(pg_catalog.lower(member_id), '-', '') = pg_catalog.replace(pg_catalog.lower(v_clean_id), '-', '')
         )
-    )
-    LIMIT 1;
+    );
 
-    IF NOT FOUND THEN
-        RETURN jsonb_build_object(
+    IF v_match_count = 0 THEN
+        RETURN pg_catalog.jsonb_build_object(
             'valid', false,
             'error', 'Sponsor identifier does not match any registered member.'
         );
     END IF;
 
-    IF v_sponsor.is_active = FALSE THEN
-        RETURN jsonb_build_object(
+    IF v_match_count > 1 THEN
+        RETURN pg_catalog.jsonb_build_object(
+            'valid', false,
+            'error', 'Ambiguous sponsor identifier. Multiple matching records found.'
+        );
+    END IF;
+
+    -- Fetch the unambiguous single matching sponsor record
+    SELECT id, auth_user_id, member_id, full_name, role, is_active
+    INTO v_sponsor
+    FROM public.profiles
+    WHERE (
+        pg_catalog.lower(member_id) = pg_catalog.lower(v_clean_id)
+        OR id = v_clean_id
+        OR (auth_user_id IS NOT NULL AND auth_user_id::text = v_clean_id)
+        OR (
+            member_id IS NOT NULL
+            AND pg_catalog.replace(pg_catalog.lower(member_id), '-', '') = pg_catalog.replace(pg_catalog.lower(v_clean_id), '-', '')
+        )
+    )
+    LIMIT 1;
+
+    -- Reject suspended, inactive, or NULL active status
+    IF v_sponsor.is_active IS NOT TRUE THEN
+        RETURN pg_catalog.jsonb_build_object(
             'valid', false,
             'error', 'The specified sponsor account is suspended or inactive.'
         );
     END IF;
 
-    IF v_sponsor.role NOT IN ('super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member') THEN
-        RETURN jsonb_build_object(
+    -- Reject ineligible sponsor roles (Buyers and NULL roles are strictly ineligible)
+    IF v_sponsor.role IS NULL OR v_sponsor.role NOT IN (
+        'super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member'
+    ) THEN
+        RETURN pg_catalog.jsonb_build_object(
             'valid', false,
             'error', 'The specified account is not authorized to sponsor members or clients.'
         );
     END IF;
 
-    IF p_candidate_id IS NOT NULL AND trim(p_candidate_id) <> '' THEN
-        IF v_sponsor.id = trim(p_candidate_id)
-           OR (v_candidate_auth_id IS NOT NULL AND v_sponsor.auth_user_id = v_candidate_auth_id)
-           OR (v_sponsor.member_id IS NOT NULL AND LOWER(v_sponsor.member_id) = LOWER(trim(p_candidate_id)))
-        THEN
-            RETURN jsonb_build_object(
-                'valid', false,
-                'error', 'Self-referral is strictly prohibited.'
-            );
-        END IF;
+    -- Anti-self-referral validation: Check against candidate profile ID, Auth user ID, and current caller session
+    IF (v_cand_profile_id IS NOT NULL AND (
+            v_sponsor.id = v_cand_profile_id
+            OR (v_sponsor.member_id IS NOT NULL AND pg_catalog.lower(v_sponsor.member_id) = pg_catalog.lower(v_cand_profile_id))
+            OR (v_sponsor.auth_user_id IS NOT NULL AND v_sponsor.auth_user_id::text = v_cand_profile_id)
+        ))
+        OR (v_cand_auth_id IS NOT NULL AND (
+            v_sponsor.id = v_cand_auth_id
+            OR (v_sponsor.member_id IS NOT NULL AND pg_catalog.lower(v_sponsor.member_id) = pg_catalog.lower(v_cand_auth_id))
+            OR (v_sponsor.auth_user_id IS NOT NULL AND v_sponsor.auth_user_id::text = v_cand_auth_id)
+        ))
+        OR (v_parsed_cand_auth_uuid IS NOT NULL AND v_sponsor.auth_user_id IS NOT NULL AND v_sponsor.auth_user_id = v_parsed_cand_auth_uuid)
+        OR (v_session_auth_uid IS NOT NULL AND v_sponsor.auth_user_id IS NOT NULL AND v_sponsor.auth_user_id = v_session_auth_uid)
+        OR (v_session_auth_uid IS NOT NULL AND v_sponsor.id = v_session_auth_uid::text)
+    THEN
+        RETURN pg_catalog.jsonb_build_object(
+            'valid', false,
+            'error', 'Self-referral is strictly prohibited.'
+        );
     END IF;
 
-    RETURN jsonb_build_object(
+    -- Return sanitized public advisor information without exposing internal UUIDs
+    RETURN pg_catalog.jsonb_build_object(
         'valid', true,
-        'canonical_sponsor_id', COALESCE(v_sponsor.member_id, v_sponsor.id),
-        'sponsor_profile_id', v_sponsor.id,
+        'canonical_sponsor_id', pg_catalog.coalesce(v_sponsor.member_id, v_sponsor.id),
         'sponsor_member_id', v_sponsor.member_id,
         'sponsor_name', v_sponsor.full_name,
         'sponsor_role', v_sponsor.role
@@ -965,15 +1026,15 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT) TO anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT, TEXT) TO anon, authenticated, service_role;
 
 -- Trigger to enforce profile update integrity (Prevents non-admin role escalation and tampering with sensitive metrics)
 CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity()
 RETURNS TRIGGER 
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = ''
 AS $$
 DECLARE
     v_new jsonb;
@@ -988,44 +1049,85 @@ BEGIN
     -- Administrators retain full management authority
     IF public.is_admin() THEN
         IF TG_OP = 'UPDATE' THEN
-            NEW.updated_at := timezone('utc', now());
+            NEW.updated_at := pg_catalog.timezone('utc', pg_catalog.now());
         END IF;
         RETURN NEW;
     END IF;
 
-    v_new := to_jsonb(NEW);
+    -- Convert NEW record to JSONB for schema-existence-safe inspection
+    v_new := pg_catalog.to_jsonb(NEW);
 
     -- =========================================================================
-    -- INSERT VALIDATION (Blocks Direct API Bypasses)
+    -- FAIL-CLOSED SCHEMA INTEGRITY CHECK (Enforced for BOTH INSERT and UPDATE)
+    -- =========================================================================
+    IF NOT (v_new ? 'role')
+       OR NOT (v_new ? 'is_active')
+       OR NOT (v_new ? 'kyc_status')
+       OR NOT (v_new ? 'permissions')
+       OR NOT (v_new ? 'sponsor_id')
+       OR NOT (v_new ? 'member_id')
+    THEN
+        RAISE EXCEPTION 'Schema integrity error: profiles table is missing required security columns';
+    END IF;
+
+    -- =========================================================================
+    -- INSERT VALIDATION (Least-Privilege Non-Admin Registration)
     -- =========================================================================
     IF TG_OP = 'INSERT' THEN
         -- Non-admins can strictly only register as 'buyer'
-        IF COALESCE(NEW.role, 'buyer') <> 'buyer' THEN
+        IF (v_new->>'role') IS NOT NULL AND (v_new->>'role') <> 'buyer' THEN
             RAISE EXCEPTION 'Unauthorized: Public registrations are strictly limited to buyer role';
         END IF;
+        NEW.role := 'buyer';
 
-        -- Non-admins cannot assign member_id (MLM associate codes are reserved for staff)
-        IF NEW.member_id IS NOT NULL AND trim(NEW.member_id) <> '' THEN
+        -- Non-admins cannot self-assign member_id (reserved for company associates)
+        IF (v_new->>'member_id') IS NOT NULL AND pg_catalog.trim(v_new->>'member_id') <> '' THEN
             RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign member_id';
         END IF;
+        NEW.member_id := NULL;
 
         -- Non-admins cannot self-certify KYC status
-        IF COALESCE(NEW.kyc_status, 'pending') NOT IN ('pending', 'submitted') THEN
+        IF (v_new->>'kyc_status') IS NOT NULL AND (v_new->>'kyc_status') NOT IN ('pending', 'submitted') THEN
             RAISE EXCEPTION 'Unauthorized: Non-admin users cannot set verified KYC status on registration';
         END IF;
+        NEW.kyc_status := 'pending';
 
-        -- Non-admins cannot grant themselves permissions
-        IF NEW.permissions IS NOT NULL AND NEW.permissions <> '{}'::jsonb AND NEW.permissions <> '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": true, "canSubmitFieldReports": true, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb THEN
-            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign elevated permissions';
+        -- Non-admins cannot self-assign any elevated staff permissions
+        IF v_new ? 'permissions' AND v_new->'permissions' IS NOT NULL THEN
+            IF (v_new->'permissions'->>'canCreateDownline')::boolean IS TRUE
+               OR (v_new->'permissions'->>'canManagePlots')::boolean IS TRUE
+               OR (v_new->'permissions'->>'canRecordEnquiries')::boolean IS TRUE
+               OR (v_new->'permissions'->>'canSubmitFieldReports')::boolean IS TRUE
+               OR (v_new->'permissions'->>'canViewTeamSales')::boolean IS TRUE
+               OR (v_new->'permissions'->>'canVerifyPayments')::boolean IS TRUE
+               OR (v_new->'permissions'->>'canEditCms')::boolean IS TRUE
+            THEN
+                RAISE EXCEPTION 'Unauthorized: Elevated permissions cannot be granted to public buyer accounts';
+            END IF;
         END IF;
+        -- Enforce least-privilege zero-staff-permission baseline
+        NEW.permissions := '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": false, "canSubmitFieldReports": false, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb;
 
+        -- Non-admins cannot self-assign level, rank, or business volume
+        IF pg_catalog.coalesce((v_new->>'level')::int, 1) > 1
+           OR (v_new->>'rank_title') IS NOT NULL
+           OR pg_catalog.coalesce((v_new->>'total_business_volume_inr')::numeric, 0) > 0
+           OR pg_catalog.coalesce((v_new->>'plots_closed_count')::int, 0) > 0
+        THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign level, rank_title, or business volume';
+        END IF;
         NEW.level := 1;
+        NEW.rank_title := NULL;
         NEW.total_business_volume_inr := 0;
         NEW.plots_closed_count := 0;
 
-        -- Validate sponsor_id if provided
-        IF NEW.sponsor_id IS NOT NULL AND trim(NEW.sponsor_id) <> '' THEN
-            v_sponsor_validation := public.resolve_and_validate_sponsor(NEW.sponsor_id, NEW.id);
+        -- Authoritative sponsor validation
+        IF (v_new->>'sponsor_id') IS NOT NULL AND pg_catalog.trim(v_new->>'sponsor_id') <> '' THEN
+            v_sponsor_validation := public.resolve_and_validate_sponsor(
+                v_new->>'sponsor_id',
+                v_new->>'id',
+                v_new->>'auth_user_id'
+            );
             IF (v_sponsor_validation->>'valid')::boolean IS NOT TRUE THEN
                 RAISE EXCEPTION 'Invalid sponsor: %', (v_sponsor_validation->>'error');
             END IF;
@@ -1038,11 +1140,15 @@ BEGIN
     -- =========================================================================
     -- UPDATE VALIDATION
     -- =========================================================================
-    v_old := to_jsonb(OLD);
+    v_old := pg_catalog.to_jsonb(OLD);
 
-    -- Do not silently ignore missing security-critical columns on profiles
-    IF NOT (v_new ? 'role') OR NOT (v_new ? 'is_active') OR NOT (v_new ? 'kyc_status') OR NOT (v_new ? 'permissions') THEN
-        RAISE EXCEPTION 'Schema integrity error: profiles table is missing required security columns';
+    -- Primary key id and auth_user_id immutability
+    IF (v_new->>'id') IS DISTINCT FROM (v_old->>'id') THEN
+        RAISE EXCEPTION 'Unauthorized: Cannot alter profile primary key';
+    END IF;
+
+    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') AND (v_old->>'auth_user_id') IS NOT NULL THEN
+        RAISE EXCEPTION 'Integrity violation: auth_user_id cannot be reassigned once established';
     END IF;
 
     -- Non-admin callers cannot alter sensitive identity, role, or financial tracking attributes
@@ -1086,15 +1192,7 @@ BEGIN
         RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter plots_closed_count';
     END IF;
 
-    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') AND (v_old->>'auth_user_id') IS NOT NULL THEN
-        RAISE EXCEPTION 'Unauthorized: Cannot alter auth_user_id binding';
-    END IF;
-
-    IF (v_new->>'id') IS DISTINCT FROM (v_old->>'id') THEN
-        RAISE EXCEPTION 'Unauthorized: Cannot alter profile primary key';
-    END IF;
-
-    NEW.updated_at := timezone('utc', now());
+    NEW.updated_at := pg_catalog.timezone('utc', pg_catalog.now());
     RETURN NEW;
 END;
 $$;
@@ -1104,6 +1202,8 @@ CREATE TRIGGER trg_enforce_profile_update_integrity
 BEFORE INSERT OR UPDATE ON public.profiles
 FOR EACH ROW
 EXECUTE FUNCTION public.enforce_profile_update_integrity();
+
+REVOKE ALL ON FUNCTION public.enforce_profile_update_integrity() FROM PUBLIC;
 
 -- Authoritative Audit Logging Procedure (Derives actor from auth.uid() securely)
 CREATE OR REPLACE FUNCTION public.record_audit_log(
