@@ -1,0 +1,9 @@
+# Cloudflare Pages Security Headers for AKGV Infra City Private Limited
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), geolocation=(self), microphone=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+  Content-Security-Policy: default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://assets.akgvinfacity.com https://wa.me; img-src 'self' https: data: blob:; font-src 'self' https: data:;

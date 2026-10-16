@@ -546,16 +546,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     role?: UserRole;
     sponsorId?: string;
   }): Profile => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    const assignedRole: UserRole = isAdmin ? (data.role || 'junior_member') : 'buyer';
     const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
     const newProfile: Profile = {
       id: `usr-${Date.now()}`,
       email: data.email,
       fullName: data.fullName,
       phone: data.phone,
-      role: data.role || 'junior_member',
+      role: assignedRole,
       memberId: newMemberId,
       sponsorId: data.sponsorId,
-      kycStatus: 'verified',
+      kycStatus: isAdmin ? 'verified' : 'pending',
       isActive: true,
       createdAt: new Date().toISOString(),
     };
@@ -735,7 +737,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updatePlotStatus = (plotId: string, newStatus: PlotStatus, reason?: string) => {
+  const setPlotStatusInternal = (plotId: string, newStatus: PlotStatus, reason?: string) => {
     let targetPlot: Plot | null = null;
     setPlots((prev) => {
       const updated = prev.map((p) => {
@@ -758,7 +760,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updatePlotStatus = (plotId: string, newStatus: PlotStatus, reason?: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can manually update plot statuses.');
+    }
+    setPlotStatusInternal(plotId, newStatus, reason);
+  };
+
   const addPlot = (plotData: Omit<Plot, 'id'>): Plot => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can add new plots.');
+    }
     const cleanNum = plotData.plotNumber.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
     const newPlot: Plot = {
       ...plotData,
@@ -776,6 +790,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updatePlot = (plotId: string, patch: Partial<Plot>) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can edit plot configurations.');
+    }
     let targetPlot: Plot | null = null;
     setPlots((prev) => {
       const updated = prev.map((p) => {
@@ -796,6 +814,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deletePlot = (plotId: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can delete plots.');
+    }
     setPlots((prev) => {
       const updated = prev.filter((p) => p.id !== plotId);
       try {
@@ -881,11 +903,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
-    updatePlotStatus(plotId, 'hold_pending', 'Booking request initiated by buyer');
+    setPlotStatusInternal(plotId, 'hold_pending', 'Booking request initiated by buyer');
     return newBooking;
   };
 
   const confirmBooking = (bookingId: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can confirm bookings.');
+    }
     let targetBooking: Booking | null = null;
     setBookings((prev) => {
       const next = prev.map((b) => {
@@ -903,11 +929,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (targetBooking) {
       void saveBookingToSupabase(targetBooking);
-      updatePlotStatus((targetBooking as Booking).plotId, 'booked_yellow', 'Booking confirmed by administrator');
+      setPlotStatusInternal((targetBooking as Booking).plotId, 'booked_yellow', 'Booking confirmed by administrator');
     }
   };
 
   const cancelBooking = (bookingId: string, reason?: string) => {
+    const target = bookings.find((b) => b.id === bookingId);
+    if (!target) throw new Error('Booking not found');
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    const isOwner = currentUser?.id && target.buyerId === currentUser.id;
+    if (!isAdmin && !isOwner) {
+      throw new Error('Access denied: You can only cancel your own bookings.');
+    }
+
     let targetBooking: Booking | null = null;
     setBookings((prev) => {
       const next = prev.map((b) => {
@@ -928,7 +962,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.info(`[Booking] Booking ${bookingId} cancelled: ${reason}`);
       }
       void saveBookingToSupabase(targetBooking);
-      updatePlotStatus((targetBooking as Booking).plotId, 'available_green', reason || 'Booking cancelled and released');
+      setPlotStatusInternal((targetBooking as Booking).plotId, 'available_green', reason || 'Booking cancelled and released');
     }
   };
 
@@ -941,12 +975,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser?.id) {
       throw new Error('Authentication required: You must be logged in to submit payment proof.');
     }
+    if (!amount || amount <= 0) {
+      throw new Error('Invalid payment amount: Amount must be greater than zero.');
+    }
+    if (!txRef || !txRef.trim()) {
+      throw new Error('Transaction reference number is required.');
+    }
     const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking) {
+      throw new Error('Booking not found.');
+    }
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin && booking.buyerId !== currentUser.id) {
+      throw new Error('Unauthorized: You can only submit payment proofs for your own bookings.');
+    }
+
     const newPayment: PaymentRecord = {
       id: `pay-${Date.now()}`,
-      transactionRef: txRef,
+      transactionRef: txRef.trim(),
       bookingId,
-      plotNumber: booking ? booking.plotNumber : 'A-01',
+      plotNumber: booking.plotNumber || 'A-01',
       payerId: currentUser.id,
       payerName: currentUser.fullName,
       payerPhone: currentUser.phone,
@@ -1058,12 +1106,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Transition plot to booked_yellow
       const booking = bookings.find((b) => b.id === existingPayment.bookingId);
       if (booking) {
-        updatePlotStatus(booking.plotId, 'booked_yellow', `Payment verified and receipt ${receiptNum} issued`);
+        setPlotStatusInternal(booking.plotId, 'booked_yellow', `Payment verified and receipt ${receiptNum} issued`);
       }
     }
   };
 
   const recordKitIssue = (data: Omit<JoiningKitIssue, 'id' | 'receiptNumber'>): JoiningKitIssue => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can record joining kit issues.');
+    }
     const newKit: JoiningKitIssue = {
       ...data,
       id: `kit-${Date.now()}`,
@@ -1092,6 +1144,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const submitGpsEvidence = async (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>): Promise<FieldGpsEvidence> => {
+    if (!currentUser) {
+      throw new Error('Unauthorized: Authentication required to submit field GPS evidence.');
+    }
     const newEvidence: FieldGpsEvidence = {
       ...evidence,
       id: `gps-${Date.now()}`,
@@ -1189,16 +1244,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const replyToTicket = (ticketId: string, message: string, isInternalNote = false) => {
+    if (!currentUser) {
+      throw new Error('Unauthorized: Authentication required to reply to support tickets.');
+    }
+    const isStaff = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    const targetTicket = supportTickets.find((t) => t.id === ticketId);
+    if (!targetTicket) {
+      throw new Error('Ticket not found.');
+    }
+    if (!isStaff && targetTicket.userId !== currentUser.id) {
+      throw new Error("Access denied: You cannot reply to another user's support ticket.");
+    }
+    const safeInternalNote = isStaff && Boolean(isInternalNote);
+
     setSupportTickets((prev) =>
       prev.map((tkt) => {
         if (tkt.id === ticketId) {
-          const isStaff = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
           const newMsg = {
             id: `msg-${Date.now()}`,
-            senderId: currentUser?.id || 'guest',
-            senderName: currentUser?.fullName || 'Visitor',
+            senderId: currentUser.id,
+            senderName: currentUser.fullName || 'Member',
             isStaff,
-            isInternalNote,
+            isInternalNote: safeInternalNote,
             message,
             timestamp: new Date().toISOString(),
           };
@@ -1221,12 +1288,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addReview = (data: Omit<ReviewRecord, 'id' | 'createdAt' | 'helpfulCount' | 'status'>): ReviewRecord => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     const newReview: ReviewRecord = {
       ...data,
       id: `rev-${Date.now()}`,
       createdAt: new Date().toISOString(),
       helpfulCount: 0,
-      status: 'approved',
+      status: isAdmin ? 'approved' : 'pending',
     };
     const updated = [newReview, ...reviews];
     saveReviews(updated);
@@ -1250,6 +1318,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateReviewStatus = (reviewId: string, status: 'approved' | 'pending' | 'rejected') => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can update review status.');
+    }
     let targetReview: ReviewRecord | null = null;
     const updated = reviews.map((r) => {
       if (r.id === reviewId) {
@@ -1265,6 +1337,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const replyToReview = (reviewId: string, replyText: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can reply to reviews.');
+    }
     let targetReview: ReviewRecord | null = null;
     const updated = reviews.map((r) => {
       if (r.id === reviewId) {
@@ -1289,6 +1365,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteReview = (reviewId: string) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can delete reviews.');
+    }
     const updated = reviews.filter((r) => r.id !== reviewId);
     saveReviews(updated);
     void deleteReviewFromSupabase(reviewId);
@@ -1313,6 +1393,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateEnquiryStatus = (id: string, status: ClientEnquiry['status']) => {
+    const isStaff = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isStaff) {
+      throw new Error('Access denied: Only staff can update enquiry status.');
+    }
     setEnquiries((prev) => {
       const next = prev.map((e) => (e.id === id ? { ...e, status } : e));
       try {
@@ -1324,6 +1408,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Sales Targets
   const updateTarget = (targetId: string, patch: Partial<SalesTarget>) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can update sales targets.');
+    }
     let updatedTarget: SalesTarget | null = null;
     setTargets((prev) => {
       const next = prev.map((t) => {
@@ -1393,6 +1481,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Dynamic CMS Content (No-Code Routine Changes)
   const updateCmsContent = (patch: Partial<CmsContent>) => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can update CMS content.');
+    }
     setCmsContent((prev) => {
       const updated = { ...prev, ...patch, updatedAt: new Date().toISOString() };
       try {

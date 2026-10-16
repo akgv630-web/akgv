@@ -966,14 +966,35 @@ CREATE POLICY "Self or admin update profile" ON profiles FOR UPDATE TO authentic
 CREATE POLICY "Admin delete profile" ON profiles FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Buyer or sponsor or admin read bookings" ON bookings FOR SELECT TO authenticated USING (public.is_admin() OR buyer_id = auth.uid()::text OR sponsor_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
-CREATE POLICY "Buyer create booking" ON bookings FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR buyer_id = auth.uid()::text);
+CREATE POLICY "Buyer create booking" ON bookings FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR (buyer_id = auth.uid()::text AND status IN ('pending', 'hold') AND (paid_amount_inr IS NULL OR paid_amount_inr = 0)));
 CREATE POLICY "Admin update bookings" ON bookings FOR UPDATE TO authenticated USING (public.is_admin());
 CREATE POLICY "Admin delete bookings" ON bookings FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Payer or admin read payments" ON payment_records FOR SELECT TO authenticated USING (public.is_admin() OR payer_id = auth.uid()::text OR booking_id IN (SELECT b.id FROM bookings b WHERE b.buyer_id = auth.uid()::text));
-CREATE POLICY "Payer create payment" ON payment_records FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR payer_id = auth.uid()::text);
+CREATE POLICY "Payer create payment" ON payment_records FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR (payer_id = auth.uid()::text AND status IN ('pending', 'under_review') AND amount_inr > 0 AND receipt_number IS NULL AND verified_by IS NULL AND verified_at IS NULL));
 CREATE POLICY "Admin update payments" ON payment_records FOR UPDATE TO authenticated USING (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text) WITH CHECK (public.is_admin() AND payer_id IS DISTINCT FROM auth.uid()::text);
 CREATE POLICY "Admin delete payments" ON payment_records FOR DELETE TO authenticated USING (public.is_admin());
+
+CREATE POLICY "Members view own commission" ON commission_ledger FOR SELECT TO authenticated USING (public.is_admin() OR member_id IN (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)));
+CREATE POLICY "Admins manage commission ledger" ON commission_ledger FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Members view own kit issue" ON kit_issues FOR SELECT TO authenticated USING (public.is_admin() OR member_id IN (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)));
+CREATE POLICY "Admins manage kit issues" ON kit_issues FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Payers can view own receipts" ON receipts FOR SELECT TO authenticated USING (public.is_admin() OR booking_id IN (SELECT b.id FROM bookings b WHERE b.buyer_id = auth.uid()::text) OR payment_record_id IN (SELECT p.id FROM payment_records p WHERE p.payer_id = auth.uid()::text));
+CREATE POLICY "Admins manage receipts" ON receipts FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Users can view own tickets" ON support_tickets FOR SELECT TO authenticated USING (public.is_admin() OR user_id = auth.uid()::text OR user_id IN (SELECT p.id FROM profiles p WHERE p.auth_user_id = auth.uid()));
+CREATE POLICY "Users can create tickets" ON support_tickets FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR ((user_id = auth.uid()::text OR user_id IN (SELECT p.id FROM profiles p WHERE p.auth_user_id = auth.uid())) AND status = 'open'));
+CREATE POLICY "Admins can manage tickets" ON support_tickets FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Users can view customer-visible messages" ON ticket_messages FOR SELECT TO authenticated USING (public.is_admin() OR (ticket_id IN (SELECT t.id FROM support_tickets t WHERE t.user_id = auth.uid()::text OR t.user_id IN (SELECT p.id FROM profiles p WHERE p.auth_user_id = auth.uid())) AND is_internal_note = FALSE));
+CREATE POLICY "Users can reply to own tickets" ON ticket_messages FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR (ticket_id IN (SELECT t.id FROM support_tickets t WHERE t.user_id = auth.uid()::text OR t.user_id IN (SELECT p.id FROM profiles p WHERE p.auth_user_id = auth.uid())) AND is_internal_note = FALSE AND sender_id = auth.uid()::text));
+CREATE POLICY "Admins manage all ticket messages" ON ticket_messages FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+
+CREATE POLICY "Members view own reward claims" ON reward_claims FOR SELECT TO authenticated USING (public.is_admin() OR member_id IN (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)));
+CREATE POLICY "Members submit reward claims" ON reward_claims FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR (member_id IN (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)) AND status = 'pending'));
+CREATE POLICY "Admins manage reward claims" ON reward_claims FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 CREATE POLICY "Member or admin read targets" ON sales_targets FOR SELECT TO authenticated USING (public.is_admin() OR member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
 CREATE POLICY "Admin write targets" ON sales_targets FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
@@ -987,7 +1008,7 @@ CREATE POLICY "Recipient or admin read messages" ON in_app_messages FOR SELECT T
 CREATE POLICY "Admin write messages" ON in_app_messages FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 CREATE POLICY "Read gps evidence" ON field_gps_evidence FOR SELECT TO anon, authenticated USING (status = 'approved' OR public.is_admin() OR captured_by_member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
-CREATE POLICY "Authenticated insert gps evidence" ON field_gps_evidence FOR INSERT TO authenticated WITH CHECK (true);
+CREATE POLICY "Authenticated insert gps evidence" ON field_gps_evidence FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR (captured_by_member_id IN (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)) AND status IN ('pending', 'pending_review') AND reviewed_by IS NULL AND reviewed_at IS NULL));
 CREATE POLICY "Admin update gps evidence" ON field_gps_evidence FOR UPDATE TO authenticated USING (public.is_admin());
 CREATE POLICY "Admin delete gps evidence" ON field_gps_evidence FOR DELETE TO authenticated USING (public.is_admin());
 
