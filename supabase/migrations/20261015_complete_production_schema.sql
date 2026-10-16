@@ -325,6 +325,98 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- 19. COMMISSION LEDGER TABLE
+CREATE TABLE IF NOT EXISTS commission_ledger (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    member_id TEXT NOT NULL,
+    source_booking_id TEXT,
+    sale_amount_inr NUMERIC NOT NULL DEFAULT 0,
+    commission_percent NUMERIC NOT NULL DEFAULT 0,
+    commission_earned_inr NUMERIC NOT NULL DEFAULT 0,
+    is_reversed BOOLEAN NOT NULL DEFAULT FALSE,
+    reversal_reason TEXT,
+    payout_status TEXT NOT NULL DEFAULT 'calculated',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    paid_at TIMESTAMPTZ
+);
+
+-- 20. JOINING KIT INVENTORY TABLE
+CREATE TABLE IF NOT EXISTS kit_inventory (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    item_name TEXT UNIQUE NOT NULL,
+    stock_count INT NOT NULL DEFAULT 0,
+    unit_cost_inr NUMERIC NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 21. JOINING KIT ISSUES TABLE
+CREATE TABLE IF NOT EXISTS kit_issues (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    receipt_number TEXT UNIQUE NOT NULL,
+    member_id TEXT NOT NULL,
+    amount_received_inr NUMERIC NOT NULL DEFAULT 999,
+    collection_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    collector_staff_id TEXT,
+    collector_staff_name TEXT NOT NULL,
+    items_included JSONB NOT NULL DEFAULT '{"bag": true, "pen": true, "diary": true, "file": true}'::jsonb,
+    delivery_status TEXT NOT NULL DEFAULT 'issued',
+    recipient_ack_signature TEXT,
+    audit_notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 22. RECEIPTS TABLE
+CREATE TABLE IF NOT EXISTS receipts (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    receipt_number TEXT UNIQUE NOT NULL,
+    booking_id TEXT,
+    payment_record_id TEXT,
+    payer_name TEXT,
+    amount_inr NUMERIC NOT NULL,
+    issued_by TEXT,
+    pdf_url TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 23. REWARD CLAIMS TABLE
+CREATE TABLE IF NOT EXISTS reward_claims (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    member_id TEXT NOT NULL,
+    level_number INT NOT NULL,
+    reward_name TEXT NOT NULL,
+    business_volume_achieved_inr NUMERIC NOT NULL,
+    status TEXT NOT NULL DEFAULT 'eligible',
+    claim_date TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    fulfilled_date TIMESTAMPTZ,
+    admin_notes TEXT
+);
+
+-- 24. SUPPORT TICKETS TABLE
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    ticket_number TEXT UNIQUE NOT NULL,
+    user_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    priority TEXT NOT NULL DEFAULT 'medium',
+    status TEXT NOT NULL DEFAULT 'open',
+    subject TEXT NOT NULL,
+    description TEXT NOT NULL,
+    assigned_staff_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
+-- 25. TICKET MESSAGES TABLE
+CREATE TABLE IF NOT EXISTS ticket_messages (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    ticket_id TEXT NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+    sender_id TEXT NOT NULL,
+    is_staff BOOLEAN NOT NULL DEFAULT FALSE,
+    is_internal_note BOOLEAN NOT NULL DEFAULT FALSE,
+    message TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+);
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES — LEAST-PRIVILEGE HYBRID ENFORCEMENT
 -- ==============================================================================
@@ -346,6 +438,13 @@ ALTER TABLE in_app_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cms_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE field_gps_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE commission_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kit_inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kit_issues ENABLE ROW LEVEL SECURITY;
+ALTER TABLE receipts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reward_claims ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ticket_messages ENABLE ROW LEVEL SECURITY;
 
 -- Helper Functions for Role-Based Row Level Security
 CREATE OR REPLACE FUNCTION public.current_user_role()
@@ -916,6 +1015,7 @@ BEGIN
     DROP POLICY IF EXISTS "Authenticated insert audit_logs" ON audit_logs;
     DROP POLICY IF EXISTS "Admin insert audit_logs" ON audit_logs;
 EXCEPTION
+    WHEN undefined_table THEN NULL;
     WHEN undefined_object THEN NULL;
 END $$;
 
