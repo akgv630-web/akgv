@@ -482,17 +482,89 @@ ALTER TABLE client_enquiries ADD COLUMN IF NOT EXISTS assigned_member_id TEXT;
 
 -- Helper Functions for Role-Based Row Level Security
 CREATE OR REPLACE FUNCTION public.current_user_role()
-RETURNS TEXT AS $$
-  SELECT role FROM public.profiles WHERE auth_user_id = auth.uid() OR id = auth.uid()::text LIMIT 1;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_role TEXT;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN 'visitor';
+    END IF;
+
+    SELECT role INTO v_role
+    FROM public.profiles
+    WHERE auth_user_id = auth.uid()
+    LIMIT 1;
+
+    IF v_role IS NULL THEN
+        SELECT role INTO v_role
+        FROM public.profiles
+        WHERE auth_user_id IS NULL AND id = auth.uid()::text
+        LIMIT 1;
+    END IF;
+
+    RETURN COALESCE(v_role, 'visitor');
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.current_user_role() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated, anon, service_role;
 
 CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
-  SELECT COALESCE(
-    (SELECT role IN ('super_admin', 'sub_admin') FROM public.profiles WHERE auth_user_id = auth.uid() OR id = auth.uid()::text LIMIT 1),
-    FALSE
-  );
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_role TEXT;
+    v_jwt_role TEXT;
+BEGIN
+    -- 1. Direct superuser / database administrator session check (e.g. Supabase Dashboard SQL editor)
+    IF session_user IN ('postgres', 'supabase_admin') THEN
+        RETURN TRUE;
+    END IF;
+
+    -- 2. Supabase service_role key check (e.g. backend Edge functions / server-side admin client)
+    BEGIN
+        v_jwt_role := (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role');
+        IF v_jwt_role = 'service_role' THEN
+            RETURN TRUE;
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        v_jwt_role := NULL;
+    END;
+
+    -- 3. Unauthenticated sessions exit immediately
+    IF auth.uid() IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    -- 4. Query canonical auth_user_id first
+    SELECT role INTO v_role
+    FROM public.profiles
+    WHERE auth_user_id = auth.uid()
+    LIMIT 1;
+
+    -- 5. Fallback to string id only for legacy/seed profiles where auth_user_id IS NULL
+    IF v_role IS NULL THEN
+        SELECT role INTO v_role
+        FROM public.profiles
+        WHERE auth_user_id IS NULL AND id = auth.uid()::text
+        LIMIT 1;
+    END IF;
+
+    RETURN COALESCE(v_role IN ('super_admin', 'sub_admin'), FALSE);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon, service_role;
 
 -- Partial Unique Index on Active Bookings (Prevents Double Bookings and Race Conditions)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_plot_booking 
@@ -869,6 +941,10 @@ BEGIN
 
     IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') THEN
         RAISE EXCEPTION 'Unauthorized: Cannot alter auth_user_id binding';
+    END IF;
+
+    IF (v_new->>'id') IS DISTINCT FROM (v_old->>'id') THEN
+        RAISE EXCEPTION 'Unauthorized: Cannot alter profile primary key';
     END IF;
 
     NEW.updated_at := timezone('utc', now());

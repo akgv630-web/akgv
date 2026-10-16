@@ -32,7 +32,93 @@ ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE public.locations ADD COLUMN IF NOT EXISTS working_hours TEXT;
 
--- 3. Upgrade enforce_profile_update_integrity function
+-- 3. Harden is_admin() and get_current_user_role() with search_path safety and unambiguous auth resolution
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_role TEXT;
+    v_jwt_role TEXT;
+BEGIN
+    -- 1. Direct superuser / database administrator session check (e.g. Supabase Dashboard SQL editor)
+    IF session_user IN ('postgres', 'supabase_admin') THEN
+        RETURN TRUE;
+    END IF;
+
+    -- 2. Supabase service_role key check (e.g. backend Edge functions / server-side admin client)
+    BEGIN
+        v_jwt_role := (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role');
+        IF v_jwt_role = 'service_role' THEN
+            RETURN TRUE;
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        v_jwt_role := NULL;
+    END;
+
+    -- 3. Unauthenticated sessions exit immediately
+    IF auth.uid() IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    -- 4. Query canonical auth_user_id first
+    SELECT role INTO v_role
+    FROM public.profiles
+    WHERE auth_user_id = auth.uid()
+    LIMIT 1;
+
+    -- 5. Fallback to string id only for legacy/seed profiles where auth_user_id IS NULL
+    IF v_role IS NULL THEN
+        SELECT role INTO v_role
+        FROM public.profiles
+        WHERE auth_user_id IS NULL AND id = auth.uid()::text
+        LIMIT 1;
+    END IF;
+
+    RETURN COALESCE(v_role IN ('super_admin', 'sub_admin'), FALSE);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon, service_role;
+
+CREATE OR REPLACE FUNCTION public.get_current_user_role()
+RETURNS TEXT
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_role TEXT;
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RETURN 'visitor';
+    END IF;
+
+    SELECT role INTO v_role
+    FROM public.profiles
+    WHERE auth_user_id = auth.uid()
+    LIMIT 1;
+
+    IF v_role IS NULL THEN
+        SELECT role INTO v_role
+        FROM public.profiles
+        WHERE auth_user_id IS NULL AND id = auth.uid()::text
+        LIMIT 1;
+    END IF;
+
+    RETURN COALESCE(v_role, 'visitor');
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_current_user_role() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_current_user_role() TO authenticated, anon, service_role;
+
+-- 4. Upgrade enforce_profile_update_integrity function
 CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity()
 RETURNS TRIGGER 
 LANGUAGE plpgsql
@@ -105,6 +191,10 @@ BEGIN
 
     IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') THEN
         RAISE EXCEPTION 'Unauthorized: Cannot alter auth_user_id binding';
+    END IF;
+
+    IF (v_new->>'id') IS DISTINCT FROM (v_old->>'id') THEN
+        RAISE EXCEPTION 'Unauthorized: Cannot alter profile primary key';
     END IF;
 
     NEW.updated_at := timezone('utc', now());

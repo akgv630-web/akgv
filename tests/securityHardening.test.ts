@@ -333,6 +333,9 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(schemaSql).toContain('to_jsonb(NEW)');
       expect(schemaSql).toContain('to_jsonb(OLD)');
       expect(schemaSql).toContain("TG_TABLE_NAME <> 'profiles'");
+      expect(schemaSql).toContain('Cannot alter profile primary key');
+      expect(schemaSql).toContain('CREATE OR REPLACE FUNCTION public.is_admin()');
+      expect(schemaSql).toContain('SET search_path = public, pg_temp');
     });
 
     it('must verify forward migration 20261016_zz_profile_integrity_trigger_hardening.sql contains defensive schema and trigger fixes', () => {
@@ -349,6 +352,9 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(migrationSql).toContain("TG_TABLE_NAME <> 'profiles'");
       expect(migrationSql).toContain('DROP TRIGGER IF EXISTS trg_enforce_profile_update_integrity ON public.profiles;');
       expect(migrationSql).toContain('CREATE TRIGGER trg_enforce_profile_update_integrity');
+      expect(migrationSql).toContain('CREATE OR REPLACE FUNCTION public.is_admin()');
+      expect(migrationSql).toContain('SET search_path = public, pg_temp');
+      expect(migrationSql).toContain('Cannot alter profile primary key');
     });
 
     it('behaviorally validates enforce_profile_update_integrity against missing columns and unauthorized changes', () => {
@@ -414,6 +420,9 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
         if (v_new['auth_user_id'] !== v_old['auth_user_id']) {
           throw new Error('Unauthorized: Cannot alter auth_user_id binding');
         }
+        if (v_new['id'] !== v_old['id']) {
+          throw new Error('Unauthorized: Cannot alter profile primary key');
+        }
 
         return { ...newRow, updated_at: 'now()' };
       };
@@ -471,7 +480,12 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
         simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, total_business_volume_inr: 5000000 })
       ).toThrow('Unauthorized: Non-admin users cannot alter total_business_volume_inr');
 
-      // 7. Legitimate non-admin profile update on allowed fields succeeds
+      // 7. Unauthorized primary key id tampering blocked
+      expect(() =>
+        simulateTrigger('profiles', false, baselineProfile, { ...baselineProfile, id: 'usr-admin-01' })
+      ).toThrow('Unauthorized: Cannot alter profile primary key');
+
+      // 8. Legitimate non-admin profile update on allowed fields succeeds
       const safeUpdate = simulateTrigger('profiles', false, baselineProfile, {
         ...baselineProfile,
         full_name: 'Updated Buyer Name',
@@ -480,7 +494,7 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(safeUpdate.full_name).toBe('Updated Buyer Name');
       expect(safeUpdate.phone).toBe('9999988888');
 
-      // 8. Admin update of role and permissions succeeds
+      // 9. Admin update of role and permissions succeeds
       const adminUpdate = simulateTrigger('profiles', true, baselineProfile, {
         ...baselineProfile,
         role: 'senior_member',
@@ -489,6 +503,70 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       });
       expect(adminUpdate.role).toBe('senior_member');
       expect(adminUpdate.kyc_status).toBe('verified');
+    });
+
+    it('deterministically resolves is_admin auth.uid matching without cross-matching or ambiguity', () => {
+      type MockProfile = {
+        id: string;
+        auth_user_id: string | null;
+        role: string;
+      };
+
+      const simulateIsAdmin = (
+        authUid: string | null,
+        profiles: MockProfile[],
+        sessionUser?: string,
+        jwtRole?: string
+      ): boolean => {
+        if (sessionUser === 'postgres' || sessionUser === 'supabase_admin') return true;
+        if (jwtRole === 'service_role') return true;
+        if (!authUid) return false;
+
+        // 1. Canonical auth_user_id match
+        let role = profiles.find((p) => p.auth_user_id === authUid)?.role || null;
+
+        // 2. Fallback to string id ONLY where auth_user_id IS NULL
+        if (!role) {
+          role =
+            profiles.find((p) => p.auth_user_id === null && p.id === authUid)?.role || null;
+        }
+
+        return role === 'super_admin' || role === 'sub_admin';
+      };
+
+      const profilesDb: MockProfile[] = [
+        { id: 'usr-admin-01', auth_user_id: 'admin-uuid-111', role: 'super_admin' },
+        { id: 'usr-buyer-02', auth_user_id: 'buyer-uuid-222', role: 'buyer' },
+        { id: 'legacy-admin-333', auth_user_id: null, role: 'sub_admin' },
+        { id: 'hijack-attempt-444', auth_user_id: 'legit-user-555', role: 'super_admin' },
+      ];
+
+      // 1. Valid canonical admin returns true
+      expect(simulateIsAdmin('admin-uuid-111', profilesDb)).toBe(true);
+
+      // 2. Valid canonical buyer returns false
+      expect(simulateIsAdmin('buyer-uuid-222', profilesDb)).toBe(false);
+
+      // 3. Legacy profile where auth_user_id IS NULL correctly resolves via id
+      expect(simulateIsAdmin('legacy-admin-333', profilesDb)).toBe(true);
+
+      // 4. Attempting to match an id where auth_user_id belongs to someone else is rejected
+      expect(simulateIsAdmin('hijack-attempt-444', profilesDb)).toBe(false);
+
+      // 5. Unauthenticated user returns false
+      expect(simulateIsAdmin(null, profilesDb)).toBe(false);
+
+      // 6. Unknown user returns false
+      expect(simulateIsAdmin('unknown-uuid-999', profilesDb)).toBe(false);
+
+      // 7. Database superuser session (Dashboard SQL editor) returns true
+      expect(simulateIsAdmin(null, profilesDb, 'postgres')).toBe(true);
+
+      // 8. Service role key (Edge function / server backend) returns true
+      expect(simulateIsAdmin(null, profilesDb, 'authenticated', 'service_role')).toBe(true);
+
+      // 9. Authenticated non-admin with arbitrary jwt role returns false
+      expect(simulateIsAdmin(null, profilesDb, 'authenticated', 'authenticated')).toBe(false);
     });
   });
 
