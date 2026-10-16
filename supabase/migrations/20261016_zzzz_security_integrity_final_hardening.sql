@@ -3,10 +3,14 @@
 -- Migration: 20261016_zzzz_security_integrity_final_hardening.sql
 -- Purpose:
 --   1. Ensure all security columns exist on public.profiles with least-privilege buyer defaults
---   2. Authoritative, search_path-isolated, ambiguity-safe sponsor resolution RPC
---   3. Fail-closed schema-column checking for BOTH INSERT and UPDATE trigger branches
---   4. Least-privilege buyer role & permission enforcement on direct API INSERTs
---   5. Anti-self-referral checking for profile ID, Auth user ID, and authenticated session
+--   2. Detach trigger during migration maintenance to prevent self-blocking
+--   3. Cleanse any existing buyer accounts to zero elevated staff permissions
+--   4. Safely revoke and drop obsolete 2-argument resolve_and_validate_sponsor(TEXT, TEXT) overload
+--   5. Create authoritative, search_path-isolated, ambiguity-safe 3-argument sponsor resolution RPC
+--      using valid standard SQL expressions (COALESCE, NULLIF) and pg_catalog.btrim
+--   6. Fail-closed schema-column checking for BOTH INSERT and UPDATE trigger branches
+--   7. Least-privilege buyer role & permission enforcement on direct API INSERTs
+--   8. Anti-self-referral checking for profile ID, Auth user ID, and authenticated session
 -- ==============================================================================
 
 BEGIN;
@@ -22,14 +26,19 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plots_closed_count INT DEFA
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS kyc_status TEXT DEFAULT 'pending';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 
--- Cleanse any existing buyer accounts to ensure zero elevated staff permissions
+-- 2. Temporarily detach legacy trigger during migration maintenance to prevent self-blocking
+DROP TRIGGER IF EXISTS trg_enforce_profile_update_integrity ON public.profiles;
+
+-- 3. Cleanse any existing buyer accounts to ensure zero elevated staff permissions
 UPDATE public.profiles
 SET permissions = '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": false, "canSubmitFieldReports": false, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb
 WHERE role = 'buyer'
   AND permissions IS DISTINCT FROM '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": false, "canSubmitFieldReports": false, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb;
 
+-- 4. Safely drop obsolete 2-argument sponsor resolution overload to eliminate function ambiguity
+DROP FUNCTION IF EXISTS public.resolve_and_validate_sponsor(TEXT, TEXT);
 
--- 2. Create authoritative, search_path-isolated sponsor validation RPC
+-- 5. Create authoritative, search_path-isolated sponsor validation RPC (3 arguments)
 CREATE OR REPLACE FUNCTION public.resolve_and_validate_sponsor(
     p_identifier TEXT,
     p_candidate_profile_id TEXT DEFAULT NULL,
@@ -49,14 +58,14 @@ DECLARE
     v_session_auth_uid UUID;
     v_match_count INT;
 BEGIN
-    IF p_identifier IS NULL OR pg_catalog.trim(p_identifier) = '' THEN
+    IF p_identifier IS NULL OR pg_catalog.btrim(p_identifier) = '' THEN
         RETURN pg_catalog.jsonb_build_object(
             'valid', false,
             'error', 'Sponsor identifier cannot be empty.'
         );
     END IF;
 
-    v_clean_id := pg_catalog.trim(p_identifier);
+    v_clean_id := pg_catalog.btrim(p_identifier);
 
     -- Reject malformed inputs (too short or excessively long)
     IF pg_catalog.length(v_clean_id) < 3 OR pg_catalog.length(v_clean_id) > 100 THEN
@@ -66,9 +75,9 @@ BEGIN
         );
     END IF;
 
-    -- Normalize candidate identifiers
-    v_cand_profile_id := pg_catalog.nullif(pg_catalog.trim(pg_catalog.coalesce(p_candidate_profile_id, '')), '');
-    v_cand_auth_id := pg_catalog.nullif(pg_catalog.trim(pg_catalog.coalesce(p_candidate_auth_id, '')), '');
+    -- Normalize candidate identifiers using standard SQL NULLIF and COALESCE with pg_catalog.btrim
+    v_cand_profile_id := NULLIF(pg_catalog.btrim(COALESCE(p_candidate_profile_id, '')), '');
+    v_cand_auth_id := NULLIF(pg_catalog.btrim(COALESCE(p_candidate_auth_id, '')), '');
 
     -- Safely parse candidate auth UUID
     IF v_cand_auth_id IS NOT NULL THEN
@@ -179,7 +188,7 @@ BEGIN
     -- Return sanitized public advisor information without exposing internal UUIDs
     RETURN pg_catalog.jsonb_build_object(
         'valid', true,
-        'canonical_sponsor_id', pg_catalog.coalesce(v_sponsor.member_id, v_sponsor.id),
+        'canonical_sponsor_id', COALESCE(v_sponsor.member_id, v_sponsor.id),
         'sponsor_member_id', v_sponsor.member_id,
         'sponsor_name', v_sponsor.full_name,
         'sponsor_role', v_sponsor.role
@@ -187,12 +196,26 @@ BEGIN
 END;
 $$;
 
+-- Ensure roles exist for portable database execution
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon;
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated;
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role;
+  END IF;
+END $$;
+
 -- Revoke public permissions and grant minimal execution
 REVOKE ALL ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_and_validate_sponsor(TEXT, TEXT, TEXT) TO anon, authenticated, service_role;
 
 
--- 3. Upgrade enforce_profile_update_integrity with fail-closed schema checks on BOTH INSERT & UPDATE
+-- 6. Upgrade enforce_profile_update_integrity with fail-closed schema checks on BOTH INSERT & UPDATE
 CREATE OR REPLACE FUNCTION public.enforce_profile_update_integrity()
 RETURNS TRIGGER 
 LANGUAGE plpgsql
@@ -244,7 +267,7 @@ BEGIN
         NEW.role := 'buyer';
 
         -- Non-admins cannot self-assign member_id (reserved for company associates)
-        IF (v_new->>'member_id') IS NOT NULL AND pg_catalog.trim(v_new->>'member_id') <> '' THEN
+        IF (v_new->>'member_id') IS NOT NULL AND pg_catalog.btrim(v_new->>'member_id') <> '' THEN
             RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign member_id';
         END IF;
         NEW.member_id := NULL;
@@ -272,10 +295,10 @@ BEGIN
         NEW.permissions := '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": false, "canSubmitFieldReports": false, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb;
 
         -- Non-admins cannot self-assign level, rank, or business volume
-        IF pg_catalog.coalesce((v_new->>'level')::int, 1) > 1
+        IF COALESCE((v_new->>'level')::int, 1) > 1
            OR (v_new->>'rank_title') IS NOT NULL
-           OR pg_catalog.coalesce((v_new->>'total_business_volume_inr')::numeric, 0) > 0
-           OR pg_catalog.coalesce((v_new->>'plots_closed_count')::int, 0) > 0
+           OR COALESCE((v_new->>'total_business_volume_inr')::numeric, 0) > 0
+           OR COALESCE((v_new->>'plots_closed_count')::int, 0) > 0
         THEN
             RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign level, rank_title, or business volume';
         END IF;
@@ -285,7 +308,7 @@ BEGIN
         NEW.plots_closed_count := 0;
 
         -- Authoritative sponsor validation
-        IF (v_new->>'sponsor_id') IS NOT NULL AND pg_catalog.trim(v_new->>'sponsor_id') <> '' THEN
+        IF (v_new->>'sponsor_id') IS NOT NULL AND pg_catalog.btrim(v_new->>'sponsor_id') <> '' THEN
             v_sponsor_validation := public.resolve_and_validate_sponsor(
                 v_new->>'sponsor_id',
                 v_new->>'id',
@@ -360,15 +383,13 @@ BEGIN
 END;
 $$;
 
--- 4. Re-attach trigger on public.profiles
-DROP TRIGGER IF EXISTS trg_enforce_profile_update_integrity ON public.profiles;
-
+-- 7. Re-attach trigger on public.profiles
 CREATE TRIGGER trg_enforce_profile_update_integrity
 BEFORE INSERT OR UPDATE ON public.profiles
 FOR EACH ROW
 EXECUTE FUNCTION public.enforce_profile_update_integrity();
 
--- 5. Revoke direct execute on trigger function from PUBLIC
+-- 8. Revoke direct execute on trigger function from PUBLIC
 REVOKE ALL ON FUNCTION public.enforce_profile_update_integrity() FROM PUBLIC;
 
 COMMIT;

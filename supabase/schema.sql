@@ -888,14 +888,14 @@ DECLARE
     v_session_auth_uid UUID;
     v_match_count INT;
 BEGIN
-    IF p_identifier IS NULL OR pg_catalog.trim(p_identifier) = '' THEN
+    IF p_identifier IS NULL OR pg_catalog.btrim(p_identifier) = '' THEN
         RETURN pg_catalog.jsonb_build_object(
             'valid', false,
             'error', 'Sponsor identifier cannot be empty.'
         );
     END IF;
 
-    v_clean_id := pg_catalog.trim(p_identifier);
+    v_clean_id := pg_catalog.btrim(p_identifier);
 
     -- Reject malformed inputs (too short or excessively long)
     IF pg_catalog.length(v_clean_id) < 3 OR pg_catalog.length(v_clean_id) > 100 THEN
@@ -905,9 +905,9 @@ BEGIN
         );
     END IF;
 
-    -- Normalize candidate identifiers
-    v_cand_profile_id := pg_catalog.nullif(pg_catalog.trim(pg_catalog.coalesce(p_candidate_profile_id, '')), '');
-    v_cand_auth_id := pg_catalog.nullif(pg_catalog.trim(pg_catalog.coalesce(p_candidate_auth_id, '')), '');
+    -- Normalize candidate identifiers using standard SQL NULLIF and COALESCE with pg_catalog.btrim
+    v_cand_profile_id := NULLIF(pg_catalog.btrim(COALESCE(p_candidate_profile_id, '')), '');
+    v_cand_auth_id := NULLIF(pg_catalog.btrim(COALESCE(p_candidate_auth_id, '')), '');
 
     -- Safely parse candidate auth UUID
     IF v_cand_auth_id IS NOT NULL THEN
@@ -1018,7 +1018,7 @@ BEGIN
     -- Return sanitized public advisor information without exposing internal UUIDs
     RETURN pg_catalog.jsonb_build_object(
         'valid', true,
-        'canonical_sponsor_id', pg_catalog.coalesce(v_sponsor.member_id, v_sponsor.id),
+        'canonical_sponsor_id', COALESCE(v_sponsor.member_id, v_sponsor.id),
         'sponsor_member_id', v_sponsor.member_id,
         'sponsor_name', v_sponsor.full_name,
         'sponsor_role', v_sponsor.role
@@ -1081,7 +1081,7 @@ BEGIN
         NEW.role := 'buyer';
 
         -- Non-admins cannot self-assign member_id (reserved for company associates)
-        IF (v_new->>'member_id') IS NOT NULL AND pg_catalog.trim(v_new->>'member_id') <> '' THEN
+        IF (v_new->>'member_id') IS NOT NULL AND pg_catalog.btrim(v_new->>'member_id') <> '' THEN
             RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign member_id';
         END IF;
         NEW.member_id := NULL;
@@ -1109,10 +1109,10 @@ BEGIN
         NEW.permissions := '{"canCreateDownline": false, "canManagePlots": false, "canRecordEnquiries": false, "canSubmitFieldReports": false, "canViewTeamSales": false, "canVerifyPayments": false, "canEditCms": false}'::jsonb;
 
         -- Non-admins cannot self-assign level, rank, or business volume
-        IF pg_catalog.coalesce((v_new->>'level')::int, 1) > 1
+        IF COALESCE((v_new->>'level')::int, 1) > 1
            OR (v_new->>'rank_title') IS NOT NULL
-           OR pg_catalog.coalesce((v_new->>'total_business_volume_inr')::numeric, 0) > 0
-           OR pg_catalog.coalesce((v_new->>'plots_closed_count')::int, 0) > 0
+           OR COALESCE((v_new->>'total_business_volume_inr')::numeric, 0) > 0
+           OR COALESCE((v_new->>'plots_closed_count')::int, 0) > 0
         THEN
             RAISE EXCEPTION 'Unauthorized: Non-admin users cannot assign level, rank_title, or business volume';
         END IF;
@@ -1122,7 +1122,7 @@ BEGIN
         NEW.plots_closed_count := 0;
 
         -- Authoritative sponsor validation
-        IF (v_new->>'sponsor_id') IS NOT NULL AND pg_catalog.trim(v_new->>'sponsor_id') <> '' THEN
+        IF (v_new->>'sponsor_id') IS NOT NULL AND pg_catalog.btrim(v_new->>'sponsor_id') <> '' THEN
             v_sponsor_validation := public.resolve_and_validate_sponsor(
                 v_new->>'sponsor_id',
                 v_new->>'id',
