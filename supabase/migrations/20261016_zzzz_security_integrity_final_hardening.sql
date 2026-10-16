@@ -26,6 +26,83 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS plots_closed_count INT DEFA
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS kyc_status TEXT DEFAULT 'pending';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
 
+-- 1b. Validate schema types and defensive assertions on public.profiles
+DO $$
+DECLARE
+    v_type TEXT;
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_catalog.pg_tables
+        WHERE schemaname = 'public' AND tablename = 'profiles'
+    ) THEN
+        RAISE EXCEPTION 'Schema integrity error: public.profiles table does not exist';
+    END IF;
+
+    -- Verify id is text
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'id';
+    IF v_type IS DISTINCT FROM 'text' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.id must be text, found %', v_type;
+    END IF;
+
+    -- Verify auth_user_id is uuid
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'auth_user_id';
+    IF v_type IS DISTINCT FROM 'uuid' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.auth_user_id must be uuid, found %', v_type;
+    END IF;
+
+    -- Verify permissions is jsonb
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'permissions';
+    IF v_type IS DISTINCT FROM 'jsonb' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.permissions must be jsonb, found %', v_type;
+    END IF;
+
+    -- Verify member_id is text
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'member_id';
+    IF v_type IS DISTINCT FROM 'text' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.member_id must be text, found %', v_type;
+    END IF;
+
+    -- Verify sponsor_id is text
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'sponsor_id';
+    IF v_type IS DISTINCT FROM 'text' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.sponsor_id must be text, found %', v_type;
+    END IF;
+
+    -- Verify role is text
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'role';
+    IF v_type IS DISTINCT FROM 'text' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.role must be text, found %', v_type;
+    END IF;
+
+    -- Verify is_active is boolean
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'is_active';
+    IF v_type IS DISTINCT FROM 'boolean' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.is_active must be boolean, found %', v_type;
+    END IF;
+
+    -- Verify kyc_status is text
+    SELECT data_type INTO v_type
+    FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'kyc_status';
+    IF v_type IS DISTINCT FROM 'text' THEN
+        RAISE EXCEPTION 'Schema type mismatch: profiles.kyc_status must be text, found %', v_type;
+    END IF;
+END $$;
+
 -- 2. Temporarily detach legacy trigger during migration maintenance to prevent self-blocking
 DROP TRIGGER IF EXISTS trg_enforce_profile_update_integrity ON public.profiles;
 
@@ -185,13 +262,11 @@ BEGIN
         );
     END IF;
 
-    -- Return sanitized public advisor information without exposing internal UUIDs
+    -- Return sanitized public advisor information without exposing internal UUIDs or roles
     RETURN pg_catalog.jsonb_build_object(
         'valid', true,
         'canonical_sponsor_id', COALESCE(v_sponsor.member_id, v_sponsor.id),
-        'sponsor_member_id', v_sponsor.member_id,
-        'sponsor_name', v_sponsor.full_name,
-        'sponsor_role', v_sponsor.role
+        'sponsor_name', v_sponsor.full_name
     );
 END;
 $$;
@@ -260,6 +335,23 @@ BEGIN
     -- INSERT VALIDATION (Least-Privilege Non-Admin Registration)
     -- =========================================================================
     IF TG_OP = 'INSERT' THEN
+        -- Non-admins cannot forge or hijack another user's auth_user_id
+        IF auth.uid() IS NULL THEN
+            IF (v_new->>'auth_user_id') IS NOT NULL AND pg_catalog.btrim(v_new->>'auth_user_id') <> '' THEN
+                RAISE EXCEPTION 'Unauthorized: Unauthenticated clients cannot bind a profile to an auth_user_id';
+            END IF;
+            NEW.auth_user_id := NULL;
+        ELSE
+            IF (v_new->>'auth_user_id') IS NOT NULL AND (v_new->>'auth_user_id')::uuid <> auth.uid() THEN
+                RAISE EXCEPTION 'Unauthorized: Profile auth_user_id must match authenticated session identity';
+            END IF;
+            IF (v_new->>'id') IS NOT NULL AND (v_new->>'id') <> auth.uid()::text THEN
+                RAISE EXCEPTION 'Unauthorized: Profile id must match authenticated session identity';
+            END IF;
+            NEW.auth_user_id := auth.uid();
+            NEW.id := auth.uid()::text;
+        END IF;
+
         -- Non-admins can strictly only register as 'buyer'
         IF (v_new->>'role') IS NOT NULL AND (v_new->>'role') <> 'buyer' THEN
             RAISE EXCEPTION 'Unauthorized: Public registrations are strictly limited to buyer role';
@@ -328,13 +420,39 @@ BEGIN
     -- =========================================================================
     v_old := pg_catalog.to_jsonb(OLD);
 
-    -- Primary key id and auth_user_id immutability
+    -- Primary key id immutability
     IF (v_new->>'id') IS DISTINCT FROM (v_old->>'id') THEN
         RAISE EXCEPTION 'Unauthorized: Cannot alter profile primary key';
     END IF;
 
-    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') AND (v_old->>'auth_user_id') IS NOT NULL THEN
-        RAISE EXCEPTION 'Integrity violation: auth_user_id cannot be reassigned once established';
+    -- Cross-user profile update protection: When authenticated, non-admin callers can only update their own profile
+    IF auth.uid() IS NOT NULL THEN
+        IF (v_old->>'auth_user_id') IS NOT NULL AND (v_old->>'auth_user_id')::uuid <> auth.uid() THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users can only update their own profile';
+        END IF;
+        IF (v_old->>'auth_user_id') IS NULL AND (v_old->>'id') <> auth.uid()::text THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot claim or modify unlinked profiles belonging to another entity';
+        END IF;
+    END IF;
+
+    -- auth_user_id binding and integrity protection
+    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') THEN
+        IF (v_old->>'auth_user_id') IS NOT NULL THEN
+            RAISE EXCEPTION 'Integrity violation: auth_user_id cannot be reassigned once established';
+        ELSE
+            -- Attempting to link an unlinked profile (transition from NULL to non-NULL)
+            IF auth.uid() IS NULL THEN
+                RAISE EXCEPTION 'Unauthorized: Unauthenticated callers cannot assign auth_user_id';
+            END IF;
+
+            IF (v_new->>'auth_user_id') IS NULL OR (v_new->>'auth_user_id')::uuid <> auth.uid() THEN
+                RAISE EXCEPTION 'Unauthorized: Profile auth_user_id must match authenticated session identity';
+            END IF;
+
+            IF (v_old->>'id') <> auth.uid()::text THEN
+                RAISE EXCEPTION 'Unauthorized: Non-admin users cannot claim unlinked profiles belonging to another entity';
+            END IF;
+        END IF;
     END IF;
 
     -- Non-admin callers cannot alter sensitive identity, role, or financial tracking attributes
@@ -389,7 +507,41 @@ BEFORE INSERT OR UPDATE ON public.profiles
 FOR EACH ROW
 EXECUTE FUNCTION public.enforce_profile_update_integrity();
 
--- 8. Revoke direct execute on trigger function from PUBLIC
+-- 8. Harden RLS policies on public.profiles to enforce strict Auth-identity binding
+DROP POLICY IF EXISTS "Authenticated create profile" ON public.profiles;
+CREATE POLICY "Authenticated create profile" ON public.profiles
+FOR INSERT TO authenticated
+WITH CHECK (
+    public.is_admin()
+    OR (
+        auth_user_id = auth.uid()
+        AND id = auth.uid()::text
+        AND role = 'buyer'
+    )
+);
+
+DROP POLICY IF EXISTS "Self or admin update profile" ON public.profiles;
+CREATE POLICY "Self or admin update profile" ON public.profiles
+FOR UPDATE TO authenticated
+USING (
+    public.is_admin()
+    OR (auth_user_id = auth.uid())
+    OR (auth_user_id IS NULL AND id = auth.uid()::text)
+)
+WITH CHECK (
+    public.is_admin()
+    OR (
+        (auth_user_id = auth.uid() OR (auth_user_id IS NULL AND id = auth.uid()::text))
+        AND role = (
+            SELECT p2.role
+            FROM public.profiles p2
+            WHERE (p2.auth_user_id = auth.uid() OR (p2.auth_user_id IS NULL AND p2.id = auth.uid()::text))
+            LIMIT 1
+        )
+    )
+);
+
+-- 9. Revoke direct execute on trigger function from PUBLIC
 REVOKE ALL ON FUNCTION public.enforce_profile_update_integrity() FROM PUBLIC;
 
 COMMIT;

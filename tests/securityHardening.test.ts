@@ -857,7 +857,8 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(resByMemberId.valid).toBe(true);
       expect(resByMemberId.canonicalSponsorId).toBe('AKGV-3498');
       expect(resByMemberId.sponsorName).toBe('Vikram Singh');
-      expect(resByMemberId.sponsorRole).toBe('senior_member');
+      // Least privilege: internal role and enumeration attributes must be omitted
+      expect(resByMemberId.sponsorRole).toBeUndefined();
 
       const resById = await resolveAndValidateSponsor('usr-sponsor-01');
       expect(resById.valid).toBe(true);

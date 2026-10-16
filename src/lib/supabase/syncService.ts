@@ -1222,9 +1222,7 @@ export async function resolveAndValidateSponsor(
           return {
             valid: true,
             canonicalSponsorId: res.canonical_sponsor_id,
-            sponsorMemberId: res.sponsor_member_id,
             sponsorName: res.sponsor_name,
-            sponsorRole: res.sponsor_role,
           };
         } else {
           return { valid: false, error: res.error || 'Sponsor verification failed.' };
@@ -1283,9 +1281,7 @@ export async function resolveAndValidateSponsor(
       return {
         valid: true,
         canonicalSponsorId: row.member_id || row.id,
-        sponsorMemberId: row.member_id || undefined,
         sponsorName: row.full_name,
-        sponsorRole: row.role,
       };
     } catch (err) {
       console.warn('[Supabase Sync] Exception during sponsor validation:', err);
@@ -1339,9 +1335,7 @@ export async function resolveAndValidateSponsor(
   return {
     valid: true,
     canonicalSponsorId: match.memberId || match.id,
-    sponsorMemberId: match.memberId,
     sponsorName: match.fullName,
-    sponsorRole: match.role,
   };
 }
 

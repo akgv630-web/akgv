@@ -1015,13 +1015,11 @@ BEGIN
         );
     END IF;
 
-    -- Return sanitized public advisor information without exposing internal UUIDs
+    -- Return sanitized public advisor information without exposing internal UUIDs or roles
     RETURN pg_catalog.jsonb_build_object(
         'valid', true,
         'canonical_sponsor_id', COALESCE(v_sponsor.member_id, v_sponsor.id),
-        'sponsor_member_id', v_sponsor.member_id,
-        'sponsor_name', v_sponsor.full_name,
-        'sponsor_role', v_sponsor.role
+        'sponsor_name', v_sponsor.full_name
     );
 END;
 $$;
@@ -1074,6 +1072,23 @@ BEGIN
     -- INSERT VALIDATION (Least-Privilege Non-Admin Registration)
     -- =========================================================================
     IF TG_OP = 'INSERT' THEN
+        -- Non-admins cannot forge or hijack another user's auth_user_id
+        IF auth.uid() IS NULL THEN
+            IF (v_new->>'auth_user_id') IS NOT NULL AND pg_catalog.btrim(v_new->>'auth_user_id') <> '' THEN
+                RAISE EXCEPTION 'Unauthorized: Unauthenticated clients cannot bind a profile to an auth_user_id';
+            END IF;
+            NEW.auth_user_id := NULL;
+        ELSE
+            IF (v_new->>'auth_user_id') IS NOT NULL AND (v_new->>'auth_user_id')::uuid <> auth.uid() THEN
+                RAISE EXCEPTION 'Unauthorized: Profile auth_user_id must match authenticated session identity';
+            END IF;
+            IF (v_new->>'id') IS NOT NULL AND (v_new->>'id') <> auth.uid()::text THEN
+                RAISE EXCEPTION 'Unauthorized: Profile id must match authenticated session identity';
+            END IF;
+            NEW.auth_user_id := auth.uid();
+            NEW.id := auth.uid()::text;
+        END IF;
+
         -- Non-admins can strictly only register as 'buyer'
         IF (v_new->>'role') IS NOT NULL AND (v_new->>'role') <> 'buyer' THEN
             RAISE EXCEPTION 'Unauthorized: Public registrations are strictly limited to buyer role';
@@ -1142,13 +1157,39 @@ BEGIN
     -- =========================================================================
     v_old := pg_catalog.to_jsonb(OLD);
 
-    -- Primary key id and auth_user_id immutability
+    -- Primary key id immutability
     IF (v_new->>'id') IS DISTINCT FROM (v_old->>'id') THEN
         RAISE EXCEPTION 'Unauthorized: Cannot alter profile primary key';
     END IF;
 
-    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') AND (v_old->>'auth_user_id') IS NOT NULL THEN
-        RAISE EXCEPTION 'Integrity violation: auth_user_id cannot be reassigned once established';
+    -- Cross-user profile update protection: When authenticated, non-admin callers can only update their own profile
+    IF auth.uid() IS NOT NULL THEN
+        IF (v_old->>'auth_user_id') IS NOT NULL AND (v_old->>'auth_user_id')::uuid <> auth.uid() THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users can only update their own profile';
+        END IF;
+        IF (v_old->>'auth_user_id') IS NULL AND (v_old->>'id') <> auth.uid()::text THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot claim or modify unlinked profiles belonging to another entity';
+        END IF;
+    END IF;
+
+    -- auth_user_id binding and integrity protection
+    IF (v_new->>'auth_user_id') IS DISTINCT FROM (v_old->>'auth_user_id') THEN
+        IF (v_old->>'auth_user_id') IS NOT NULL THEN
+            RAISE EXCEPTION 'Integrity violation: auth_user_id cannot be reassigned once established';
+        ELSE
+            -- Attempting to link an unlinked profile (transition from NULL to non-NULL)
+            IF auth.uid() IS NULL THEN
+                RAISE EXCEPTION 'Unauthorized: Unauthenticated callers cannot assign auth_user_id';
+            END IF;
+
+            IF (v_new->>'auth_user_id') IS NULL OR (v_new->>'auth_user_id')::uuid <> auth.uid() THEN
+                RAISE EXCEPTION 'Unauthorized: Profile auth_user_id must match authenticated session identity';
+            END IF;
+
+            IF (v_old->>'id') <> auth.uid()::text THEN
+                RAISE EXCEPTION 'Unauthorized: Non-admin users cannot claim unlinked profiles belonging to another entity';
+            END IF;
+        END IF;
     END IF;
 
     -- Non-admin callers cannot alter sensitive identity, role, or financial tracking attributes
@@ -1434,8 +1475,30 @@ CREATE POLICY "Private profiles read access" ON profiles FOR SELECT TO authentic
     OR sponsor_id = (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) LIMIT 1)
     OR member_id = (SELECT p.sponsor_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) LIMIT 1)
 );
-CREATE POLICY "Authenticated create profile" ON profiles FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR ((auth_user_id = auth.uid() OR id = auth.uid()::text) AND role = 'buyer'));
-CREATE POLICY "Self or admin update profile" ON profiles FOR UPDATE TO authenticated USING (public.is_admin() OR auth_user_id = auth.uid() OR id = auth.uid()::text) WITH CHECK (public.is_admin() OR ((auth_user_id = auth.uid() OR id = auth.uid()::text) AND role = (SELECT p2.role FROM profiles p2 WHERE p2.auth_user_id = auth.uid() OR p2.id = auth.uid()::text LIMIT 1)));
+CREATE POLICY "Authenticated create profile" ON profiles FOR INSERT TO authenticated WITH CHECK (
+    public.is_admin()
+    OR (
+        auth_user_id = auth.uid()
+        AND id = auth.uid()::text
+        AND role = 'buyer'
+    )
+);
+CREATE POLICY "Self or admin update profile" ON profiles FOR UPDATE TO authenticated USING (
+    public.is_admin()
+    OR (auth_user_id = auth.uid())
+    OR (auth_user_id IS NULL AND id = auth.uid()::text)
+) WITH CHECK (
+    public.is_admin()
+    OR (
+        (auth_user_id = auth.uid() OR (auth_user_id IS NULL AND id = auth.uid()::text))
+        AND role = (
+            SELECT p2.role
+            FROM public.profiles p2
+            WHERE (p2.auth_user_id = auth.uid() OR (p2.auth_user_id IS NULL AND p2.id = auth.uid()::text))
+            LIMIT 1
+        )
+    )
+);
 CREATE POLICY "Admin delete profile" ON profiles FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Buyer or sponsor or admin read bookings" ON bookings FOR SELECT TO authenticated USING (public.is_admin() OR buyer_id = auth.uid()::text OR sponsor_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));

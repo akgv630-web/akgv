@@ -174,17 +174,17 @@ describe('Real PostgreSQL Database Integration Suite (PGlite 18 Engine)', () => 
       `);
     });
 
-    it('resolves valid sponsor by member_id without exposing internal UUID', async () => {
-      const res = await db.query<{ res: { valid: boolean; canonical_sponsor_id: string; sponsor_member_id: string; sponsor_name: string; sponsor_role: string; sponsor_profile_id?: string } }>(`
+    it('resolves valid sponsor by member_id without exposing internal UUID or roles', async () => {
+      const res = await db.query<{ res: { valid: boolean; canonical_sponsor_id: string; sponsor_name: string; sponsor_role?: string; sponsor_member_id?: string; sponsor_profile_id?: string } }>(`
         SELECT public.resolve_and_validate_sponsor('AKGV-3498') AS res;
       `);
       const data = res.rows[0].res;
       expect(data.valid).toBe(true);
       expect(data.canonical_sponsor_id).toBe('AKGV-3498');
-      expect(data.sponsor_member_id).toBe('AKGV-3498');
       expect(data.sponsor_name).toBe('Sponsor Patel');
-      expect(data.sponsor_role).toBe('senior_member');
-      // Must not leak private internal database UUID
+      // Must not leak internal roles, unneeded member IDs, or private internal database UUID
+      expect(data.sponsor_role).toBeUndefined();
+      expect(data.sponsor_member_id).toBeUndefined();
       expect(data.sponsor_profile_id).toBeUndefined();
     });
 
@@ -481,6 +481,149 @@ describe('Real PostgreSQL Database Integration Suite (PGlite 18 Engine)', () => 
       expect(res.rows[0].phone).toBe('9111111111');
       expect(res.rows[0].city).toBe('Varanasi');
       expect(res.rows[0].address).toBe('Rampur Colony');
+    });
+
+    it('rejects public unauthenticated INSERT attempting to set auth_user_id', async () => {
+      // Unauthenticated session (auth.uid() is null)
+      await db.exec(`SET my.session_uid = '';`);
+
+      await expect(
+        db.exec(`
+          INSERT INTO public.profiles (
+            id, auth_user_id, email, full_name, phone, role, is_active, kyc_status, permissions, sponsor_id, member_id
+          ) VALUES (
+            'usr-anon-forged', '55555555-5555-5555-5555-555555555555'::uuid, 'anonforged@example.com',
+            'Anon Forged', '9876543210', 'buyer', TRUE, 'pending', NULL, NULL, NULL
+          );
+        `)
+      ).rejects.toThrow('Unauthorized: Unauthenticated clients cannot bind a profile to an auth_user_id');
+    });
+
+    it('rejects authenticated INSERT attempting to forge another user auth_user_id', async () => {
+      // Authenticated session as user A
+      await db.exec(`SET my.session_uid = '66666666-6666-6666-6666-666666666661';`);
+
+      await expect(
+        db.exec(`
+          INSERT INTO public.profiles (
+            id, auth_user_id, email, full_name, phone, role, is_active, kyc_status, permissions, sponsor_id, member_id
+          ) VALUES (
+            '66666666-6666-6666-6666-666666666661', '66666666-6666-6666-6666-666666666662'::uuid,
+            'crossuser@example.com', 'Cross User', '9876543210', 'buyer', TRUE, 'pending', NULL, NULL, NULL
+          );
+        `)
+      ).rejects.toThrow('Unauthorized: Profile auth_user_id must match authenticated session identity');
+
+      await db.exec(`SET my.session_uid = '';`);
+    });
+
+    it('binds authenticated buyer profile to session auth.uid() on INSERT', async () => {
+      const legitUid = '77777777-7777-7777-7777-777777777777';
+      await db.exec(`SET my.session_uid = '${legitUid}';`);
+
+      await db.exec(`
+        INSERT INTO public.profiles (
+          id, email, full_name, phone, role, is_active, kyc_status, permissions, sponsor_id, member_id
+        ) VALUES (
+          '${legitUid}', 'boundbuyer@example.com', 'Bound Buyer', '9876543210', 'buyer',
+          TRUE, 'pending', NULL, 'AKGV-3498', NULL
+        );
+      `);
+
+      const res = await db.query<{ id: string; auth_user_id: string }>(`
+        SELECT id, auth_user_id FROM public.profiles WHERE id = '${legitUid}';
+      `);
+
+      expect(res.rows[0].id).toBe(legitUid);
+      expect(res.rows[0].auth_user_id).toBe(legitUid);
+
+      await db.exec(`SET my.session_uid = '';`);
+    });
+
+    it('rejects non-admin UPDATE attempting to claim someone else unlinked profile', async () => {
+      // Seed unlinked associate profile under admin
+      await db.exec(`
+        SET my.is_admin = 'true';
+        INSERT INTO public.profiles (
+          id, auth_user_id, email, full_name, phone, role, member_id, is_active
+        ) VALUES (
+          'prof-unlinked-associate', NULL, 'unlinked@akgvinfra.com', 'Unlinked Associate', '9876543299', 'senior_member', 'AKGV-UNLINK', TRUE
+        );
+        SET my.is_admin = 'false';
+      `);
+
+      // Attacker authenticated as user 8
+      const attackerUid = '88888888-8888-8888-8888-888888888888';
+      await db.exec(`SET my.session_uid = '${attackerUid}';`);
+
+      await expect(
+        db.exec(`
+          UPDATE public.profiles
+          SET auth_user_id = '${attackerUid}'::uuid
+          WHERE id = 'prof-unlinked-associate';
+        `)
+      ).rejects.toThrow('Unauthorized: Non-admin users cannot claim or modify unlinked profiles belonging to another entity');
+
+      await db.exec(`SET my.session_uid = '';`);
+    });
+
+    it('allows legitimate user to link their own unlinked profile on UPDATE', async () => {
+      const userUid = '99999999-9999-9999-9999-999999999999';
+      // Seed legacy unlinked profile where id = userUid
+      await db.exec(`
+        SET my.is_admin = 'true';
+        INSERT INTO public.profiles (
+          id, auth_user_id, email, full_name, phone, role, is_active
+        ) VALUES (
+          '${userUid}', NULL, 'legacyself@example.com', 'Legacy Self', '9876543288', 'buyer', TRUE
+        );
+        SET my.is_admin = 'false';
+      `);
+
+      // Caller authenticated as userUid links their own record
+      await db.exec(`SET my.session_uid = '${userUid}';`);
+
+      await db.exec(`
+        UPDATE public.profiles
+        SET auth_user_id = '${userUid}'::uuid
+        WHERE id = '${userUid}';
+      `);
+
+      const res = await db.query<{ id: string; auth_user_id: string }>(`
+        SELECT id, auth_user_id FROM public.profiles WHERE id = '${userUid}';
+      `);
+
+      expect(res.rows[0].auth_user_id).toBe(userUid);
+
+      await db.exec(`SET my.session_uid = '';`);
+    });
+
+    it('rejects non-admin UPDATE attempting to modify another user profile', async () => {
+      // Victim profile
+      const victimUid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+      await db.exec(`
+        SET my.is_admin = 'true';
+        INSERT INTO public.profiles (
+          id, auth_user_id, email, full_name, phone, role, is_active
+        ) VALUES (
+          '${victimUid}', '${victimUid}'::uuid, 'victim@example.com', 'Victim User', '9876543277', 'buyer', TRUE
+        );
+        SET my.is_admin = 'false';
+      `);
+
+      // Attacker authenticated as user B
+      const attackerUid = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+      await db.exec(`SET my.session_uid = '${attackerUid}';`);
+
+      await expect(
+        db.exec(`
+          UPDATE public.profiles
+          SET phone = '9999999999'
+          WHERE id = '${victimUid}';
+        `)
+      ).rejects.toThrow('Unauthorized: Non-admin users can only update their own profile');
+
+      await db.exec(`SET my.session_uid = '';`);
     });
   });
 });
