@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   ArrowRight,
@@ -19,6 +20,8 @@ import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { UserRole } from '@/types';
 import { resolveAndValidateSponsor, SponsorValidationResult } from '@/lib/supabase/syncService';
+
+const emptySubscribe = () => () => {};
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -39,6 +42,22 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot' | 'sandbox'>(
     initialTab === 'sandbox' && !isDev ? 'login' : initialTab
   );
+
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -116,7 +135,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     };
   }, [regSponsorCode]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isMounted) return null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,10 +304,13 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto"
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-lg max-h-[92vh] flex flex-col rounded-3xl border border-[#C7A35A]/40 bg-[#0B1734] shadow-2xl overflow-hidden text-gray-200"
+        className="relative w-full max-w-lg max-h-[90vh] my-auto flex flex-col rounded-3xl border border-[#C7A35A]/40 bg-[#0B1734] shadow-2xl overflow-hidden text-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Banner */}
@@ -836,6 +858,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           <span className="text-[#DFC382]">Varanasi, UP</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
