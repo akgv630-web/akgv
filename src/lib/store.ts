@@ -37,7 +37,7 @@ export const DEMO_PROFILES: Profile[] = [
   {
     id: 'usr-admin-01',
     email: 'admin@akgvinfacity.com',
-    fullName: 'Rajesh Kumar Patel',
+    fullName: 'Preet Yadav',
     phone: '6306917991',
     role: 'super_admin',
     memberId: 'AKGV-HQ-001',

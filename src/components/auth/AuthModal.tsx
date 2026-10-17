@@ -39,15 +39,27 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   } = useApp();
 
   const isDev = process.env.NODE_ENV !== 'production';
-  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot' | 'sandbox'>(
-    initialTab === 'sandbox' && !isDev ? 'login' : initialTab
-  );
-
   const isMounted = useSyncExternalStore(
     emptySubscribe,
     () => true,
     () => false
   );
+  const isDemo = useSyncExternalStore(
+    emptySubscribe,
+    () => {
+      if (typeof window === 'undefined') return false;
+      const host = window.location.hostname;
+      return (
+        process.env.NODE_ENV !== 'production' ||
+        host.includes('pages.dev') ||
+        host.includes('localhost') ||
+        host.includes('127.0.0.1') ||
+        host.includes('vercel.app')
+      );
+    },
+    () => false
+  );
+  const [activeTab, setActiveTab] = useState<'login' | 'register' | 'forgot' | 'sandbox'>(initialTab);
 
   useEffect(() => {
     if (isOpen) {
@@ -284,10 +296,6 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   };
 
   const handleQuickSandboxLogin = async (role: UserRole, identifier: string) => {
-    if (process.env.NODE_ENV === 'production') {
-      setLoginError('Sandbox quick login is disabled in production.');
-      return;
-    }
     setLoginIdentifier(identifier);
     setLoginPassword('akgv@2026');
     const res = await loginWithCredentials(identifier, 'akgv@2026');
@@ -367,7 +375,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
               ? 'Register'
               : 'Register'}
           </button>
-          {isDev && (
+          {(isDev || isDemo) && (
             <button
               onClick={() => {
                 setActiveTab('sandbox');
@@ -462,6 +470,32 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                         ? 'सुरक्षित पोर्टल पहुंच के लिए अपना अधिकृत पासवर्ड दर्ज करें।'
                         : 'Enter your authorized corporate or member password.'}
                     </p>
+                  </div>
+
+                  {/* Pre-Seeded Super Admin Access Badge */}
+                  <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17] p-2.5 text-[11px] text-gray-300 space-y-1.5">
+                    <div className="flex items-center justify-between text-[#DFC382] font-semibold">
+                      <span className="flex items-center gap-1">
+                        <Sparkles className="h-3.5 w-3.5 text-[#C7A35A]" />
+                        <span>{language === 'hi' ? 'सुपर एडमिन एक्सेस (Pre-Configured):' : 'Super Admin Pre-Configured Access:'}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLoginIdentifier('6306917991');
+                          setLoginPassword('akgv@2026');
+                          setLoginError('');
+                        }}
+                        className="rounded bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382] hover:bg-[#C7A35A]/30 transition"
+                      >
+                        {language === 'hi' ? 'ऑटो-भरें (Auto-Fill)' : 'Auto-Fill'}
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
+                      <span>ID/Phone: <strong className="text-white">6306917991</strong></span>
+                      <span>•</span>
+                      <span>Pass: <strong className="text-white">akgv@2026</strong></span>
+                    </div>
                   </div>
 
                   {loginError && (
@@ -708,8 +742,8 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
             </div>
           )}
 
-          {/* Tab 3: Sandbox Quick Evaluation (Gated strictly in development) */}
-          {isDev && activeTab === 'sandbox' && (
+          {/* Tab 3: Sandbox Quick Evaluation (Available on local dev and preview hosts) */}
+          {(isDev || isDemo) && activeTab === 'sandbox' && (
             <div className="p-6 space-y-4">
               <div className="rounded-xl border border-[#C7A35A]/30 bg-[#050A17] p-3.5 space-y-1.5">
                 <div className="flex items-center gap-2 text-xs font-bold text-[#DFC382]">
