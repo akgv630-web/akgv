@@ -41,12 +41,27 @@ import {
   UserPlus,
   Users,
   X,
-  XCircle
+  XCircle,
+  CheckSquare,
+  Car,
+  Target,
+  Camera,
+  Megaphone,
+  Globe,
+  Radio,
+  MessageSquare
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { KycStatus, Plot, PlotStatus, Profile, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { PlotManagementModal } from '@/components/admin/PlotManagementModal';
+import { AdminTaskCenter } from '@/components/admin/AdminTaskCenter';
+import { AdminEnquiriesTab } from '@/components/admin/AdminEnquiriesTab';
+import { AdminSiteVisitsTab } from '@/components/admin/AdminSiteVisitsTab';
+import { AdminTargetsTab } from '@/components/admin/AdminTargetsTab';
+import { AdminFieldGpsTab } from '@/components/admin/AdminFieldGpsTab';
+import { AdminBroadcastTab } from '@/components/admin/AdminBroadcastTab';
+import { AdminCmsTab } from '@/components/admin/AdminCmsTab';
 import { AuthBarrier, UnauthorizedBarrier } from '@/components/auth/AuthBarrier';
 import { COMMISSION_LEVELS_GROUND_TRUTH } from '@/data/groundTruth';
 
@@ -127,9 +142,31 @@ export default function SuperAdminPage() {
     updateReviewStatus,
     replyToReview,
     deleteReview,
+    tasks,
+    enquiries,
+    siteVisits,
+    targets,
+    gpsEvidences,
+    messages,
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'plots' | 'payments' | 'bookings' | 'kits' | 'support' | 'reviews'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    | 'overview'
+    | 'tasks'
+    | 'enquiries'
+    | 'site_visits'
+    | 'targets'
+    | 'field_gps'
+    | 'broadcast'
+    | 'cms'
+    | 'members'
+    | 'plots'
+    | 'payments'
+    | 'bookings'
+    | 'kits'
+    | 'support'
+    | 'reviews'
+  >('overview');
   const [reviewFilterStatus, setReviewFilterStatus] = useState<'ALL' | 'approved' | 'pending' | 'rejected'>('ALL');
   const [reviewReplyInputs, setReviewReplyInputs] = useState<Record<string, string>>({});
   const [plotFilterBlock, setPlotFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C' | 'D'>('ALL');
@@ -389,6 +426,54 @@ export default function SuperAdminPage() {
         </button>
 
         <button
+          onClick={() => setActiveTab('tasks')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'tasks'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <CheckSquare className="h-4 w-4" />
+          <span>Daily Task Center ({tasks.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('enquiries')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'enquiries'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          <span>CRM Leads ({enquiries.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('site_visits')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'site_visits'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Car className="h-4 w-4" />
+          <span>Site Visits ({siteVisits.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('targets')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'targets'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Target className="h-4 w-4" />
+          <span>Sales Quotas ({targets.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('members')}
           className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'members'
@@ -449,6 +534,18 @@ export default function SuperAdminPage() {
         </button>
 
         <button
+          onClick={() => setActiveTab('field_gps')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'field_gps'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Camera className="h-4 w-4" />
+          <span>Field GPS Queue ({gpsEvidences.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('support')}
           className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
             activeTab === 'support'
@@ -470,6 +567,30 @@ export default function SuperAdminPage() {
         >
           <Star className="h-4 w-4 text-amber-400" />
           <span>Real Reviews ({reviews.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('broadcast')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'broadcast'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Megaphone className="h-4 w-4" />
+          <span>Broadcast Alerts ({messages.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cms')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'cms'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Globe className="h-4 w-4" />
+          <span>Website CMS</span>
         </button>
       </div>
 
@@ -2884,6 +3005,27 @@ export default function SuperAdminPage() {
           </div>
         </div>
       )}
+
+      {/* Tab: Daily Task Center */}
+      {activeTab === 'tasks' && <AdminTaskCenter />}
+
+      {/* Tab: CRM Enquiries & Lead Follow-ups */}
+      {activeTab === 'enquiries' && <AdminEnquiriesTab />}
+
+      {/* Tab: Site Visit Scheduling & Coordinator Allocation */}
+      {activeTab === 'site_visits' && <AdminSiteVisitsTab />}
+
+      {/* Tab: Sales Quotas & Targets */}
+      {activeTab === 'targets' && <AdminTargetsTab />}
+
+      {/* Tab: Field GPS Evidence & Approvals */}
+      {activeTab === 'field_gps' && <AdminFieldGpsTab />}
+
+      {/* Tab: Broadcast Announcements & In-App Messaging */}
+      {activeTab === 'broadcast' && <AdminBroadcastTab />}
+
+      {/* Tab: Website CMS & Dynamic Homepage */}
+      {activeTab === 'cms' && <AdminCmsTab />}
     </div>
   );
 }

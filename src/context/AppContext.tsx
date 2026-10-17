@@ -34,7 +34,8 @@ import {
   INITIAL_SITE_VISITS,
   INITIAL_SUPPORT_TICKETS,
   INITIAL_TARGETS,
-  INITIAL_TASKS
+  INITIAL_TASKS,
+  INITIAL_MESSAGES
 } from '@/lib/store';
 import { DICTIONARY, Language } from '@/lib/i18n';
 import {
@@ -47,7 +48,10 @@ import {
   fetchBookingsFromSupabase,
   saveBookingToSupabase,
   savePaymentToSupabase,
+  fetchSiteVisitsFromSupabase,
   saveSiteVisitToSupabase,
+  updateSiteVisitInSupabase,
+  deleteSiteVisitFromSupabase,
   fetchProfilesFromSupabase,
   fetchProfileByAuthId,
   saveProfileToSupabase,
@@ -64,10 +68,20 @@ import {
   saveGpsEvidenceToSupabase,
   fetchEnquiriesFromSupabase,
   saveEnquiryToSupabase,
+  updateEnquiryInSupabase,
+  deleteEnquiryFromSupabase,
   fetchTargetsFromSupabase,
   saveTargetToSupabase,
+  updateTargetInSupabase,
+  deleteTargetFromSupabase,
   fetchTasksFromSupabase,
   saveTaskToSupabase,
+  updateTaskInSupabase,
+  deleteTaskFromSupabase,
+  fetchInAppMessagesFromSupabase,
+  saveInAppMessageToSupabase,
+  markInAppMessageReadInSupabase,
+  deleteInAppMessageFromSupabase,
   fetchCmsContentFromSupabase,
   saveCmsContentToSupabase,
   fetchOffersFromSupabase,
@@ -119,6 +133,9 @@ interface AppContextType {
   recordKitIssue: (data: Omit<JoiningKitIssue, 'id' | 'receiptNumber'>) => JoiningKitIssue;
   siteVisits: SiteVisit[];
   bookSiteVisit: (data: Omit<SiteVisit, 'id' | 'status' | 'createdAt'>) => SiteVisit;
+  assignSiteVisit: (visitId: string, staffProfileId: string, staffName: string, staffMemberId?: string) => Promise<{ success: boolean; error?: string }>;
+  updateSiteVisitStatus: (visitId: string, status: SiteVisit['status'], notes?: string) => Promise<{ success: boolean; error?: string }>;
+  deleteSiteVisit: (visitId: string) => Promise<boolean>;
   gpsEvidences: FieldGpsEvidence[];
   submitGpsEvidence: (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>) => Promise<FieldGpsEvidence>;
   approveFieldGpsEvidence: (evidenceId: string, adminNotes?: string) => Promise<void>;
@@ -153,17 +170,26 @@ interface AppContextType {
   deleteReview: (reviewId: string) => void;
   enquiries: ClientEnquiry[];
   addEnquiry: (data: Omit<ClientEnquiry, 'id' | 'createdAt'>) => ClientEnquiry;
-  updateEnquiryStatus: (id: string, status: ClientEnquiry['status']) => void;
+  assignEnquiry: (enquiryId: string, memberProfileId: string, memberName: string, memberId?: string) => Promise<{ success: boolean; error?: string }>;
+  addEnquiryFollowUp: (enquiryId: string, summary: string, nextDate?: string) => Promise<{ success: boolean; error?: string }>;
+  updateEnquiryStatus: (id: string, status: ClientEnquiry['status'], notes?: string) => Promise<{ success: boolean; error?: string }>;
+  deleteEnquiry: (enquiryId: string) => Promise<boolean>;
   offers: OfferIncentive[];
   targets: SalesTarget[];
-  updateTarget: (targetId: string, patch: Partial<SalesTarget>) => void;
+  updateTarget: (targetId: string, patch: Partial<SalesTarget>) => Promise<{ success: boolean; error?: string }>;
+  assignTarget: (targetData: Omit<SalesTarget, 'id' | 'updatedAt'>) => Promise<SalesTarget>;
+  deleteTarget: (targetId: string) => Promise<boolean>;
   tasks: TaskReminder[];
-  addTask: (task: Omit<TaskReminder, 'id' | 'createdAt' | 'isCompleted'>) => TaskReminder;
-  toggleTask: (taskId: string) => void;
+  addTask: (task: Omit<TaskReminder, 'id' | 'createdAt' | 'isCompleted'>) => Promise<TaskReminder>;
+  updateTask: (taskId: string, patch: Partial<TaskReminder>) => Promise<{ success: boolean; error?: string }>;
+  toggleTask: (taskId: string, completionNotes?: string) => Promise<{ success: boolean; error?: string }>;
+  deleteTask: (taskId: string) => Promise<boolean>;
   messages: InAppMessage[];
-  sendMessage: (msg: Omit<InAppMessage, 'id' | 'createdAt' | 'isRead'>) => InAppMessage;
+  sendMessage: (msg: Omit<InAppMessage, 'id' | 'createdAt' | 'isRead'>) => Promise<InAppMessage>;
+  markMessageRead: (msgId: string) => Promise<boolean>;
+  deleteMessage: (msgId: string) => Promise<boolean>;
   cmsContent: CmsContent;
-  updateCmsContent: (patch: Partial<CmsContent>) => void;
+  updateCmsContent: (patch: Partial<CmsContent>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -227,7 +253,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [offers, setOffers] = useState<OfferIncentive[]>(() => getInitialStorage('offers', INITIAL_OFFERS));
   const [targets, setTargets] = useState<SalesTarget[]>(() => getInitialStorage('targets', INITIAL_TARGETS));
   const [tasks, setTasks] = useState<TaskReminder[]>(() => getInitialStorage('tasks', INITIAL_TASKS));
-  const [messages, setMessages] = useState<InAppMessage[]>([]);
+  const [messages, setMessages] = useState<InAppMessage[]>(() => getInitialStorage('messages', INITIAL_MESSAGES));
   const [cmsContent, setCmsContent] = useState<CmsContent>(() => getInitialStorage('cms', INITIAL_CMS_CONTENT));
 
   // Supabase Live Remote Sync (Non-blocking background sync)
@@ -245,6 +271,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           remoteTasks,
           remoteCms,
           remoteOffers,
+          remoteVisits,
+          remoteMessages,
           authSession
         ] = await Promise.all([
           fetchPlotsFromSupabase(),
@@ -257,6 +285,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           fetchTasksFromSupabase(),
           fetchCmsContentFromSupabase(),
           fetchOffersFromSupabase(),
+          fetchSiteVisitsFromSupabase(),
+          fetchInAppMessagesFromSupabase(),
           supabaseGetSession()
         ]);
 
@@ -281,12 +311,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (remoteEnquiries && remoteEnquiries.length > 0) {
           setEnquiries(remoteEnquiries);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}enquiries`, JSON.stringify(remoteEnquiries)); } catch {}
         }
         if (remoteTargets && remoteTargets.length > 0) {
           setTargets(remoteTargets);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}targets`, JSON.stringify(remoteTargets)); } catch {}
         }
         if (remoteTasks && remoteTasks.length > 0) {
           setTasks(remoteTasks);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(remoteTasks)); } catch {}
+        }
+        if (remoteVisits && remoteVisits.length > 0) {
+          setSiteVisits(remoteVisits);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}site_visits`, JSON.stringify(remoteVisits)); } catch {}
+        }
+        if (remoteMessages && remoteMessages.length > 0) {
+          setMessages(remoteMessages);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}messages`, JSON.stringify(remoteMessages)); } catch {}
         }
         if (remoteCms && remoteCms.heroHeadlineEn) {
           setCmsContent(remoteCms);
@@ -1328,12 +1369,81 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newVisit: SiteVisit = {
       ...data,
       id: `sv-${Date.now()}`,
+      buyerId: data.buyerId || currentUser?.id,
       status: 'requested',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
-    setSiteVisits((prev) => [newVisit, ...prev]);
+    setSiteVisits((prev) => {
+      const next = [newVisit, ...prev];
+      try { localStorage.setItem(`${STORAGE_KEY_PREFIX}site_visits`, JSON.stringify(next)); } catch {}
+      return next;
+    });
     void saveSiteVisitToSupabase(newVisit);
     return newVisit;
+  };
+
+  const assignSiteVisit = async (
+    visitId: string,
+    staffProfileId: string,
+    staffName: string,
+    staffMemberId?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized: Only administrators can assign site visits.' };
+    }
+
+    const patch: Partial<SiteVisit> = {
+      assignedStaffId: staffProfileId,
+      assignedStaffName: staffName,
+      assignedStaffMemberId: staffMemberId,
+      status: 'confirmed',
+      updatedAt: new Date().toISOString(),
+    };
+
+    setSiteVisits((prev) => {
+      const next = prev.map((v) => (v.id === visitId ? { ...v, ...patch } : v));
+      try { localStorage.setItem(`${STORAGE_KEY_PREFIX}site_visits`, JSON.stringify(next)); } catch {}
+      return next;
+    });
+
+    const ok = await updateSiteVisitInSupabase(visitId, patch);
+    return ok ? { success: true } : { success: false, error: 'Failed to persist site visit assignment to database.' };
+  };
+
+  const updateSiteVisitStatus = async (
+    visitId: string,
+    status: SiteVisit['status'],
+    notes?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const patch: Partial<SiteVisit> = {
+      status,
+      ...(notes !== undefined ? { notes } : {}),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setSiteVisits((prev) => {
+      const next = prev.map((v) => (v.id === visitId ? { ...v, ...patch } : v));
+      try { localStorage.setItem(`${STORAGE_KEY_PREFIX}site_visits`, JSON.stringify(next)); } catch {}
+      return next;
+    });
+
+    const ok = await updateSiteVisitInSupabase(visitId, patch);
+    return ok ? { success: true } : { success: false, error: 'Failed to update site visit status in database.' };
+  };
+
+  const deleteSiteVisit = async (visitId: string): Promise<boolean> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can delete site visits.');
+    }
+    setSiteVisits((prev) => {
+      const next = prev.filter((v) => v.id !== visitId);
+      try { localStorage.setItem(`${STORAGE_KEY_PREFIX}site_visits`, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    return await deleteSiteVisitFromSupabase(visitId);
   };
 
   const submitGpsEvidence = async (evidence: Omit<FieldGpsEvidence, 'id' | 'status'>): Promise<FieldGpsEvidence> => {
@@ -1572,7 +1682,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newEnquiry: ClientEnquiry = {
       ...data,
       id: `enq-${Date.now()}`,
+      status: data.status || 'new',
       createdAt: new Date().toISOString(),
+      followUps: data.followUps || [],
     };
     setEnquiries((prev) => {
       const next = [newEnquiry, ...prev];
@@ -1585,48 +1697,188 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return newEnquiry;
   };
 
-  const updateEnquiryStatus = (id: string, status: ClientEnquiry['status']) => {
-    const isStaff = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
-    if (!isStaff) {
-      throw new Error('Access denied: Only staff can update enquiry status.');
+  const assignEnquiry = async (
+    enquiryId: string,
+    memberProfileId: string,
+    memberName: string,
+    memberId?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized: Only administrators can assign enquiries.' };
     }
+
+    const patch: Partial<ClientEnquiry> = {
+      assignedProfileId: memberProfileId,
+      assignedMemberId: memberId || memberProfileId,
+      assignedMemberName: memberName,
+    };
+
     setEnquiries((prev) => {
-      const next = prev.map((e) => (e.id === id ? { ...e, status } : e));
+      const next = prev.map((e) => (e.id === enquiryId ? { ...e, ...patch } : e));
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}enquiries`, JSON.stringify(next));
       } catch {}
       return next;
     });
+
+    const ok = await updateEnquiryInSupabase(enquiryId, patch);
+    return ok ? { success: true } : { success: false, error: 'Failed to persist enquiry assignment.' };
+  };
+
+  const addEnquiryFollowUp = async (
+    enquiryId: string,
+    summary: string,
+    nextDate?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const target = enquiries.find((e) => e.id === enquiryId);
+    if (!target) return { success: false, error: 'Enquiry not found.' };
+
+    const newFollowUp = {
+      id: `flw-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      summary,
+      nextFollowUpDate: nextDate,
+    };
+    const updatedFollowUps = [...(target.followUps || []), newFollowUp];
+    const patch: Partial<ClientEnquiry> = {
+      followUps: updatedFollowUps,
+      status: target.status === 'new' ? 'contacted' : target.status,
+    };
+
+    setEnquiries((prev) => {
+      const next = prev.map((e) => (e.id === enquiryId ? { ...e, ...patch } : e));
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}enquiries`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    const ok = await updateEnquiryInSupabase(enquiryId, patch);
+    return ok ? { success: true } : { success: false, error: 'Failed to persist follow-up note.' };
+  };
+
+  const updateEnquiryStatus = async (
+    id: string,
+    status: ClientEnquiry['status'],
+    notes?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const patch: Partial<ClientEnquiry> = {
+      status,
+      ...(notes !== undefined ? { notes } : {}),
+    };
+
+    setEnquiries((prev) => {
+      const next = prev.map((e) => (e.id === id ? { ...e, ...patch } : e));
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}enquiries`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    const ok = await updateEnquiryInSupabase(id, patch);
+    return ok ? { success: true } : { success: false, error: 'Failed to update enquiry status in database.' };
+  };
+
+  const deleteEnquiry = async (enquiryId: string): Promise<boolean> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can delete enquiries.');
+    }
+    setEnquiries((prev) => {
+      const next = prev.filter((e) => e.id !== enquiryId);
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}enquiries`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    return await deleteEnquiryFromSupabase(enquiryId);
   };
 
   // Sales Targets
-  const updateTarget = (targetId: string, patch: Partial<SalesTarget>) => {
+  const updateTarget = async (
+    targetId: string,
+    patch: Partial<SalesTarget>
+  ): Promise<{ success: boolean; error?: string }> => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     if (!isAdmin) {
-      throw new Error('Access denied: Only administrators can update sales targets.');
+      return { success: false, error: 'Access denied: Only administrators can update sales targets.' };
     }
     let updatedTarget: SalesTarget | null = null;
     setTargets((prev) => {
       const next = prev.map((t) => {
         if (t.id === targetId) {
-          updatedTarget = { ...t, ...patch };
+          updatedTarget = { ...t, ...patch, updatedAt: new Date().toISOString() };
           return updatedTarget;
         }
         return t;
       });
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}targets`, JSON.stringify(next));
+      } catch {}
       return next;
     });
     if (updatedTarget) {
-      void saveTargetToSupabase(updatedTarget);
+      const ok = await saveTargetToSupabase(updatedTarget);
+      return ok ? { success: true } : { success: false, error: 'Failed to persist target changes.' };
     }
+    return { success: false, error: 'Target not found.' };
+  };
+
+  const assignTarget = async (
+    targetData: Omit<SalesTarget, 'id' | 'updatedAt'>
+  ): Promise<SalesTarget> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can assign sales targets.');
+    }
+    const newTarget: SalesTarget = {
+      ...targetData,
+      id: `tgt-${Date.now()}`,
+      updatedAt: new Date().toISOString(),
+    };
+    setTargets((prev) => {
+      const next = [newTarget, ...prev];
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}targets`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    await saveTargetToSupabase(newTarget);
+    return newTarget;
+  };
+
+  const deleteTarget = async (targetId: string): Promise<boolean> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can delete sales targets.');
+    }
+    setTargets((prev) => {
+      const next = prev.filter((t) => t.id !== targetId);
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}targets`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    return await deleteTargetFromSupabase(targetId);
   };
 
   // Task Reminders (Aaj ke Kaam)
-  const addTask = (taskData: Omit<TaskReminder, 'id' | 'createdAt' | 'isCompleted'>): TaskReminder => {
+  const addTask = async (
+    taskData: Omit<TaskReminder, 'id' | 'createdAt' | 'isCompleted'>
+  ): Promise<TaskReminder> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can create task assignments.');
+    }
     const newTask: TaskReminder = {
       ...taskData,
       id: `task-${Date.now()}`,
+      assigneeId: taskData.assigneeId || taskData.assignedToMemberId,
+      status: taskData.status || 'pending',
       isCompleted: false,
+      createdBy: currentUser?.id || 'usr-admin-01',
+      createdByName: currentUser?.fullName || 'Director Office',
       createdAt: new Date().toISOString(),
     };
     setTasks((prev) => {
@@ -1636,56 +1888,140 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch {}
       return next;
     });
-    void saveTaskToSupabase(newTask);
+    const ok = await saveTaskToSupabase(newTask);
+    if (!ok) {
+      console.warn('[AppContext] saveTask notice: database sync offline or table pending');
+    }
     return newTask;
   };
 
-  const toggleTask = (taskId: string) => {
-    let targetTask: TaskReminder | null = null;
+  const updateTask = async (
+    taskId: string,
+    patch: Partial<TaskReminder>
+  ): Promise<{ success: boolean; error?: string }> => {
     setTasks((prev) => {
-      const next = prev.map((t) => {
-        if (t.id === taskId) {
-          targetTask = { ...t, isCompleted: !t.isCompleted, completedAt: !t.isCompleted ? new Date().toISOString() : undefined };
-          return targetTask;
-        }
-        return t;
-      });
+      const next = prev.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(next));
       } catch {}
       return next;
     });
-    if (targetTask) {
-      void saveTaskToSupabase(targetTask);
+
+    return await updateTaskInSupabase(taskId, patch);
+  };
+
+  const toggleTask = async (
+    taskId: string,
+    completionNotes?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const target = tasks.find((t) => t.id === taskId);
+    if (!target) return { success: false, error: 'Task not found.' };
+
+    const newCompleted = !target.isCompleted;
+    const patch: Partial<TaskReminder> = {
+      isCompleted: newCompleted,
+      completedAt: newCompleted ? new Date().toISOString() : undefined,
+      status: newCompleted ? 'completed' : 'in_progress',
+      ...(completionNotes !== undefined ? { completionNotes } : {}),
+    };
+
+    setTasks((prev) => {
+      const next = prev.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    return await updateTaskInSupabase(taskId, patch);
+  };
+
+  const deleteTask = async (taskId: string): Promise<boolean> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can delete tasks.');
     }
+    setTasks((prev) => {
+      const next = prev.filter((t) => t.id !== taskId);
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    return await deleteTaskFromSupabase(taskId);
   };
 
   // In-App Messages
-  const sendMessage = (msgData: Omit<InAppMessage, 'id' | 'createdAt' | 'isRead'>): InAppMessage => {
+  const sendMessage = async (
+    msgData: Omit<InAppMessage, 'id' | 'createdAt' | 'isRead'>
+  ): Promise<InAppMessage> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can broadcast or send messages.');
+    }
     const newMsg: InAppMessage = {
       ...msgData,
       id: `msg-${Date.now()}`,
+      senderName: msgData.senderName || currentUser?.fullName || 'AKGV Corporate Desk',
       isRead: false,
       createdAt: new Date().toISOString(),
     };
-    setMessages((prev) => [newMsg, ...prev]);
+    setMessages((prev) => {
+      const next = [newMsg, ...prev];
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}messages`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    await saveInAppMessageToSupabase(newMsg);
     return newMsg;
   };
 
+  const markMessageRead = async (msgId: string): Promise<boolean> => {
+    setMessages((prev) => {
+      const next = prev.map((m) =>
+        m.id === msgId ? { ...m, isRead: true, readAt: new Date().toISOString() } : m
+      );
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}messages`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    return await markInAppMessageReadInSupabase(msgId);
+  };
+
+  const deleteMessage = async (msgId: string): Promise<boolean> => {
+    const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+    if (!isAdmin) {
+      throw new Error('Access denied: Only administrators can delete messages.');
+    }
+    setMessages((prev) => {
+      const next = prev.filter((m) => m.id !== msgId);
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}messages`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    return await deleteInAppMessageFromSupabase(msgId);
+  };
+
   // Dynamic CMS Content (No-Code Routine Changes)
-  const updateCmsContent = (patch: Partial<CmsContent>) => {
+  const updateCmsContent = async (patch: Partial<CmsContent>): Promise<void> => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     if (!isAdmin) {
       throw new Error('Access denied: Only administrators can update CMS content.');
     }
-    setCmsContent((prev) => {
-      const updated = { ...prev, ...patch, updatedAt: new Date().toISOString() };
-      try {
-        localStorage.setItem(`${STORAGE_KEY_PREFIX}cms`, JSON.stringify(updated));
-      } catch {}
-      void saveCmsContentToSupabase(updated);
-      return updated;
-    });
+    const updated: CmsContent = {
+      ...cmsContent,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+      updatedBy: currentUser?.fullName || 'Director (Rajesh Kumar Patel)'
+    };
+    setCmsContent(updated);
+    try {
+      localStorage.setItem(`${STORAGE_KEY_PREFIX}cms`, JSON.stringify(updated));
+    } catch {}
+    await saveCmsContentToSupabase(updated);
   };
 
   const t = DICTIONARY[language] || DICTIONARY.en;
@@ -1723,6 +2059,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         recordKitIssue,
         siteVisits,
         bookSiteVisit,
+        assignSiteVisit,
+        updateSiteVisitStatus,
+        deleteSiteVisit,
         gpsEvidences,
         submitGpsEvidence,
         approveFieldGpsEvidence,
@@ -1746,15 +2085,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteReview,
         enquiries,
         addEnquiry,
+        assignEnquiry,
+        addEnquiryFollowUp,
         updateEnquiryStatus,
+        deleteEnquiry,
         offers,
         targets,
         updateTarget,
+        assignTarget,
+        deleteTarget,
         tasks,
         addTask,
+        updateTask,
         toggleTask,
+        deleteTask,
         messages,
         sendMessage,
+        markMessageRead,
+        deleteMessage,
         cmsContent,
         updateCmsContent,
       }}

@@ -369,10 +369,22 @@ export default function BuyerPortalPage() {
                     {v.status}
                   </span>
                 </div>
-                <div className="text-xs text-gray-300 space-y-1">
+                <div className="text-xs text-gray-300 space-y-1.5">
                   <div>Date: <strong className="text-white">{v.preferredDate}</strong></div>
                   <div>Time Slot: <strong className="text-white">{v.preferredTimeSlot}</strong></div>
-                  <div>Assigned Coordinator: <strong className="text-[#DFC382]">{v.assignedStaffName || 'Dispatched on arrival'}</strong></div>
+                  <div>
+                    Assigned Coordinator:{' '}
+                    <strong className="text-[#DFC382]">
+                      {v.assignedStaffName
+                        ? `${v.assignedStaffName} (${v.assignedStaffMemberId || 'Field Staff'})`
+                        : 'Dispatched on arrival at township'}
+                    </strong>
+                  </div>
+                  {v.pickupRequired && (
+                    <div className="text-[11px] text-sky-400 font-semibold">
+                      ✓ Cantt / Airport Station Pickup Arranged
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

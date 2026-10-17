@@ -225,10 +225,13 @@ export interface SiteVisit {
   preferredDate: string;
   preferredTimeSlot: string;
   pickupRequired: boolean;
+  assignedStaffId?: string; // Canonical profiles.id
+  assignedStaffMemberId?: string; // Display memberId (e.g. AKGV-3498)
   assignedStaffName?: string;
   status: SiteVisitStatus;
   notes?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface FieldGpsEvidence {
@@ -313,6 +316,7 @@ export interface ClientEnquiry {
   preferredLocationId?: string;
   budgetInr?: number;
   status: 'new' | 'contacted' | 'visit_scheduled' | 'booked' | 'lost';
+  assignedProfileId?: string; // Canonical profiles.id
   assignedMemberId: string;
   assignedMemberName: string;
   notes?: string;
@@ -343,6 +347,7 @@ export interface OfferIncentive {
 
 export interface SalesTarget {
   id: string;
+  profileId?: string; // Canonical profiles.id
   memberId: string;
   memberName: string;
   period: 'monthly' | 'quarterly';
@@ -356,19 +361,31 @@ export interface SalesTarget {
   updatedAt: string;
 }
 
+export type TaskCategory = 'site_visit' | 'client_followup' | 'payment_verification' | 'field_inspection' | 'plot' | 'booking' | 'general';
+export type TaskRelatedRecordType = 'site_visit' | 'enquiry' | 'payment' | 'booking' | 'field_inspection' | 'plot' | 'general';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
 export interface TaskReminder {
   id: string;
-  assignedToMemberId: string;
+  assigneeId?: string; // Canonical profiles.id
+  assignedToMemberId: string; // e.g. AKGV-3498 or memberId
   assignedToName: string;
   title: string;
   description?: string;
-  category: 'site_visit' | 'client_followup' | 'payment_verification' | 'field_inspection' | 'general';
+  category: TaskCategory;
+  relatedRecordType?: TaskRelatedRecordType;
+  relatedRecordId?: string;
+  targetRoute?: string; // Safe deep-link route (e.g. /member?tab=visits&id=sv-001)
+  completionNotes?: string;
+  status?: TaskStatus;
   dueDate: string;
   dueTime?: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   isCompleted: boolean;
   completedAt?: string;
   createdBy: string;
+  createdByName?: string;
   createdAt: string;
 }
 
@@ -376,11 +393,14 @@ export interface InAppMessage {
   id: string;
   recipientType: 'individual' | 'role' | 'branch' | 'all';
   recipientId?: string; // memberId or role or branch name
+  recipientProfileId?: string; // Canonical profiles.id for individual recipient
+  targetRoute?: string; // Safe deep-link route
   title: string;
   message: string;
   senderName: string;
   priority: 'normal' | 'important' | 'urgent';
   isRead?: boolean;
+  readAt?: string;
   createdAt: string;
 }
 

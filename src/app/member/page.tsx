@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Award,
@@ -17,7 +17,12 @@ import {
   Sparkles,
   Trophy,
   User,
-  Users
+  Users,
+  CheckSquare,
+  Car,
+  MessageSquare,
+  Target,
+  Bell
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { calculateMemberLevel } from '@/lib/store';
@@ -25,12 +30,46 @@ import { COMMISSION_LEVELS_GROUND_TRUTH, COMPANY_DETAILS } from '@/data/groundTr
 import { FieldGpsCameraCapture } from '@/components/gps-camera/FieldGpsCameraCapture';
 import { AssociateIdCard } from '@/components/member/AssociateIdCard';
 import { ProfilePhotoStudioModal } from '@/components/common/ProfilePhotoStudioModal';
+import { MemberTaskInbox } from '@/components/member/MemberTaskInbox';
+import { MemberEnquiriesTab } from '@/components/member/MemberEnquiriesTab';
+import { MemberSiteVisitsTab } from '@/components/member/MemberSiteVisitsTab';
+import { MemberTargetsTab } from '@/components/member/MemberTargetsTab';
+import { InAppNotificationDrawer } from '@/components/common/InAppNotificationDrawer';
 import { AuthBarrier, UnauthorizedBarrier } from '@/components/auth/AuthBarrier';
 
 export function MemberPortalPage() {
-  const { currentUser, kitIssues, language, allProfiles, updateMember } = useApp();
-  const [activeTab, setActiveTab] = useState<'id_card' | 'hierarchy' | 'commission' | 'rewards' | 'field_gps'>('id_card');
+  const { currentUser, kitIssues, language, allProfiles, updateMember, tasks, enquiries, siteVisits, targets } = useApp();
+  const [activeTab, setActiveTab] = useState<
+    | 'tasks'
+    | 'enquiries'
+    | 'site_visits'
+    | 'targets'
+    | 'id_card'
+    | 'hierarchy'
+    | 'commission'
+    | 'rewards'
+    | 'field_gps'
+  >('tasks');
   const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
+
+  // Deep-link support from tasks or notifications: ?tab=tasks, ?tab=visits, etc.
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam) {
+        if (tabParam === 'tasks') setActiveTab('tasks');
+        else if (tabParam === 'enquiries') setActiveTab('enquiries');
+        else if (tabParam === 'visits' || tabParam === 'site_visits') setActiveTab('site_visits');
+        else if (tabParam === 'targets') setActiveTab('targets');
+        else if (tabParam === 'id_card') setActiveTab('id_card');
+        else if (tabParam === 'hierarchy') setActiveTab('hierarchy');
+        else if (tabParam === 'commission') setActiveTab('commission');
+        else if (tabParam === 'rewards') setActiveTab('rewards');
+        else if (tabParam === 'field_gps') setActiveTab('field_gps');
+      }
+    }
+  }, []);
 
   if (!currentUser) {
     return <AuthBarrier requiredRole="member" />;
@@ -52,6 +91,42 @@ export function MemberPortalPage() {
       p.sponsorId === currentUser.memberId ||
       (currentUser.memberId === 'AKGV-3498' && (p.sponsorId === 'usr-sponsor-01' || p.sponsorId === 'AKGV-3498'))
   );
+
+  // Task, CRM, Site Visit & Target Counts for Current Member
+  const myPendingTasksCount = tasks.filter(
+    (t) =>
+      (t.assigneeId === currentUser.id ||
+        t.assignedToMemberId === currentUser.memberId ||
+        t.assignedToMemberId === currentUser.id ||
+        (currentUser.memberId === 'AKGV-3498' && (t.assignedToMemberId === 'usr-sponsor-01' || t.assignedToMemberId === 'AKGV-3498'))) &&
+      !t.isCompleted
+  ).length;
+
+  const myEnquiriesCount = enquiries.filter(
+    (e) =>
+      e.assignedProfileId === currentUser.id ||
+      e.assignedMemberId === currentUser.memberId ||
+      e.assignedMemberId === currentUser.id ||
+      (currentUser.memberId === 'AKGV-3498' && (e.assignedMemberId === 'usr-sponsor-01' || e.assignedMemberId === 'AKGV-3498'))
+  ).length;
+
+  const myVisitsCount = siteVisits.filter(
+    (v) =>
+      (v.assignedStaffId === currentUser.id ||
+        v.assignedStaffMemberId === currentUser.memberId ||
+        v.assignedStaffMemberId === currentUser.id ||
+        (currentUser.memberId === 'AKGV-3498' && (v.assignedStaffMemberId === 'usr-sponsor-01' || v.assignedStaffMemberId === 'AKGV-3498'))) &&
+      v.status !== 'completed' &&
+      v.status !== 'cancelled'
+  ).length;
+
+  const myTargetsCount = targets.filter(
+    (t) =>
+      t.profileId === currentUser.id ||
+      t.memberId === currentUser.memberId ||
+      t.memberId === currentUser.id ||
+      (currentUser.memberId === 'AKGV-3498' && (t.memberId === 'usr-sponsor-01' || t.memberId === 'AKGV-3498'))
+  ).length;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
@@ -107,17 +182,85 @@ export function MemberPortalPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#050A17]/80 px-4 py-2.5 text-right text-xs">
-          <span className="text-gray-400 block text-[11px]">Total Eligible Business Volume</span>
-          <span className="font-serif text-lg font-bold text-emerald-400">
-            ₹{(memberBusinessVolumeInr / 100000).toFixed(1)} Lakh
-          </span>
-          <span className="text-[10px] text-[#DFC382] block">Level {currentLevel.levelNumber} Commission: {currentLevel.commissionPercent}%</span>
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl border border-white/10 bg-[#050A17]/80 px-4 py-2.5 text-right text-xs">
+            <span className="text-gray-400 block text-[11px]">Total Eligible Business Volume</span>
+            <span className="font-serif text-lg font-bold text-emerald-400">
+              ₹{(memberBusinessVolumeInr / 100000).toFixed(1)} Lakh
+            </span>
+            <span className="text-[10px] text-[#DFC382] block">Level {currentLevel.levelNumber} Commission: {currentLevel.commissionPercent}%</span>
+          </div>
+
+          {/* In-App Broadcast Notification Bell */}
+          <InAppNotificationDrawer />
         </div>
       </div>
 
       {/* Tabs Navigation */}
       <div className="flex overflow-x-auto no-scrollbar border-b border-white/10 text-xs sm:text-sm font-semibold gap-1 whitespace-nowrap pb-1">
+        <button
+          onClick={() => setActiveTab('tasks')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'tasks'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <CheckSquare className="h-4 w-4" />
+          <span>Aaj Ke Kaam (आज के काम)</span>
+          {myPendingTasksCount > 0 && (
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/30">
+              {myPendingTasksCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('enquiries')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'enquiries'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          <span>My Leads / CRM</span>
+          {myEnquiriesCount > 0 && (
+            <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-400 border border-sky-500/30">
+              {myEnquiriesCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('site_visits')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'site_visits'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Car className="h-4 w-4" />
+          <span>Assigned Site Visits</span>
+          {myVisitsCount > 0 && (
+            <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-bold text-indigo-300 border border-indigo-500/30">
+              {myVisitsCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('targets')}
+          className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
+            activeTab === 'targets'
+              ? 'border-[#C7A35A] text-[#DFC382]'
+              : 'border-transparent text-gray-400 hover:text-white'
+          }`}
+        >
+          <Target className="h-4 w-4" />
+          <span>Sales Quotas ({myTargetsCount})</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('id_card')}
           className={`flex shrink-0 items-center gap-2 border-b-2 px-4 sm:px-5 py-3 transition ${
@@ -178,6 +321,18 @@ export function MemberPortalPage() {
           <span>Plot GPS Capture</span>
         </button>
       </div>
+
+      {/* Tab: Aaj Ke Kaam (Daily Task Inbox) */}
+      {activeTab === 'tasks' && <MemberTaskInbox />}
+
+      {/* Tab: Assigned Leads CRM */}
+      {activeTab === 'enquiries' && <MemberEnquiriesTab />}
+
+      {/* Tab: Assigned Site Visits */}
+      {activeTab === 'site_visits' && <MemberSiteVisitsTab />}
+
+      {/* Tab: Sales Quotas & Targets */}
+      {activeTab === 'targets' && <MemberTargetsTab />}
 
       {/* Tab 1: Digital ID Card */}
       {activeTab === 'id_card' && (

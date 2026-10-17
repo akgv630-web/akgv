@@ -6,6 +6,7 @@ import {
   ClientEnquiry,
   CmsContent,
   FieldGpsEvidence,
+  InAppMessage,
   OfferIncentive,
   PaymentRecord,
   Plot,
@@ -380,24 +381,69 @@ export async function savePaymentToSupabase(payment: PaymentRecord): Promise<boo
 // 5. SITE VISITS SYNC
 // ==============================================================================
 
+export async function fetchSiteVisitsFromSupabase(): Promise<SiteVisit[] | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('site_visits')
+      .select('*')
+      .order('preferred_date', { ascending: false });
+
+    if (error) {
+      console.warn('[Supabase Sync] fetchSiteVisits notice:', error.message);
+      return null;
+    }
+
+    if (!data || data.length === 0) return null;
+
+    return data.map((row) => ({
+      id: row.id,
+      buyerId: row.buyer_id || undefined,
+      visitorName: row.visitor_name,
+      visitorPhone: row.visitor_phone,
+      visitorEmail: row.visitor_email || undefined,
+      locationId: row.location_id,
+      locationName: row.location_name,
+      preferredDate: row.preferred_date,
+      preferredTimeSlot: row.preferred_time_slot,
+      pickupRequired: Boolean(row.pickup_required),
+      assignedStaffId: row.assigned_staff_id || undefined,
+      assignedStaffMemberId: row.assigned_staff_member_id || undefined,
+      assignedStaffName: row.assigned_staff_name || undefined,
+      status: row.status,
+      notes: row.notes || undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at || undefined,
+    }));
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception fetching site visits:', err);
+    return null;
+  }
+}
+
 export async function saveSiteVisitToSupabase(visit: SiteVisit): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
 
   try {
     const payload = {
       id: visit.id,
+      buyer_id: visit.buyerId || null,
       visitor_name: visit.visitorName,
       visitor_phone: visit.visitorPhone,
-      visitor_email: visit.visitorEmail,
+      visitor_email: visit.visitorEmail || null,
       location_id: visit.locationId,
       location_name: visit.locationName,
       preferred_date: visit.preferredDate,
       preferred_time_slot: visit.preferredTimeSlot,
       pickup_required: visit.pickupRequired,
-      assigned_staff_name: visit.assignedStaffName,
+      assigned_staff_id: visit.assignedStaffId || null,
+      assigned_staff_member_id: visit.assignedStaffMemberId || null,
+      assigned_staff_name: visit.assignedStaffName || null,
       status: visit.status,
-      notes: visit.notes,
-      created_at: visit.createdAt
+      notes: visit.notes || null,
+      created_at: visit.createdAt,
+      updated_at: new Date().toISOString()
     };
 
     const { error } = await supabase
@@ -411,6 +457,60 @@ export async function saveSiteVisitToSupabase(visit: SiteVisit): Promise<boolean
     return true;
   } catch (err) {
     console.warn('[Supabase Sync] Exception saving site visit:', err);
+    return false;
+  }
+}
+
+export async function updateSiteVisitInSupabase(
+  visitId: string,
+  patch: Partial<SiteVisit>
+): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+
+  try {
+    const payload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (patch.status !== undefined) payload.status = patch.status;
+    if (patch.notes !== undefined) payload.notes = patch.notes;
+    if (patch.assignedStaffId !== undefined) payload.assigned_staff_id = patch.assignedStaffId;
+    if (patch.assignedStaffMemberId !== undefined) payload.assigned_staff_member_id = patch.assignedStaffMemberId;
+    if (patch.assignedStaffName !== undefined) payload.assigned_staff_name = patch.assignedStaffName;
+    if (patch.preferredDate !== undefined) payload.preferred_date = patch.preferredDate;
+    if (patch.preferredTimeSlot !== undefined) payload.preferred_time_slot = patch.preferredTimeSlot;
+
+    const { error } = await supabase
+      .from('site_visits')
+      .update(payload)
+      .eq('id', visitId);
+
+    if (error) {
+      console.warn('[Supabase Sync] Error updating site visit:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception updating site visit:', err);
+    return false;
+  }
+}
+
+export async function deleteSiteVisitFromSupabase(visitId: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+
+  try {
+    const { error } = await supabase
+      .from('site_visits')
+      .delete()
+      .eq('id', visitId);
+
+    if (error) {
+      console.warn('[Supabase Sync] Error deleting site visit:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception deleting site visit:', err);
     return false;
   }
 }
@@ -885,7 +985,7 @@ export async function saveGpsEvidenceToSupabase(evidence: FieldGpsEvidence): Pro
 // 9. CLIENT ENQUIRIES & CRM SYNC
 // ==============================================================================
 
-export async function fetchEnquiriesFromSupabase() {
+export async function fetchEnquiriesFromSupabase(): Promise<ClientEnquiry[] | null> {
   if (!isSupabaseConfigured || !supabase) return null;
   try {
     const { data, error } = await supabase
@@ -903,8 +1003,9 @@ export async function fetchEnquiriesFromSupabase() {
       preferredLocationId: row.preferred_location_id || undefined,
       budgetInr: row.budget_inr ? Number(row.budget_inr) : undefined,
       status: row.status,
-      assignedMemberId: row.assigned_member_id,
-      assignedMemberName: row.assigned_member_name,
+      assignedProfileId: row.assigned_profile_id || undefined,
+      assignedMemberId: row.assigned_member_id || '',
+      assignedMemberName: row.assigned_member_name || '',
       notes: row.notes || undefined,
       followUps: Array.isArray(row.follow_ups) ? row.follow_ups : [],
       createdAt: row.created_at,
@@ -921,14 +1022,15 @@ export async function saveEnquiryToSupabase(enquiry: ClientEnquiry): Promise<boo
       id: enquiry.id,
       client_name: enquiry.clientName,
       client_phone: enquiry.clientPhone,
-      client_email: enquiry.clientEmail,
-      interested_plot_id: enquiry.interestedPlotId,
-      preferred_location_id: enquiry.preferredLocationId,
-      budget_inr: enquiry.budgetInr,
+      client_email: enquiry.clientEmail || null,
+      interested_plot_id: enquiry.interestedPlotId || null,
+      preferred_location_id: enquiry.preferredLocationId || null,
+      budget_inr: enquiry.budgetInr || null,
       status: enquiry.status,
-      assigned_member_id: enquiry.assignedMemberId,
-      assigned_member_name: enquiry.assignedMemberName,
-      notes: enquiry.notes,
+      assigned_profile_id: enquiry.assignedProfileId || null,
+      assigned_member_id: enquiry.assignedMemberId || null,
+      assigned_member_name: enquiry.assignedMemberName || null,
+      notes: enquiry.notes || null,
       follow_ups: enquiry.followUps || [],
       created_at: enquiry.createdAt,
     };
@@ -941,17 +1043,55 @@ export async function saveEnquiryToSupabase(enquiry: ClientEnquiry): Promise<boo
   }
 }
 
+export async function updateEnquiryInSupabase(
+  enquiryId: string,
+  patch: Partial<ClientEnquiry>
+): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const payload: Record<string, unknown> = {};
+    if (patch.status !== undefined) payload.status = patch.status;
+    if (patch.notes !== undefined) payload.notes = patch.notes;
+    if (patch.followUps !== undefined) payload.follow_ups = patch.followUps;
+    if (patch.assignedProfileId !== undefined) payload.assigned_profile_id = patch.assignedProfileId;
+    if (patch.assignedMemberId !== undefined) payload.assigned_member_id = patch.assignedMemberId;
+    if (patch.assignedMemberName !== undefined) payload.assigned_member_name = patch.assignedMemberName;
+
+    const { error } = await supabase
+      .from('client_enquiries')
+      .update(payload)
+      .eq('id', enquiryId);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteEnquiryFromSupabase(enquiryId: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const { error } = await supabase
+      .from('client_enquiries')
+      .delete()
+      .eq('id', enquiryId);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 // ==============================================================================
 // 10. SALES TARGETS & TASK REMINDERS SYNC
 // ==============================================================================
 
-export async function fetchTargetsFromSupabase() {
+export async function fetchTargetsFromSupabase(): Promise<SalesTarget[] | null> {
   if (!isSupabaseConfigured || !supabase) return null;
   try {
     const { data, error } = await supabase.from('sales_targets').select('*');
     if (error || !data) return null;
     return data.map((row) => ({
       id: row.id,
+      profileId: row.profile_id || undefined,
       memberId: row.member_id,
       memberName: row.member_name,
       period: row.period,
@@ -974,6 +1114,7 @@ export async function saveTargetToSupabase(target: SalesTarget): Promise<boolean
   try {
     const payload = {
       id: target.id,
+      profile_id: target.profileId || null,
       member_id: target.memberId,
       member_name: target.memberName,
       period: target.period,
@@ -993,18 +1134,59 @@ export async function saveTargetToSupabase(target: SalesTarget): Promise<boolean
   }
 }
 
-export async function fetchTasksFromSupabase() {
+export async function updateTargetInSupabase(
+  targetId: string,
+  patch: Partial<SalesTarget>
+): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const payload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (patch.targetPlotsCount !== undefined) payload.target_plots_count = patch.targetPlotsCount;
+    if (patch.targetSalesVolumeInr !== undefined) payload.target_sales_volume_inr = patch.targetSalesVolumeInr;
+    if (patch.achievedPlotsCount !== undefined) payload.achieved_plots_count = patch.achievedPlotsCount;
+    if (patch.achievedSalesVolumeInr !== undefined) payload.achieved_sales_volume_inr = patch.achievedSalesVolumeInr;
+    if (patch.status !== undefined) payload.status = patch.status;
+
+    const { error } = await supabase.from('sales_targets').update(payload).eq('id', targetId);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteTargetFromSupabase(targetId: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const { error } = await supabase.from('sales_targets').delete().eq('id', targetId);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchTasksFromSupabase(): Promise<TaskReminder[] | null> {
   if (!isSupabaseConfigured || !supabase) return null;
   try {
-    const { data, error } = await supabase.from('task_reminders').select('*').order('due_date', { ascending: true });
+    const { data, error } = await supabase
+      .from('task_reminders')
+      .select('*')
+      .order('due_date', { ascending: true });
     if (error || !data) return null;
     return data.map((row) => ({
       id: row.id,
+      assigneeId: row.assignee_id || row.assigned_to_member_id,
       assignedToMemberId: row.assigned_to_member_id,
       assignedToName: row.assigned_to_name,
       title: row.title,
       description: row.description || undefined,
       category: row.category,
+      relatedRecordType: row.related_record_type || undefined,
+      relatedRecordId: row.related_record_id || undefined,
+      targetRoute: row.target_route || undefined,
+      completionNotes: row.completion_notes || undefined,
+      status: row.status || (row.is_completed ? 'completed' : 'pending'),
       dueDate: row.due_date,
       dueTime: row.due_time || undefined,
       priority: row.priority,
@@ -1023,20 +1205,83 @@ export async function saveTaskToSupabase(task: TaskReminder): Promise<boolean> {
   try {
     const payload = {
       id: task.id,
+      assignee_id: task.assigneeId || task.assignedToMemberId,
       assigned_to_member_id: task.assignedToMemberId,
       assigned_to_name: task.assignedToName,
       title: task.title,
-      description: task.description,
+      description: task.description || null,
       category: task.category,
+      related_record_type: task.relatedRecordType || null,
+      related_record_id: task.relatedRecordId || null,
+      target_route: task.targetRoute || null,
+      completion_notes: task.completionNotes || null,
+      status: task.status || (task.isCompleted ? 'completed' : 'pending'),
       due_date: task.dueDate,
-      due_time: task.dueTime,
+      due_time: task.dueTime || null,
       priority: task.priority,
       is_completed: task.isCompleted,
-      completed_at: task.completedAt,
+      completed_at: task.completedAt || null,
       created_by: task.createdBy,
       created_at: task.createdAt,
     };
     const { error } = await supabase.from('task_reminders').upsert(payload, { onConflict: 'id' });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function updateTaskInSupabase(
+  taskId: string,
+  patch: Partial<TaskReminder>
+): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Database service not configured' };
+  try {
+    const payload: Record<string, unknown> = {};
+    if (patch.isCompleted !== undefined) {
+      payload.is_completed = patch.isCompleted;
+      if (patch.isCompleted) {
+        payload.completed_at = patch.completedAt || new Date().toISOString();
+        payload.status = 'completed';
+      } else {
+        payload.completed_at = null;
+        payload.status = patch.status || 'in_progress';
+      }
+    }
+    if (patch.completionNotes !== undefined) payload.completion_notes = patch.completionNotes;
+    if (patch.status !== undefined) payload.status = patch.status;
+    if (patch.title !== undefined) payload.title = patch.title;
+    if (patch.description !== undefined) payload.description = patch.description;
+    if (patch.dueDate !== undefined) payload.due_date = patch.dueDate;
+    if (patch.dueTime !== undefined) payload.due_time = patch.dueTime;
+    if (patch.priority !== undefined) payload.priority = patch.priority;
+    if (patch.category !== undefined) payload.category = patch.category;
+    if (patch.assigneeId !== undefined) payload.assignee_id = patch.assigneeId;
+    if (patch.assignedToMemberId !== undefined) payload.assigned_to_member_id = patch.assignedToMemberId;
+    if (patch.assignedToName !== undefined) payload.assigned_to_name = patch.assignedToName;
+    if (patch.targetRoute !== undefined) payload.target_route = patch.targetRoute;
+    if (patch.relatedRecordType !== undefined) payload.related_record_type = patch.relatedRecordType;
+    if (patch.relatedRecordId !== undefined) payload.related_record_id = patch.relatedRecordId;
+
+    const { error } = await supabase
+      .from('task_reminders')
+      .update(payload)
+      .eq('id', taskId);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: message };
+  }
+}
+
+export async function deleteTaskFromSupabase(taskId: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const { error } = await supabase.from('task_reminders').delete().eq('id', taskId);
     return !error;
   } catch {
     return false;
@@ -1154,6 +1399,104 @@ export async function saveOfferToSupabase(offer: OfferIncentive): Promise<boolea
     const { error } = await supabase
       .from('offer_incentives')
       .upsert(payload, { onConflict: 'id' });
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+// ==============================================================================
+// 13. IN-APP MESSAGING SYNC
+// ==============================================================================
+
+export async function fetchInAppMessagesFromSupabase(): Promise<InAppMessage[] | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('in_app_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return null;
+
+    return data.map((row) => ({
+      id: row.id,
+      recipientType: row.recipient_type as 'individual' | 'role' | 'branch' | 'all',
+      recipientId: row.recipient_id || undefined,
+      recipientProfileId: row.recipient_profile_id || undefined,
+      targetRoute: row.target_route || undefined,
+      title: row.title,
+      message: row.message,
+      senderName: row.sender_name,
+      priority: row.priority as 'normal' | 'important' | 'urgent',
+      isRead: Boolean(row.is_read),
+      readAt: row.read_at || undefined,
+      createdAt: row.created_at,
+    }));
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception fetching in-app messages:', err);
+    return null;
+  }
+}
+
+export async function saveInAppMessageToSupabase(msg: InAppMessage): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const payload = {
+      id: msg.id,
+      recipient_type: msg.recipientType,
+      recipient_id: msg.recipientId || null,
+      recipient_profile_id: msg.recipientProfileId || null,
+      target_route: msg.targetRoute || null,
+      title: msg.title,
+      message: msg.message,
+      sender_name: msg.senderName,
+      priority: msg.priority || 'normal',
+      is_read: Boolean(msg.isRead),
+      read_at: msg.readAt || null,
+      created_at: msg.createdAt,
+    };
+
+    const { error } = await supabase
+      .from('in_app_messages')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.warn('[Supabase Sync] Error saving in-app message:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception saving in-app message:', err);
+    return false;
+  }
+}
+
+export async function markInAppMessageReadInSupabase(msgId: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const { error } = await supabase
+      .from('in_app_messages')
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString(),
+      })
+      .eq('id', msgId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export async function deleteInAppMessageFromSupabase(msgId: string): Promise<boolean> {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const { error } = await supabase
+      .from('in_app_messages')
+      .delete()
+      .eq('id', msgId);
 
     return !error;
   } catch {

@@ -168,10 +168,13 @@ CREATE TABLE IF NOT EXISTS site_visits (
     preferred_date DATE NOT NULL,
     preferred_time_slot TEXT NOT NULL,
     pickup_required BOOLEAN NOT NULL DEFAULT FALSE,
+    assigned_staff_id TEXT,
+    assigned_staff_member_id TEXT,
     assigned_staff_name TEXT,
     status TEXT NOT NULL DEFAULT 'requested',
     notes TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
 -- 10. COMMISSION RULES TABLE
@@ -202,6 +205,7 @@ CREATE TABLE IF NOT EXISTS client_enquiries (
     preferred_location_id TEXT,
     budget_inr NUMERIC,
     status TEXT NOT NULL DEFAULT 'new',
+    assigned_profile_id TEXT,
     assigned_member_id TEXT,
     assigned_member_name TEXT,
     notes TEXT,
@@ -230,6 +234,7 @@ CREATE TABLE IF NOT EXISTS offer_incentives (
 -- 13. SALES TARGETS TABLE
 CREATE TABLE IF NOT EXISTS sales_targets (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    profile_id TEXT,
     member_id TEXT NOT NULL,
     member_name TEXT NOT NULL,
     period TEXT NOT NULL DEFAULT 'monthly',
@@ -246,11 +251,17 @@ CREATE TABLE IF NOT EXISTS sales_targets (
 -- 14. TASK REMINDERS TABLE (Aaj Ke Kaam)
 CREATE TABLE IF NOT EXISTS task_reminders (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    assignee_id TEXT,
     assigned_to_member_id TEXT NOT NULL,
     assigned_to_name TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
     category TEXT NOT NULL DEFAULT 'general',
+    related_record_type TEXT,
+    related_record_id TEXT,
+    target_route TEXT,
+    completion_notes TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
     due_date DATE NOT NULL,
     due_time TEXT,
     priority TEXT NOT NULL DEFAULT 'medium',
@@ -265,11 +276,14 @@ CREATE TABLE IF NOT EXISTS in_app_messages (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     recipient_type TEXT NOT NULL DEFAULT 'all',
     recipient_id TEXT,
+    recipient_profile_id TEXT,
+    target_route TEXT,
     title TEXT NOT NULL,
     message TEXT NOT NULL,
     sender_name TEXT NOT NULL,
     priority TEXT NOT NULL DEFAULT 'normal',
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
@@ -1458,13 +1472,42 @@ CREATE POLICY "Admin or author update reviews" ON reviews FOR UPDATE TO authenti
 CREATE POLICY "Admin delete reviews" ON reviews FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Public insert enquiries" ON client_enquiries FOR INSERT TO anon, authenticated WITH CHECK (status = 'new' AND (assigned_member_id IS NULL OR assigned_member_id = ''));
-CREATE POLICY "Admin or assigned read enquiries" ON client_enquiries FOR SELECT TO authenticated USING (public.is_admin() OR assigned_member_id = auth.uid()::text);
-CREATE POLICY "Admin update enquiries" ON client_enquiries FOR UPDATE TO authenticated USING (public.is_admin());
+CREATE POLICY "Admin or assigned read enquiries" ON client_enquiries FOR SELECT TO authenticated USING (
+    public.is_admin()
+    OR assigned_profile_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR assigned_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+    OR assigned_member_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+);
+CREATE POLICY "Assigned or admin update enquiries" ON client_enquiries FOR UPDATE TO authenticated USING (
+    public.is_admin()
+    OR assigned_profile_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR assigned_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+    OR assigned_member_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+) WITH CHECK (
+    public.is_admin()
+    OR assigned_profile_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR assigned_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+    OR assigned_member_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+);
 CREATE POLICY "Admin delete enquiries" ON client_enquiries FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Public insert site visits" ON site_visits FOR INSERT TO anon, authenticated WITH CHECK (status = 'requested' AND (assigned_staff_name IS NULL OR assigned_staff_name = ''));
-CREATE POLICY "Buyer or admin read site visits" ON site_visits FOR SELECT TO authenticated USING (public.is_admin() OR buyer_id = auth.uid()::text);
-CREATE POLICY "Admin update site visits" ON site_visits FOR UPDATE TO authenticated USING (public.is_admin());
+CREATE POLICY "Buyer or staff or admin read site visits" ON site_visits FOR SELECT TO authenticated USING (
+    public.is_admin()
+    OR buyer_id = auth.uid()::text
+    OR buyer_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR assigned_staff_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR (assigned_staff_member_id IS NOT NULL AND assigned_staff_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL))
+);
+CREATE POLICY "Staff or admin update site visits" ON site_visits FOR UPDATE TO authenticated USING (
+    public.is_admin()
+    OR assigned_staff_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR (assigned_staff_member_id IS NOT NULL AND assigned_staff_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL))
+) WITH CHECK (
+    public.is_admin()
+    OR assigned_staff_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR (assigned_staff_member_id IS NOT NULL AND assigned_staff_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL))
+);
 CREATE POLICY "Admin delete site visits" ON site_visits FOR DELETE TO authenticated USING (public.is_admin());
 
 -- Private profiles are restricted to Admins, self, downline team, and direct sponsor (Anonymous has zero read access to private profiles; public queries public_team_directory view)
@@ -1532,16 +1575,122 @@ CREATE POLICY "Members view own reward claims" ON reward_claims FOR SELECT TO au
 CREATE POLICY "Members submit reward claims" ON reward_claims FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR (member_id IN (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)) AND status = 'pending'));
 CREATE POLICY "Admins manage reward claims" ON reward_claims FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
-CREATE POLICY "Member or admin read targets" ON sales_targets FOR SELECT TO authenticated USING (public.is_admin() OR member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
+CREATE POLICY "Member or admin read targets" ON sales_targets FOR SELECT TO authenticated USING (
+    public.is_admin()
+    OR profile_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+    OR member_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+);
 CREATE POLICY "Admin write targets" ON sales_targets FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 
-CREATE POLICY "Assigned or admin read tasks" ON task_reminders FOR SELECT TO authenticated USING (public.is_admin() OR assigned_to_member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
-CREATE POLICY "Assigned or admin update tasks" ON task_reminders FOR UPDATE TO authenticated USING (public.is_admin() OR assigned_to_member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
+CREATE OR REPLACE FUNCTION public.enforce_task_update_integrity()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF NOT public.is_admin() THEN
+        IF NEW.assignee_id IS DISTINCT FROM OLD.assignee_id THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot reassign tasks';
+        END IF;
+
+        IF NEW.assigned_to_member_id IS DISTINCT FROM OLD.assigned_to_member_id THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter assigned_to_member_id';
+        END IF;
+
+        IF NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter task creator';
+        END IF;
+
+        IF NEW.category IS DISTINCT FROM OLD.category THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter task category';
+        END IF;
+
+        IF NEW.related_record_type IS DISTINCT FROM OLD.related_record_type OR NEW.related_record_id IS DISTINCT FROM OLD.related_record_id THEN
+            RAISE EXCEPTION 'Unauthorized: Non-admin users cannot alter task record linkages';
+        END IF;
+    END IF;
+
+    IF NEW.is_completed = TRUE AND (OLD.is_completed IS DISTINCT FROM TRUE) THEN
+        NEW.completed_at := COALESCE(NEW.completed_at, timezone('utc', now()));
+        NEW.status := 'completed';
+    ELSIF NEW.is_completed = FALSE AND OLD.is_completed = TRUE THEN
+        NEW.completed_at := NULL;
+        IF NEW.status = 'completed' THEN
+            NEW.status := 'in_progress';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_enforce_task_update_integrity ON public.task_reminders;
+CREATE TRIGGER trg_enforce_task_update_integrity
+BEFORE UPDATE ON public.task_reminders
+FOR EACH ROW
+EXECUTE FUNCTION public.enforce_task_update_integrity();
+
+REVOKE ALL ON FUNCTION public.enforce_task_update_integrity() FROM PUBLIC;
+
+CREATE POLICY "Assigned or admin read tasks" ON task_reminders FOR SELECT TO authenticated USING (
+    public.is_admin()
+    OR assignee_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR assigned_to_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+    OR assigned_to_member_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+);
+CREATE POLICY "Assigned or admin update tasks" ON task_reminders FOR UPDATE TO authenticated USING (
+    public.is_admin()
+    OR assignee_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR assigned_to_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+    OR assigned_to_member_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+) WITH CHECK (
+    public.is_admin()
+    OR assignee_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    OR assigned_to_member_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+    OR assigned_to_member_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+);
 CREATE POLICY "Admin delete tasks" ON task_reminders FOR DELETE TO authenticated USING (public.is_admin());
 CREATE POLICY "Admin create tasks" ON task_reminders FOR INSERT TO authenticated WITH CHECK (public.is_admin());
 
-CREATE POLICY "Recipient or admin read messages" ON in_app_messages FOR SELECT TO authenticated USING (recipient_type = 'all' OR public.is_admin() OR recipient_id = auth.uid()::text);
-CREATE POLICY "Admin write messages" ON in_app_messages FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Recipient or admin read messages" ON in_app_messages FOR SELECT TO authenticated USING (
+    recipient_type = 'all'
+    OR public.is_admin()
+    OR (recipient_type = 'individual' AND (
+        recipient_id = auth.uid()::text
+        OR recipient_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+        OR recipient_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+        OR recipient_profile_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    ))
+    OR (recipient_type = 'role' AND recipient_id IN (
+        SELECT p.role FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text
+    ))
+    OR (recipient_type = 'branch' AND recipient_id IN (
+        SELECT p.branch_location FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text
+    ))
+);
+CREATE POLICY "Recipient or admin update messages" ON in_app_messages FOR UPDATE TO authenticated USING (
+    public.is_admin()
+    OR recipient_type = 'all'
+    OR (recipient_type = 'individual' AND (
+        recipient_id = auth.uid()::text
+        OR recipient_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+        OR recipient_id IN (SELECT p.member_id FROM public.profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text) AND p.member_id IS NOT NULL)
+        OR recipient_profile_id IN (SELECT p.id FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)
+    ))
+    OR (recipient_type = 'role' AND recipient_id IN (
+        SELECT p.role FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text
+    ))
+    OR (recipient_type = 'branch' AND recipient_id IN (
+        SELECT p.branch_location FROM public.profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text
+    ))
+) WITH CHECK (
+    public.is_admin()
+    OR is_read IS TRUE
+);
+CREATE POLICY "Admin write messages" ON in_app_messages FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admin delete messages" ON in_app_messages FOR DELETE TO authenticated USING (public.is_admin());
 
 CREATE POLICY "Read gps evidence" ON field_gps_evidence FOR SELECT TO anon, authenticated USING (status = 'approved' OR public.is_admin() OR captured_by_member_id = (SELECT p.member_id FROM profiles p WHERE p.auth_user_id = auth.uid() OR p.id = auth.uid()::text LIMIT 1));
 CREATE POLICY "Authenticated insert gps evidence" ON field_gps_evidence FOR INSERT TO authenticated WITH CHECK (public.is_admin() OR (captured_by_member_id IN (SELECT p.member_id FROM profiles p WHERE (p.auth_user_id = auth.uid() OR p.id = auth.uid()::text)) AND status IN ('pending', 'pending_review') AND reviewed_by IS NULL AND reviewed_at IS NULL));

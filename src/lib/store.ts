@@ -229,6 +229,8 @@ export const INITIAL_SITE_VISITS: SiteVisit[] = [
     preferredDate: '2026-10-18',
     preferredTimeSlot: '11:00 AM - 01:00 PM',
     pickupRequired: true,
+    assignedStaffId: 'usr-sponsor-01',
+    assignedStaffMemberId: 'AKGV-3498',
     assignedStaffName: 'Vikram Singh',
     status: 'confirmed',
     notes: 'Requested pickup from Cantt Railway Station Varanasi.',
@@ -404,7 +406,8 @@ export const INITIAL_ENQUIRIES: ClientEnquiry[] = [
     preferredLocationId: 'loc-rampur',
     budgetInr: 1500000,
     status: 'visit_scheduled',
-    assignedMemberId: 'usr-sponsor-01',
+    assignedProfileId: 'usr-sponsor-01',
+    assignedMemberId: 'AKGV-3498',
     assignedMemberName: 'Vikram Singh',
     notes: 'Interested in East-facing corner plot near 30ft entrance road. Site visit scheduled for Sunday.',
     followUps: [
@@ -424,7 +427,8 @@ export const INITIAL_ENQUIRIES: ClientEnquiry[] = [
     preferredLocationId: 'loc-mirza-murad',
     budgetInr: 1200000,
     status: 'contacted',
-    assignedMemberId: 'usr-junior-01',
+    assignedProfileId: 'usr-junior-01',
+    assignedMemberId: 'AKGV0042',
     assignedMemberName: 'Amit Sharma',
     notes: 'Inquired at Mirza Murad NH-19 branch regarding commercial road facing plots.',
     createdAt: '2026-10-12T14:30:00Z'
@@ -465,7 +469,8 @@ export const INITIAL_OFFERS: OfferIncentive[] = [
 export const INITIAL_TARGETS: SalesTarget[] = [
   {
     id: 'tgt-01',
-    memberId: 'usr-sponsor-01',
+    profileId: 'usr-sponsor-01',
+    memberId: 'AKGV-3498',
     memberName: 'Vikram Singh (Senior Associate)',
     period: 'monthly',
     periodLabel: 'October 2026',
@@ -479,7 +484,8 @@ export const INITIAL_TARGETS: SalesTarget[] = [
   },
   {
     id: 'tgt-02',
-    memberId: 'usr-junior-01',
+    profileId: 'usr-junior-01',
+    memberId: 'AKGV0042',
     memberName: 'Amit Sharma (Field Associate)',
     period: 'monthly',
     periodLabel: 'October 2026',
@@ -496,30 +502,42 @@ export const INITIAL_TARGETS: SalesTarget[] = [
 export const INITIAL_TASKS: TaskReminder[] = [
   {
     id: 'task-01',
-    assignedToMemberId: 'usr-sponsor-01',
+    assigneeId: 'usr-sponsor-01',
+    assignedToMemberId: 'AKGV-3498',
     assignedToName: 'Vikram Singh',
     title: 'Site Visit Escort: Cantt Station to Rampur',
     description: 'Escort Shri Suresh Chandra Gupta from Varanasi Cantt Station in company vehicle for Block A boundary inspection.',
     category: 'site_visit',
+    relatedRecordType: 'site_visit',
+    relatedRecordId: 'sv-001',
+    targetRoute: '/member?tab=visits&id=sv-001',
+    status: 'in_progress',
     dueDate: '2026-10-18',
     dueTime: '10:30 AM',
     priority: 'high',
     isCompleted: false,
-    createdBy: 'Director Office',
+    createdBy: 'usr-admin-01',
+    createdByName: 'Director Office',
     createdAt: '2026-10-14T08:00:00Z'
   },
   {
     id: 'task-02',
-    assignedToMemberId: 'usr-admin-01',
+    assigneeId: 'usr-admin-01',
+    assignedToMemberId: 'AKGV-ADMIN-01',
     assignedToName: 'Rajesh Kumar Patel',
     title: 'Verify Bank Statement for Plot A-03 Token Payment',
     description: 'Cross-check HDFC Bank current account statement for ₹1.5L NEFT credit ref #UPI-REF-9928192847.',
     category: 'payment_verification',
+    relatedRecordType: 'payment',
+    relatedRecordId: 'pay-001',
+    targetRoute: '/admin?tab=payments&id=pay-001',
+    status: 'pending',
     dueDate: '2026-10-16',
     dueTime: '04:00 PM',
     priority: 'urgent',
     isCompleted: false,
-    createdBy: 'Automated Ledger Monitor',
+    createdBy: 'usr-admin-01',
+    createdByName: 'Automated Ledger Monitor',
     createdAt: '2026-10-14T09:30:00Z'
   }
 ];
@@ -570,5 +588,43 @@ export const INITIAL_CMS_CONTENT: CmsContent = {
   updatedAt: '2026-10-15T00:00:00Z',
   updatedBy: 'Director (Rajesh Kumar Patel)'
 };
+
+export const INITIAL_MESSAGES: InAppMessage[] = [
+  {
+    id: 'msg-001',
+    recipientType: 'all',
+    title: 'Navratri Land Demarcation & Customer Booking Camp',
+    message: 'Welcome to Navratri Fest 2026. Rampur township boundary pillars and 30ft main road demarcation are fully completed on ground. Special subsidies active this month.',
+    senderName: 'Corporate Office',
+    priority: 'important',
+    isRead: false,
+    createdAt: '2026-10-15T09:00:00Z'
+  },
+  {
+    id: 'msg-002',
+    recipientType: 'role',
+    recipientId: 'senior_member',
+    title: 'Senior Associate Briefing: Q4 Sales Incentives',
+    message: 'All Senior Associates are invited to review new quarterly volume targets and sports bike rewards. Review assigned leads in your Task Center.',
+    senderName: 'Director (Rajesh Kumar Patel)',
+    priority: 'normal',
+    isRead: false,
+    targetRoute: '/member?tab=targets',
+    createdAt: '2026-10-16T11:00:00Z'
+  },
+  {
+    id: 'msg-003',
+    recipientType: 'individual',
+    recipientId: 'AKGV-3498',
+    recipientProfileId: 'usr-sponsor-01',
+    title: 'Assigned Site Visit: Cantt Railway Station Escort',
+    message: 'You have been assigned to escort Shri Suresh Chandra Gupta for a physical inspection at Rampur on 18 Oct 2026.',
+    senderName: 'Admin Operations',
+    priority: 'urgent',
+    isRead: false,
+    targetRoute: '/member?tab=visits&id=sv-001',
+    createdAt: '2026-10-16T14:30:00Z'
+  }
+];
 
 
