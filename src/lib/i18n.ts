@@ -21,7 +21,7 @@ export const DICTIONARY = {
       "adminPortal": "Super Admin",
       "dashboard": "Open Dashboard",
       "roleSimulator": "Role:",
-      "switchRoleTitle": "Switch Active Role (Demo)",
+      "switchRoleTitle": "Switch Active Role",
       "roleLabels": {
         "super_admin": "Super Admin",
         "sub_admin": "Sub-Admin",
@@ -556,7 +556,7 @@ export const DICTIONARY = {
       "adminPortal": "सुपर एडमिन",
       "dashboard": "डैशबोर्ड खोलें",
       "roleSimulator": "पद:",
-      "switchRoleTitle": "सक्रिय पद बदलें (डेमो)",
+      "switchRoleTitle": "सक्रिय पद बदलें",
       "roleLabels": {
         "super_admin": "सुपर एडमिन",
         "sub_admin": "सब-एडमिन",
@@ -1091,7 +1091,7 @@ export const DICTIONARY = {
       "adminPortal": "Super Admin",
       "dashboard": "Dashboard Kholein",
       "roleSimulator": "Role:",
-      "switchRoleTitle": "Switch Active Role (Demo)",
+      "switchRoleTitle": "Switch Active Role",
       "roleLabels": {
         "super_admin": "Super Admin",
         "sub_admin": "Sub-Admin",

@@ -9,7 +9,6 @@ import {
   Home,
   KeyRound
 } from 'lucide-react';
-import { AuthModal } from './AuthModal';
 import { useApp } from '@/context/AppContext';
 
 interface AuthBarrierProps {
@@ -18,7 +17,6 @@ interface AuthBarrierProps {
 
 export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
   const { language } = useApp();
-  const [modalOpen, setModalOpen] = useState(false);
 
   const roleText =
     requiredRole === 'admin'
@@ -51,14 +49,14 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
         </p>
 
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          <button
-            onClick={() => setModalOpen(true)}
+          <Link
+            href="/login"
             className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-3 text-xs sm:text-sm font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
           >
             <KeyRound className="h-4 w-4" />
             <span>{language === 'hi' ? 'लॉगिन करें' : 'Sign In Now'}</span>
             <ArrowRight className="h-4 w-4" />
-          </button>
+          </Link>
 
           <Link
             href="/"
@@ -69,8 +67,6 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
           </Link>
         </div>
       </div>
-
-      <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }

@@ -94,11 +94,7 @@ export default function UnifiedLoginPage() {
     }
   };
 
-  const handleAutoFill = (idVal: string, passVal: string) => {
-    setIdentifier(idVal);
-    setPassword(passVal);
-    setError('');
-  };
+
 
   return (
     <div className="min-h-screen bg-[#050A17] text-white flex flex-col justify-between selection:bg-[#C7A35A] selection:text-[#0B1734]">
@@ -257,26 +253,7 @@ export default function UnifiedLoginPage() {
                   )}
                 </button>
 
-                {/* 1-Click Super Admin Access (For Development & Immediate Testing) */}
-                <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#0B1734]/80 p-3 text-xs space-y-2">
-                  <div className="flex items-center justify-between text-[#DFC382] font-semibold text-[11px]">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-[#C7A35A]" />
-                      <span>सुपर एडमिन टेस्ट क्रेडेंशियल:</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleAutoFill('6306917991', 'akgv@2026')}
-                      className="rounded-lg bg-[#C7A35A]/20 hover:bg-[#C7A35A]/30 border border-[#C7A35A]/40 px-2.5 py-1 text-[10px] font-bold text-[#DFC382] transition"
-                    >
-                      ऑटो-भरें (1-Click)
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-gray-300 pt-0.5">
-                    <span>मोबाइल: <strong className="text-white font-mono">6306917991</strong></span>
-                    <span>पासवर्ड: <strong className="text-white font-mono">akgv@2026</strong></span>
-                  </div>
-                </div>
+
 
                 {/* No Self-Registration Notice */}
                 <div className="rounded-xl border border-white/10 bg-[#050A17]/60 p-3 text-[11px] text-gray-400 space-y-1">

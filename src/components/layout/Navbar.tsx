@@ -24,14 +24,12 @@ import {
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { UserRole } from '@/types';
-import { AuthModal } from '@/components/auth/AuthModal';
 
 export function Navbar() {
   const pathname = usePathname();
   const { language, setLanguage, t, currentUser, logout } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const navLinks = [
     { href: '/', label: t.nav.home, icon: Home },
@@ -334,9 +332,6 @@ export function Navbar() {
       )}
 
       </header>
-
-      {/* Global Interactive Auth Modal outside header to prevent stacking context & backdrop-filter containment */}
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </>
   );
 }
