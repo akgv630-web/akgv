@@ -55,7 +55,7 @@ A full-stack, enterprise-grade Progressive Web App (PWA) real estate and townshi
 - **Role-Governed Dashboards**:
   - **Buyer Portal (`/buyer`)**: Manage bookings, submit payment proofs, schedule site visits, track registry status.
   - **Member Portal (`/member`)**: Digital ID card, downline hierarchy tree, commission ledger, rewards claim tracking, offline kit status.
-  - **Super Admin Control Centre (`/admin`)**: Database-derived live KPIs, plot status toggle (Red/Green/Yellow), manual payment verification desk, cash reconciliation, and support CRM.
+  - **Admin Control Centre (`/admin`)**: Database-derived live KPIs, plot status toggle (Red/Green/Yellow), manual payment verification desk, cash reconciliation, and support CRM.
 - **Multi-Language Support**:
   - Full toggle between **English**, **हिंदी (Hindi)**, and **Hinglish**.
 - **Progressive Web App (PWA)**:

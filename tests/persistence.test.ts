@@ -65,7 +65,7 @@ describe('Cross-Role Workflow & State Persistence Verification', () => {
     currentPayments.unshift(paymentProof);
     mockStorage['akgv_infra_payments'] = JSON.stringify(currentPayments);
 
-    // 3. Page Refresh & Login as Super Admin
+    // 3. Page Refresh & Login as Admin
     const rehydratedBookings: Booking[] = JSON.parse(mockStorage['akgv_infra_bookings']);
     const rehydratedPayments: PaymentRecord[] = JSON.parse(mockStorage['akgv_infra_payments']);
     const rehydratedPlots: Plot[] = JSON.parse(mockStorage['akgv_infra_plots']);

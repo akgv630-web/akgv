@@ -75,7 +75,7 @@ export function AdminCmsTab() {
         faqs: faqsList,
         publicOffers: offersList,
         updatedAt: new Date().toISOString(),
-        updatedBy: currentUser?.fullName || 'Super Admin',
+        updatedBy: currentUser?.fullName || 'Admin',
       });
 
       showNotification('Dynamic website content and CMS settings updated successfully!');

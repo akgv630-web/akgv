@@ -94,13 +94,25 @@ export function MemberPortalPage() {
   );
 
   // Task, CRM, Site Visit & Target Counts for Current Member
+  const isMatchUser = (assigneeId?: string, assignedToMemberId?: string) => {
+    if (!currentUser) return false;
+    const uid = currentUser.id;
+    const memId = currentUser.memberId;
+    const isPreet =
+      memId === 'AKGV-2117' ||
+      currentUser.fullName?.toLowerCase().includes('preet') ||
+      memId === 'AKGV-HQ-001';
+
+    if (assigneeId === uid || assigneeId === memId) return true;
+    if (assignedToMemberId === uid || assignedToMemberId === memId) return true;
+    if (memId && assignedToMemberId && assignedToMemberId.toLowerCase() === memId.toLowerCase()) return true;
+    if (isPreet && (assignedToMemberId === 'AKGV-2117' || assigneeId === 'AKGV-2117')) return true;
+    if (currentUser.memberId === 'AKGV-3498' && (assignedToMemberId === 'usr-sponsor-01' || assignedToMemberId === 'AKGV-3498')) return true;
+    return false;
+  };
+
   const myPendingTasksCount = tasks.filter(
-    (t) =>
-      (t.assigneeId === currentUser.id ||
-        t.assignedToMemberId === currentUser.memberId ||
-        t.assignedToMemberId === currentUser.id ||
-        (currentUser.memberId === 'AKGV-3498' && (t.assignedToMemberId === 'usr-sponsor-01' || t.assignedToMemberId === 'AKGV-3498'))) &&
-      !t.isCompleted
+    (t) => isMatchUser(t.assigneeId, t.assignedToMemberId) && !t.isCompleted
   ).length;
 
   const myEnquiriesCount = enquiries.filter(
@@ -108,6 +120,7 @@ export function MemberPortalPage() {
       e.assignedProfileId === currentUser.id ||
       e.assignedMemberId === currentUser.memberId ||
       e.assignedMemberId === currentUser.id ||
+      (currentUser.memberId === 'AKGV-2117' && e.assignedMemberId === 'AKGV-2117') ||
       (currentUser.memberId === 'AKGV-3498' && (e.assignedMemberId === 'usr-sponsor-01' || e.assignedMemberId === 'AKGV-3498'))
   ).length;
 
@@ -116,6 +129,7 @@ export function MemberPortalPage() {
       (v.assignedStaffId === currentUser.id ||
         v.assignedStaffMemberId === currentUser.memberId ||
         v.assignedStaffMemberId === currentUser.id ||
+        (currentUser.memberId === 'AKGV-2117' && v.assignedStaffMemberId === 'AKGV-2117') ||
         (currentUser.memberId === 'AKGV-3498' && (v.assignedStaffMemberId === 'usr-sponsor-01' || v.assignedStaffMemberId === 'AKGV-3498'))) &&
       v.status !== 'completed' &&
       v.status !== 'cancelled'
@@ -126,6 +140,7 @@ export function MemberPortalPage() {
       t.profileId === currentUser.id ||
       t.memberId === currentUser.memberId ||
       t.memberId === currentUser.id ||
+      (currentUser.memberId === 'AKGV-2117' && t.memberId === 'AKGV-2117') ||
       (currentUser.memberId === 'AKGV-3498' && (t.memberId === 'usr-sponsor-01' || t.memberId === 'AKGV-3498'))
   ).length;
 
@@ -197,6 +212,41 @@ export function MemberPortalPage() {
         </div>
       </div>
 
+      {/* Action Alert Banner for Active Tasks */}
+      {myPendingTasksCount > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-950/40 via-[#0B1734] to-[#0B1734] p-4 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <CheckSquare className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-serif text-sm font-bold text-white">
+                {tLang(
+                  language,
+                  `You have ${myPendingTasksCount} active task${myPendingTasksCount > 1 ? 's' : ''} requiring action today`,
+                  `आपके पास आज ${myPendingTasksCount} कार्य कार्रवाई के लिए लंबित हैं`,
+                  `Aapke paas aaj ${myPendingTasksCount} active task action lene ke liye pending hain`
+                )}
+              </h3>
+              <p className="text-[11px] text-gray-300">
+                {tLang(
+                  language,
+                  'Escort client visits, follow up with inquiries, and mark items complete to maintain high performance.',
+                  'साइट विजिट का मार्गदर्शन करें, पूछताछ पर कॉल करें और कार्य पूरा चिह्नित करें।',
+                  'Site visits escort karein, inquiries ko follow up karein aur kaam complete karein.'
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className="self-start sm:self-auto shrink-0 rounded-xl bg-[#C7A35A] px-4 py-2 text-xs font-bold text-[#0B1734] hover:brightness-110 transition"
+          >
+            {tLang(language, 'View & Complete Tasks', 'कार्य देखें एवं पूरा करें', 'Tasks Dekhein Aur Complete Karein')}
+          </button>
+        </div>
+      )}
+
       {/* Tabs Navigation */}
       <div className="flex overflow-x-auto no-scrollbar border-b border-white/10 text-xs sm:text-sm font-semibold gap-1 whitespace-nowrap pb-1">
         <button
@@ -208,7 +258,7 @@ export function MemberPortalPage() {
           }`}
         >
           <CheckSquare className="h-4 w-4" />
-          <span>{tLang(language, 'My Daily Tasks', 'आज के काम', 'Aaj Ke Kaam')}</span>
+          <span>{tLang(language, 'My Daily Tasks', 'आज के काम / टास्क', 'Aaj Ke Kaam / Task')}</span>
           {myPendingTasksCount > 0 && (
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/30">
               {myPendingTasksCount}
@@ -394,7 +444,7 @@ export function MemberPortalPage() {
                 Company Member Governance Rules
               </span>
               <ul className="space-y-1.5 text-gray-400">
-                <li>• Company members cannot alter reporting hierarchy without Super Admin authorization.</li>
+                <li>• Company members cannot alter reporting hierarchy without Admin authorization.</li>
                 <li>• No commission is paid for member sign-ups; revenue is derived only from legally registered plot sales.</li>
                 <li>• Keep your digital ID card accessible during all township client site visits.</li>
               </ul>

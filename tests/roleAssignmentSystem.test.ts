@@ -81,7 +81,7 @@ describe('Role-Based Assignment & Task Management System', () => {
           dueDate: '2026-10-25',
           priority: 'medium',
           isCompleted: false,
-          createdBy: 'Super Admin',
+          createdBy: 'Admin',
           createdAt: new Date().toISOString(),
         },
       ];

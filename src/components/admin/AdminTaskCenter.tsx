@@ -142,7 +142,7 @@ export function AdminTaskCenter() {
         priority,
         status: 'pending',
         createdBy: currentUser?.id || 'usr-admin-01',
-        createdByName: currentUser?.fullName || 'Super Admin',
+        createdByName: currentUser?.fullName || 'Admin',
       });
 
       setActionNotice({

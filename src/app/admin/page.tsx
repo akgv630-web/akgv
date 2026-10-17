@@ -370,7 +370,7 @@ export default function SuperAdminPage() {
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
       case 'super_admin':
-        return { label: 'SUPER ADMIN', bg: 'bg-red-500/20 text-red-300 border-red-500/40' };
+        return { label: 'ADMIN', bg: 'bg-red-500/20 text-red-300 border-red-500/40' };
       case 'sub_admin':
         return { label: 'SUB-ADMIN', bg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' };
       case 'senior_member':
@@ -389,12 +389,12 @@ export default function SuperAdminPage() {
   }
 
   if (currentUser.role !== 'super_admin' && currentUser.role !== 'sub_admin') {
-    return <UnauthorizedBarrier currentRole={currentUser.role} requiredRole="Super Admin or Sub Admin" />;
+    return <UnauthorizedBarrier currentRole={currentUser.role} requiredRole="Admin" />;
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 space-y-8">
-      {/* Super Admin Header */}
+      {/* Admin Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-[#C7A35A]/50 bg-gradient-to-r from-[#050A17] via-[#0B1734] to-[#050A17] p-6 shadow-2xl">
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0B1734] border-2 border-[#C7A35A] text-[#DFC382] shadow-lg">
@@ -403,7 +403,7 @@ export default function SuperAdminPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="font-serif text-2xl font-bold text-white">
-                Super Admin Control Centre
+                Admin Control Centre
               </h1>
               <span className="rounded-full bg-red-500/20 px-2.5 py-0.5 text-[10px] font-bold text-red-400 border border-red-500/30">
                 Full Authorization
@@ -1577,7 +1577,7 @@ export default function SuperAdminPage() {
                       onChange={(e) => setNewMemberSponsorId(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                     >
-                      <option value="AKGV-HQ-001">Super Admin (AKGV-HQ-001)</option>
+                      <option value="AKGV-HQ-001">Admin (AKGV-HQ-001)</option>
                       <option value="AKGV-3498">Vikram Singh (AKGV-3498)</option>
                       <option value="AKGV-SUB-101">Suresh Yadav Sub-Admin (AKGV-SUB-101)</option>
                       {allProfiles
@@ -1709,7 +1709,7 @@ export default function SuperAdminPage() {
                         disabled={editingMember.id === currentUser.id}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none disabled:opacity-50"
                       >
-                        <option value="super_admin">Super Admin</option>
+                        <option value="super_admin">Admin</option>
                         <option value="sub_admin">Sub-Admin (Coordinator)</option>
                         <option value="senior_member">Senior Manager</option>
                         <option value="junior_member">Field Associate</option>

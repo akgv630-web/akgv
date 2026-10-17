@@ -6,13 +6,13 @@ The AKGV Infra City business platform is partitioned into three role-governed op
 1. **Public Township Portal**: General inquiries, master plan inspection, 3D house viewer, site visit bookings.
 2. **Buyer Portal (`/buyer`)**: Dedicated dashboard for registered buyers to track plot bookings, view 72-hour holds, submit payment proofs, and monitor deed registry milestones.
 3. **Company Member Portal (`/member`)**: Internal portal for sales associates showing digital ID cards, downline teams, business volume progress, commission ledgers, and joining-kit status.
-4. **Super Admin Control Centre (`/admin`)**: Company management center with real-time metrics, plot inventory status toggles, payment verification desk, cash reconciliation, and support CRM.
+4. **Admin Control Centre (`/admin`)**: Company management center with real-time metrics, plot inventory status toggles, payment verification desk, cash reconciliation, and support CRM.
 
 ---
 
 ## 2. Managing Plot Inventory
 
-Access the **Plot Inventory** tab in the Super Admin dashboard (`/admin`):
+Access the **Plot Inventory** tab in the Admin dashboard (`/admin`):
 - **Green (Available)**: Selectable and bookable by buyers on the public master plan.
 - **Yellow (Confirmed Booked)**: Permanently locked once payment verification has been approved. Cannot be booked by others.
 - **Red (Vacant / Reserved)**: Inventory held in administrative reserve. Cannot be booked publicly until an admin toggles it to Green.

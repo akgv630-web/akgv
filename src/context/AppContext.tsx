@@ -522,7 +522,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 2. Pre-seeded corporate / sandbox profile verification
-    // Allows designated company profiles (Super Admin, Sub Admin, Associates) to authenticate with authorized company key
+    // Allows designated company profiles (Admin, Sub Admin, Associates) to authenticate with authorized company key
     const found =
       allProfiles.find(
         (p) =>
@@ -1389,6 +1389,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     void saveSiteVisitToSupabase(newVisit);
+
+    // Automatically generate an urgent administrative action task so the booking is immediately visible and actionable
+    const adminTask: TaskReminder = {
+      id: `task-admin-sv-${newVisit.id}`,
+      assigneeId: 'usr-admin-01',
+      assignedToMemberId: 'AKGV-HQ-001',
+      assignedToName: 'Admin Desk',
+      title: `Assign Site Visit: ${newVisit.visitorName} (${newVisit.locationName})`,
+      description: `New visit booked on website. Visitor: ${newVisit.visitorName} (Phone: ${newVisit.visitorPhone}). Preferred Date: ${newVisit.preferredDate} ${newVisit.preferredTimeSlot || ''}. Pickup: ${newVisit.pickupRequired ? 'Required' : 'No'}. Assign a field associate immediately.`,
+      category: 'site_visit',
+      relatedRecordType: 'site_visit',
+      relatedRecordId: newVisit.id,
+      targetRoute: `/admin?tab=site_visits&id=${newVisit.id}`,
+      dueDate: newVisit.preferredDate || new Date().toISOString().split('T')[0],
+      dueTime: newVisit.preferredTimeSlot ? newVisit.preferredTimeSlot.split('-')[0].trim() : '11:00 AM',
+      priority: 'urgent',
+      status: 'pending',
+      isCompleted: false,
+      createdBy: 'system',
+      createdByName: 'Website Public Booking',
+      createdAt: new Date().toISOString(),
+    };
+    setTasks((prev) => {
+      const next = [adminTask, ...prev];
+      try { localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    void saveTaskToSupabase(adminTask);
+
     return newVisit;
   };
 
@@ -1416,6 +1445,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try { localStorage.setItem(`${STORAGE_KEY_PREFIX}site_visits`, JSON.stringify(next)); } catch {}
       return next;
     });
+
+    // Automatically create / sync high-priority task for assigned member
+    const visit = siteVisits.find((v) => v.id === visitId);
+    const visitorTitle = visit ? `Site Visit Escort: ${visit.visitorName} (${visit.locationName})` : `Site Visit Escort: #${visitId}`;
+    const visitDesc = visit
+      ? `Client: ${visit.visitorName} (Phone: ${visit.visitorPhone}). Date: ${visit.preferredDate} (${visit.preferredTimeSlot || 'Standard'}). Pickup: ${visit.pickupRequired ? 'Required' : 'Self-arrival'}. Notes: ${visit.notes || 'None'}`
+      : `Coordinate and escort customer for site visit inspection.`;
+
+    const generatedTask: TaskReminder = {
+      id: `task-sv-${visitId}`,
+      assigneeId: staffProfileId,
+      assignedToMemberId: staffMemberId || staffProfileId,
+      assignedToName: staffName,
+      title: visitorTitle,
+      description: visitDesc,
+      category: 'site_visit',
+      relatedRecordType: 'site_visit',
+      relatedRecordId: visitId,
+      targetRoute: `/member?tab=site_visits&id=${visitId}`,
+      dueDate: visit?.preferredDate || new Date().toISOString().split('T')[0],
+      dueTime: visit?.preferredTimeSlot ? visit.preferredTimeSlot.split('-')[0].trim() : '11:00 AM',
+      priority: 'high',
+      status: 'pending',
+      isCompleted: false,
+      createdBy: currentUser?.id || 'usr-admin-01',
+      createdByName: currentUser?.fullName || 'Admin Desk',
+      createdAt: new Date().toISOString()
+    };
+
+    setTasks((prev) => {
+      const filtered = prev.filter((t) => t.relatedRecordId !== visitId && t.id !== `task-sv-${visitId}`);
+      const next = [generatedTask, ...filtered];
+      try { localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    void saveTaskToSupabase(generatedTask);
 
     const ok = await updateSiteVisitInSupabase(visitId, patch);
     return ok ? { success: true } : { success: false, error: 'Failed to persist site visit assignment to database.' };
@@ -1731,6 +1796,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
 
+    // Automatically create / sync high-priority task for assigned member
+    const enq = enquiries.find((e) => e.id === enquiryId);
+    const enqTitle = enq ? `Client Lead Follow-up: ${enq.clientName}` : `Client Lead Follow-up: #${enquiryId}`;
+    const enqDesc = enq
+      ? `Client: ${enq.clientName} (Phone: ${enq.clientPhone}). Budget: ₹${enq.budgetInr ? (enq.budgetInr / 100000).toFixed(1) + ' Lakh' : 'Flexible'}. Notes: ${enq.notes || 'Interested customer lead'}`
+      : `Follow up with customer lead.`;
+
+    const generatedTask: TaskReminder = {
+      id: `task-enq-${enquiryId}`,
+      assigneeId: memberProfileId,
+      assignedToMemberId: memberId || memberProfileId,
+      assignedToName: memberName,
+      title: enqTitle,
+      description: enqDesc,
+      category: 'client_followup',
+      relatedRecordType: 'enquiry',
+      relatedRecordId: enquiryId,
+      targetRoute: `/member?tab=enquiries&id=${enquiryId}`,
+      dueDate: new Date().toISOString().split('T')[0],
+      dueTime: '12:00 PM',
+      priority: 'urgent',
+      status: 'pending',
+      isCompleted: false,
+      createdBy: currentUser?.id || 'usr-admin-01',
+      createdByName: currentUser?.fullName || 'Admin Desk',
+      createdAt: new Date().toISOString()
+    };
+
+    setTasks((prev) => {
+      const filtered = prev.filter((t) => t.relatedRecordId !== enquiryId && t.id !== `task-enq-${enquiryId}`);
+      const next = [generatedTask, ...filtered];
+      try { localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    void saveTaskToSupabase(generatedTask);
+
     const ok = await updateEnquiryInSupabase(enquiryId, patch);
     return ok ? { success: true } : { success: false, error: 'Failed to persist enquiry assignment.' };
   };
@@ -1881,8 +1982,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     taskData: Omit<TaskReminder, 'id' | 'createdAt' | 'isCompleted'>
   ): Promise<TaskReminder> => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
-    if (!isAdmin) {
-      throw new Error('Access denied: Only administrators can create task assignments.');
+    const isSelfTask = currentUser && (
+      taskData.assigneeId === currentUser.id ||
+      taskData.assigneeId === currentUser.memberId ||
+      taskData.assignedToMemberId === currentUser.memberId ||
+      taskData.assignedToMemberId === currentUser.id
+    );
+    if (!isAdmin && !isSelfTask) {
+      throw new Error('Access denied: Members can create personal tasks for themselves, or administrators can assign tasks.');
     }
     const newTask: TaskReminder = {
       ...taskData,
@@ -1891,7 +1998,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       status: taskData.status || 'pending',
       isCompleted: false,
       createdBy: currentUser?.id || 'usr-admin-01',
-      createdByName: currentUser?.fullName || 'Director Office',
+      createdByName: currentUser?.fullName || 'Admin Desk',
       createdAt: new Date().toISOString(),
     };
     setTasks((prev) => {
@@ -1945,6 +2052,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch {}
       return next;
     });
+
+    // Synchronize underlying records if this task was linked to a site visit or enquiry
+    if (target.relatedRecordType === 'site_visit' && target.relatedRecordId) {
+      void updateSiteVisitStatus(target.relatedRecordId, newCompleted ? 'completed' : 'confirmed', completionNotes);
+    }
+    if (target.relatedRecordType === 'enquiry' && target.relatedRecordId) {
+      void updateEnquiryStatus(target.relatedRecordId, newCompleted ? 'visit_scheduled' : 'contacted');
+      if (completionNotes) {
+        void addEnquiryFollowUp(target.relatedRecordId, completionNotes);
+      }
+    }
 
     return await updateTaskInSupabase(taskId, patch);
   };

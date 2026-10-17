@@ -175,7 +175,7 @@ export function AdminFieldGpsTab() {
         <div className="rounded-2xl border border-amber-500/20 bg-[#0B1734] p-4">
           <span className="text-xs text-amber-300 block">Pending Inspection</span>
           <span className="font-serif text-2xl font-bold text-amber-400">{counts.pending}</span>
-          <span className="text-[11px] text-gray-400 block mt-1">Awaiting Super Admin review</span>
+          <span className="text-[11px] text-gray-400 block mt-1">Awaiting Admin review</span>
         </div>
         <div className="rounded-2xl border border-emerald-500/20 bg-[#0B1734] p-4">
           <span className="text-xs text-emerald-300 block">Approved Boundaries</span>

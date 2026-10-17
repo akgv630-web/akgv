@@ -20,7 +20,7 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
 
   const roleText =
     requiredRole === 'admin'
-      ? { en: 'Super Admin Control Centre', hi: 'प्रशासनिक नियंत्रण केंद्र', hinglish: 'Super Admin Control Centre' }
+      ? { en: 'Admin Control Centre', hi: 'प्रशासनिक नियंत्रण केंद्र', hinglish: 'Admin Control Centre' }
       : requiredRole === 'member'
       ? { en: 'Associate & Team Management Dashboard', hi: 'एसोसिएट एवं टीम प्रबंधन डैशबोर्ड', hinglish: 'Associate & Team Management Dashboard' }
       : { en: 'Buyer & Investor Client Portal', hi: 'क्रेता एवं निवेशक पोर्टल', hinglish: 'Buyer & Investor Client Portal' };

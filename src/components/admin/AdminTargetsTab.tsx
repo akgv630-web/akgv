@@ -105,7 +105,7 @@ export function AdminTargetsTab() {
         achievedPlotsCount: 0,
         achievedSalesVolumeInr: 0,
         status: 'in_progress',
-        assignedBy: currentUser?.fullName || 'Super Admin',
+        assignedBy: currentUser?.fullName || 'Admin',
       });
 
       showNotification(`Sales quota successfully assigned to ${profile.fullName}`);
