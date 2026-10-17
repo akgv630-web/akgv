@@ -1224,8 +1224,8 @@ export async function resolveAndValidateSponsor(
             canonicalSponsorId: res.canonical_sponsor_id,
             sponsorName: res.sponsor_name,
           };
-        } else {
-          return { valid: false, error: res.error || 'Sponsor verification failed.' };
+        } else if (res.error && res.error !== 'Sponsor identifier does not match any registered member.') {
+          return { valid: false, error: res.error };
         }
       }
     } catch {
@@ -1240,52 +1240,45 @@ export async function resolveAndValidateSponsor(
         .or(`member_id.ilike.${trimmed},id.eq.${trimmed}`)
         .limit(2);
 
-      if (error) {
-        return { valid: false, error: 'Database query error during sponsor lookup.' };
+      if (!error && data && data.length > 0) {
+        if ((count && count > 1) || data.length > 1) {
+          return { valid: false, error: 'Ambiguous sponsor identifier. Multiple matching records found.' };
+        }
+
+        const row = data[0];
+
+        if (!row.is_active) {
+          return { valid: false, error: 'The specified sponsor account is suspended or inactive.' };
+        }
+
+        const eligibleRoles = ['super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member'];
+        if (!row.role || !eligibleRoles.includes(row.role)) {
+          return { valid: false, error: 'The specified account is not authorized to sponsor members or clients.' };
+        }
+
+        if (
+          (candidateUserId && (
+            row.id === candidateUserId ||
+            row.auth_user_id === candidateUserId ||
+            row.member_id?.toLowerCase() === candidateUserId.toLowerCase()
+          )) ||
+          (candidateAuthId && (
+            row.id === candidateAuthId ||
+            row.auth_user_id === candidateAuthId ||
+            row.member_id?.toLowerCase() === candidateAuthId.toLowerCase()
+          ))
+        ) {
+          return { valid: false, error: 'Self-referral is strictly prohibited.' };
+        }
+
+        return {
+          valid: true,
+          canonicalSponsorId: row.member_id || row.id,
+          sponsorName: row.full_name,
+        };
       }
-
-      if (!data || data.length === 0) {
-        return { valid: false, error: 'Sponsor identifier does not match any registered member.' };
-      }
-
-      if ((count && count > 1) || data.length > 1) {
-        return { valid: false, error: 'Ambiguous sponsor identifier. Multiple matching records found.' };
-      }
-
-      const row = data[0];
-
-      if (!row.is_active) {
-        return { valid: false, error: 'The specified sponsor account is suspended or inactive.' };
-      }
-
-      const eligibleRoles = ['super_admin', 'sub_admin', 'senior_member', 'junior_member', 'channel_partner', 'field_officer', 'member'];
-      if (!row.role || !eligibleRoles.includes(row.role)) {
-        return { valid: false, error: 'The specified account is not authorized to sponsor members or clients.' };
-      }
-
-      if (
-        (candidateUserId && (
-          row.id === candidateUserId ||
-          row.auth_user_id === candidateUserId ||
-          row.member_id?.toLowerCase() === candidateUserId.toLowerCase()
-        )) ||
-        (candidateAuthId && (
-          row.id === candidateAuthId ||
-          row.auth_user_id === candidateAuthId ||
-          row.member_id?.toLowerCase() === candidateAuthId.toLowerCase()
-        ))
-      ) {
-        return { valid: false, error: 'Self-referral is strictly prohibited.' };
-      }
-
-      return {
-        valid: true,
-        canonicalSponsorId: row.member_id || row.id,
-        sponsorName: row.full_name,
-      };
     } catch (err) {
       console.warn('[Supabase Sync] Exception during sponsor validation:', err);
-      return { valid: false, error: 'Unable to verify sponsor against the database. Please try again.' };
     }
   }
 
@@ -1300,7 +1293,7 @@ export async function resolveAndValidateSponsor(
   });
 
   if (matches.length === 0) {
-    return { valid: false, error: 'Sponsor identifier not found in company directory.' };
+    return { valid: false, error: 'Sponsor identifier does not match any registered member.' };
   }
 
   if (matches.length > 1) {
