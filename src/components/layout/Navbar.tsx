@@ -24,6 +24,7 @@ import {
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { UserRole } from '@/types';
+import { tLang } from '@/lib/i18n';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -35,11 +36,11 @@ export function Navbar() {
     { href: '/', label: t.nav.home, icon: Home },
     { href: '/projects', label: t.nav.projects, icon: MapPin },
     { href: '/master-plan', label: t.nav.masterPlan, icon: Layers },
-    { href: '/house-viewer-3d', label: language === 'hi' ? '3D विला' : '3D Villa', icon: Box },
-    { href: '/site-visit', label: language === 'hi' ? 'साइट विजिट' : 'Site Visit', icon: Calendar },
+    { href: '/house-viewer-3d', label: t.nav.villa3d, icon: Box },
+    { href: '/site-visit', label: t.nav.siteVisit, icon: Calendar },
     { href: '/rewards-plan', label: t.nav.rewards, icon: Trophy },
     { href: '/joining-kit', label: t.nav.joiningKit, icon: ShieldCheck },
-    { href: '/about', label: language === 'hi' ? 'कंपनी' : 'About', icon: Info },
+    { href: '/about', label: t.nav.about, icon: Info },
   ];
 
   const roleLabels: Record<UserRole, string> = {
@@ -66,13 +67,11 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1 rounded bg-[#146B4D]/30 px-2 py-0.5 font-medium text-[#1EA275] border border-[#146B4D]/50">
               <span className="h-1.5 w-1.5 rounded-full bg-[#1EA275] animate-pulse"></span>
-              {language === 'hi' ? COMPANY_DETAILS.taglineHi : COMPANY_DETAILS.taglineEn}
+              {tLang(language, COMPANY_DETAILS.taglineEn, COMPANY_DETAILS.taglineHi, 'Jahan Sapne Paate Hain Apna Address')}
             </span>
             <span className="text-gray-400">|</span>
             <span className="text-gray-300">
-              {language === 'hi'
-                ? 'रामपुर • लहरतारा • मिर्ज़ा मुराद (वाराणसी, उ.प्र.)'
-                : 'Rampur • Lahartara • Mirza Murad (Varanasi, UP)'}
+              {tLang(language, 'Rampur • Lahartara • Mirza Murad (Varanasi, UP)', 'रामपुर • लहरतारा • मिर्ज़ा मुराद (वाराणसी, उ.प्र.)', 'Rampur • Lahartara • Mirza Murad (Varanasi, UP)')}
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -106,7 +105,7 @@ export function Navbar() {
                     onClick={() => { setLanguage('hi'); setLangDropdownOpen(false); }}
                     className={`w-full rounded px-2.5 py-1 text-left text-xs ${language === 'hi' ? 'bg-[#C7A35A] text-[#0B1734] font-bold' : 'text-gray-200 hover:bg-white/5'}`}
                   >
-                    हिंदी (Hindi)
+                    हिन्दी
                   </button>
                   <button
                     onClick={() => { setLanguage('hinglish'); setLangDropdownOpen(false); }}
@@ -173,7 +172,7 @@ export function Navbar() {
                 title={`Signed in as ${currentUser.fullName}`}
               >
                 <div className="h-2 w-2 rounded-full bg-[#1EA275]" />
-                <span className="text-gray-400">{language === 'hi' ? 'खाता:' : 'Account:'}</span>
+                <span className="text-gray-400">{t.nav.account}:</span>
                 <span className="font-semibold text-[#DFC382]">{roleLabels[currentUser.role]}</span>
               </Link>
 
@@ -198,11 +197,11 @@ export function Navbar() {
               {/* Sign Out Button */}
               <button
                 onClick={logout}
-                title={language === 'hi' ? 'लॉगआउट' : 'Sign Out'}
+                title={t.nav.signOut}
                 className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-950/20 px-2.5 py-1.5 text-xs font-medium text-red-300 hover:bg-red-900/40 hover:text-white transition"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                <span className="hidden md:inline">{language === 'hi' ? 'लॉगआउट' : 'Sign Out'}</span>
+                <span className="hidden md:inline">{t.nav.signOut}</span>
               </button>
             </>
           ) : (
@@ -211,7 +210,7 @@ export function Navbar() {
               className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-4 py-2 text-xs font-bold text-[#0B1734] shadow-md transition hover:brightness-110 active:scale-95"
             >
               <Lock className="h-3.5 w-3.5" />
-              <span>{language === 'hi' ? 'पोर्टल लॉगिन' : 'Portal Login'}</span>
+              <span>{t.nav.portalLogin}</span>
             </Link>
           )}
         </div>
@@ -224,7 +223,7 @@ export function Navbar() {
               className="flex items-center gap-1 rounded-lg bg-[#C7A35A] px-2.5 py-1 text-xs font-bold text-[#0B1734]"
             >
               <User className="h-3 w-3" />
-              <span>{language === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}</span>
+              <span>{t.nav.dashboard}</span>
             </Link>
           ) : (
             <Link
@@ -232,7 +231,7 @@ export function Navbar() {
               className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-2.5 py-1 text-xs font-bold text-[#0B1734]"
             >
               <Lock className="h-3 w-3" />
-              <span>{language === 'hi' ? 'लॉगिन' : 'Login'}</span>
+              <span>{t.nav.portalLogin}</span>
             </Link>
           )}
           <button
@@ -280,7 +279,7 @@ export function Navbar() {
                   className="flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-950/30 px-2 py-1 text-[11px] text-red-300"
                 >
                   <LogOut className="h-3 w-3" />
-                  <span>{language === 'hi' ? 'लॉगआउट' : 'Sign Out'}</span>
+                  <span>{t.nav.signOut}</span>
                 </button>
               </div>
               <Link
@@ -300,13 +299,15 @@ export function Navbar() {
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 text-xs font-bold text-[#0B1734] shadow-md"
               >
                 <Lock className="h-3.5 w-3.5" />
-                <span>{language === 'hi' ? 'पोर्टल लॉगिन (Login)' : 'Portal Login'}</span>
+                <span>{t.nav.portalLogin}</span>
               </Link>
             </div>
           )}
 
           <div className="mt-4 border-t border-white/10 pt-4">
-            <div className="mb-2 text-xs font-medium text-gray-400">Language:</div>
+            <div className="mb-2 text-xs font-medium text-gray-400">
+              {tLang(language, 'Language:', 'भाषा:', 'Language:')}
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setLanguage('en')}
@@ -318,7 +319,7 @@ export function Navbar() {
                 onClick={() => setLanguage('hi')}
                 className={`rounded py-1.5 text-xs ${language === 'hi' ? 'bg-[#C7A35A] text-[#0B1734] font-bold' : 'bg-white/5 text-gray-300'}`}
               >
-                हिंदी
+                हिन्दी
               </button>
               <button
                 onClick={() => setLanguage('hinglish')}

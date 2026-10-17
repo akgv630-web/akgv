@@ -16,6 +16,8 @@ import {
   User,
   Move
 } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 
 interface ProfilePhotoStudioModalProps {
   isOpen: boolean;
@@ -36,35 +38,41 @@ interface FilterSetting {
   hueRotate: number;  // -180 to 180, default 0
 }
 
-const PRESET_FILTERS: Record<FilterPreset, { nameHi: string; nameEn: string; settings: FilterSetting }> = {
+const PRESET_FILTERS: Record<FilterPreset, { nameHi: string; nameEn: string; nameHinglish: string; settings: FilterSetting }> = {
   normal: {
-    nameHi: 'सामान्य (Normal)',
+    nameHi: 'सामान्य',
     nameEn: 'Normal',
+    nameHinglish: 'Normal',
     settings: { brightness: 100, contrast: 100, saturation: 100, sepia: 0, grayscale: 0, hueRotate: 0 }
   },
   pro: {
-    nameHi: 'कॉर्पोरेट प्रो (Pro)',
+    nameHi: 'कॉर्पोरेट प्रो',
     nameEn: 'Corporate Pro',
+    nameHinglish: 'Corporate Pro',
     settings: { brightness: 106, contrast: 118, saturation: 108, sepia: 0, grayscale: 0, hueRotate: 0 }
   },
   warm: {
-    nameHi: 'स्टूडियो वॉर्म (Warm)',
+    nameHi: 'स्टूडियो वॉर्म',
     nameEn: 'Studio Warm',
+    nameHinglish: 'Studio Warm',
     settings: { brightness: 105, contrast: 112, saturation: 105, sepia: 22, grayscale: 0, hueRotate: -5 }
   },
   cool: {
-    nameHi: 'एग्जीक्यूटिव कूल (Cool)',
+    nameHi: 'एग्जीक्यूटिव कूल',
     nameEn: 'Executive Cool',
+    nameHinglish: 'Executive Cool',
     settings: { brightness: 103, contrast: 112, saturation: 102, sepia: 0, grayscale: 0, hueRotate: 15 }
   },
   bw: {
-    nameHi: 'क्लासिक ब्लैक & व्हाइट (B&W)',
+    nameHi: 'क्लासिक ब्लैक & व्हाइट',
     nameEn: 'Classic B&W',
+    nameHinglish: 'Classic B&W',
     settings: { brightness: 108, contrast: 125, saturation: 0, sepia: 0, grayscale: 100, hueRotate: 0 }
   },
   vibrant: {
-    nameHi: 'गोल्डन वाइब्रेंट (Gold)',
+    nameHi: 'गोल्डन वाइब्रेंट',
     nameEn: 'Golden Vibrant',
+    nameHinglish: 'Golden Vibrant',
     settings: { brightness: 108, contrast: 112, saturation: 140, sepia: 8, grayscale: 0, hueRotate: 0 }
   }
 };
@@ -83,6 +91,7 @@ function ProfilePhotoStudioModalContent({
   memberName,
   onSave
 }: ProfilePhotoStudioModalProps) {
+  const { language } = useApp();
   const [imageSrc, setImageSrc] = useState<string | null>(() => currentAvatarUrl || null);
   const [zoom, setZoom] = useState<number>(1);
   const [rotation, setRotation] = useState<number>(0);
@@ -115,7 +124,7 @@ function ProfilePhotoStudioModalContent({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('कृपया केवल इमेज (JPG, PNG, WebP) फ़ाइल अपलोड करें।');
+      alert(tLang(language, 'Please upload an image file (JPG, PNG, WebP) only.', 'कृपया केवल इमेज (JPG, PNG, WebP) फ़ाइल अपलोड करें।', 'Kripya keval image (JPG, PNG, WebP) file upload karein.'));
       return;
     }
 
@@ -269,7 +278,7 @@ function ProfilePhotoStudioModalContent({
 
   // Remove Photo handler
   const handleRemovePhoto = () => {
-    if (confirm('क्या आप अपनी प्रोफाइल फोटो हटाना चाहते हैं? इसके बाद आपकी आईडी पर इनिशियल्स (AK) दिखाई देंगे।')) {
+    if (confirm(tLang(language, 'Do you want to remove your profile photo? Your initials will be displayed instead.', 'क्या आप अपनी प्रोफाइल फोटो हटाना चाहते हैं? इसके बाद आपकी आईडी पर इनिशियल्स दिखाई देंगे।', 'Kya aap apni profile photo hatana chahte hain? Iske baad aapki ID par initials dikhayi denge.'))) {
       setImageSrc(null);
       onSave(undefined);
       onClose();
@@ -287,10 +296,10 @@ function ProfilePhotoStudioModalContent({
             </div>
             <div>
               <h3 className="font-serif text-sm sm:text-base font-bold text-white tracking-wide">
-                Profile Photo Studio (फोटो एडिटर एवं फिल्टर)
+                {tLang(language, 'Profile Photo Studio & Filter', 'प्रोफ़ाइल फ़ोटो स्टूडियो एवं फ़िल्टर', 'Profile Photo Studio & Filter')}
               </h3>
               <p className="text-[11px] text-gray-400">
-                Crop, resize, position and apply professional studio filters to your associate badge
+                {tLang(language, 'Crop, resize, position and apply professional studio filters to your associate badge', 'क्रॉप, रीसाइज़ और प्रोफ़ेशनल फ़िल्टर्स से अपनी प्रोफ़ाइल फ़ोटो सेट करें', 'Crop, resize, position aur professional filters se apni profile photo set karein')}
               </p>
             </div>
           </div>
@@ -338,10 +347,10 @@ function ProfilePhotoStudioModalContent({
                   <div className="flex flex-col items-center justify-center text-center p-4 space-y-2">
                     <User className="h-16 w-16 text-gray-600" />
                     <span className="text-gray-400 font-semibold text-[11px]">
-                      No photo selected
+                      {tLang(language, 'No photo selected', 'कोई फ़ोटो नहीं चुनी गई', 'Koi photo select nahi hui')}
                     </span>
                     <span className="text-[10px] text-gray-500">
-                      Upload from phone or select a preset below
+                      {tLang(language, 'Upload from phone or select a preset below', 'डिवाइस से अपलोड करें या नीचे प्रीसेट चुनें', 'Device se upload karein ya neeche preset chunein')}
                     </span>
                   </div>
                 )}
@@ -358,7 +367,7 @@ function ProfilePhotoStudioModalContent({
               {imageSrc && (
                 <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
                   <Move className="h-3 w-3 text-[#C7A35A]" />
-                  <span>फोटो को एडजस्ट करने के लिए माउस/उंगली से ड्रैग करें</span>
+                  <span>{tLang(language, 'Drag with mouse or finger to adjust position', 'फ़ोटो को एडजस्ट करने के लिए माउस या उंगली से ड्रैग करें', 'Photo adjust karne ke liye mouse ya finger se drag karein')}</span>
                 </div>
               )}
             </div>
@@ -380,17 +389,17 @@ function ProfilePhotoStudioModalContent({
                   className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 px-3 font-bold text-[#0B1734] shadow hover:brightness-110 active:scale-95 transition text-xs"
                 >
                   <Upload className="h-4 w-4" />
-                  <span>{imageSrc ? 'बदलें (Change Photo)' : 'फोटो अपलोड करें (Upload)'}</span>
+                  <span>{imageSrc ? tLang(language, 'Change Photo', 'फ़ोटो बदलें', 'Photo Badlein') : tLang(language, 'Upload Photo', 'फ़ोटो अपलोड करें', 'Photo Upload Karein')}</span>
                 </button>
 
                 {imageSrc && (
                   <button
                     onClick={handleRemovePhoto}
                     className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-xs font-semibold text-red-300 hover:bg-red-500/20 transition"
-                    title="Remove Photo"
+                    title={tLang(language, 'Remove Photo', 'फ़ोटो हटाएं', 'Photo Hatayein')}
                   >
                     <Trash2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">हटाएं</span>
+                    <span className="hidden sm:inline">{tLang(language, 'Remove', 'हटाएं', 'Hatayein')}</span>
                   </button>
                 )}
               </div>
@@ -401,7 +410,7 @@ function ProfilePhotoStudioModalContent({
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="font-semibold text-gray-300 flex items-center gap-1.5">
                       <ZoomIn className="h-3.5 w-3.5 text-[#C7A35A]" />
-                      आकार / ज़ूम (Resize & Zoom)
+                      {tLang(language, 'Resize & Zoom', 'आकार एवं ज़ूम', 'Resize & Zoom')}
                     </span>
                     <span className="font-mono text-[#DFC382] font-bold">{zoom.toFixed(2)}x</span>
                   </div>
@@ -436,7 +445,7 @@ function ProfilePhotoStudioModalContent({
                       className="flex items-center gap-1 text-[11px] text-gray-300 hover:text-white"
                     >
                       <RotateCw className="h-3.5 w-3.5 text-[#C7A35A]" />
-                      <span>Rotate (90°)</span>
+                      <span>{tLang(language, 'Rotate (90°)', 'घुमाएं (90°)', 'Rotate (90°)')}</span>
                     </button>
 
                     <button
@@ -448,7 +457,7 @@ function ProfilePhotoStudioModalContent({
                       className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-[#DFC382]"
                     >
                       <RefreshCw className="h-3 w-3" />
-                      <span>Reset Position</span>
+                      <span>{tLang(language, 'Reset Position', 'स्थिति रीसेट करें', 'Position Reset Karein')}</span>
                     </button>
                   </div>
                 </div>
@@ -458,7 +467,7 @@ function ProfilePhotoStudioModalContent({
               {!imageSrc && (
                 <div className="rounded-2xl border border-white/10 bg-[#050A17] p-3.5 space-y-2">
                   <span className="font-semibold text-gray-300 block text-[11px]">
-                    या आधिकारिक कॉर्पोरेट अवतार चुनें:
+                    {tLang(language, 'Or select an official corporate avatar:', 'या आधिकारिक कॉर्पोरेट अवतार चुनें:', 'Ya official corporate avatar chunein:')}
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     {PRESET_AVATARS.map((av) => (
@@ -488,14 +497,14 @@ function ProfilePhotoStudioModalContent({
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
                   <Sparkles className="h-4 w-4 text-[#C7A35A]" />
-                  प्रोफेशनल फोटो फिल्टर्स (Studio Tone Filters)
+                  {tLang(language, 'Studio Tone Filters', 'स्टूडियो टोन फ़िल्टर्स', 'Studio Tone Filters')}
                 </span>
                 <button
                   onClick={() => setShowAdvancedSliders(!showAdvancedSliders)}
                   className="flex items-center gap-1 text-[11px] text-[#DFC382] hover:underline"
                 >
                   <Sliders className="h-3 w-3" />
-                  <span>{showAdvancedSliders ? 'फिल्टर्स छुपाएं' : 'एडवांस्ड एडजस्टमेंट'}</span>
+                  <span>{showAdvancedSliders ? tLang(language, 'Hide Sliders', 'फ़िल्टर्स छुपाएं', 'Sliders Chhupayein') : tLang(language, 'Advanced Sliders', 'एडवांस्ड एडजस्टमेंट', 'Advanced Sliders')}</span>
                 </button>
               </div>
 
@@ -504,6 +513,7 @@ function ProfilePhotoStudioModalContent({
                 {(Object.keys(PRESET_FILTERS) as FilterPreset[]).map((key) => {
                   const preset = PRESET_FILTERS[key];
                   const isSelected = activePreset === key;
+                  const label = language === 'hi' ? preset.nameHi : language === 'hinglish' ? preset.nameHinglish : preset.nameEn;
                   return (
                     <button
                       key={key}
@@ -514,8 +524,7 @@ function ProfilePhotoStudioModalContent({
                           : 'border-white/10 bg-[#050A17] text-gray-400 hover:text-white hover:border-white/20'
                       }`}
                     >
-                      <span className="text-[11px] block">{preset.nameEn}</span>
-                      <span className="text-[9px] text-gray-500 block truncate">{preset.nameHi}</span>
+                      <span className="text-[11px] block">{label}</span>
                     </button>
                   );
                 })}
@@ -527,7 +536,7 @@ function ProfilePhotoStudioModalContent({
                   {/* Brightness */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-gray-400">ब्राइटनेस (Brightness)</span>
+                      <span className="text-gray-400">{tLang(language, 'Brightness', 'ब्राइटनेस', 'Brightness')}</span>
                       <span className="font-mono text-[#DFC382]">{customFilter.brightness}%</span>
                     </div>
                     <input
@@ -545,7 +554,7 @@ function ProfilePhotoStudioModalContent({
                   {/* Contrast */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-gray-400">कंट्रास्ट (Contrast)</span>
+                      <span className="text-gray-400">{tLang(language, 'Contrast', 'कंट्रास्ट', 'Contrast')}</span>
                       <span className="font-mono text-[#DFC382]">{customFilter.contrast}%</span>
                     </div>
                     <input
@@ -563,7 +572,7 @@ function ProfilePhotoStudioModalContent({
                   {/* Saturation */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span className="text-gray-400">सैचुरेशन (Saturation)</span>
+                      <span className="text-gray-400">{tLang(language, 'Saturation', 'सैचुरेशन', 'Saturation')}</span>
                       <span className="font-mono text-[#DFC382]">{customFilter.saturation}%</span>
                     </div>
                     <input
@@ -591,7 +600,7 @@ function ProfilePhotoStudioModalContent({
               onClick={onClose}
               className="rounded-xl px-4 py-2.5 text-gray-400 hover:text-white transition text-xs"
             >
-              Cancel (रद्द करें)
+              {tLang(language, 'Cancel', 'रद्द करें', 'Cancel Karein')}
             </button>
 
             <button
@@ -599,7 +608,7 @@ function ProfilePhotoStudioModalContent({
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-2.5 font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition text-xs"
             >
               <Check className="h-4 w-4" />
-              <span>सेव करें (Apply & Save to Profile)</span>
+              <span>{tLang(language, 'Apply & Save to Profile', 'सहेजें एवं लागू करें', 'Apply & Save Karein')}</span>
             </button>
           </div>
         </div>

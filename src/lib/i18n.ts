@@ -1,5 +1,11 @@
 export type Language = 'en' | 'hi' | 'hinglish';
 
+export function tLang(lang: Language, en: string, hi: string, hinglish: string): string {
+  if (lang === 'hi') return hi;
+  if (lang === 'hinglish') return hinglish;
+  return en;
+}
+
 export const DICTIONARY = {
   "en": {
     "brandName": "AKGV Infra City",
@@ -11,6 +17,8 @@ export const DICTIONARY = {
       "projects": "Projects",
       "masterPlan": "Master Plan",
       "houseViewer3d": "3D Elevation",
+      "villa3d": "3D Villa",
+      "siteVisit": "Site Visit",
       "rewards": "Rewards & Levels",
       "joiningKit": "Joining Kit",
       "about": "About Us",
@@ -20,6 +28,8 @@ export const DICTIONARY = {
       "memberPortal": "Member Portal",
       "adminPortal": "Super Admin",
       "dashboard": "Open Dashboard",
+      "account": "Account",
+      "signOut": "Sign Out",
       "roleSimulator": "Role:",
       "switchRoleTitle": "Switch Active Role",
       "roleLabels": {
@@ -546,6 +556,8 @@ export const DICTIONARY = {
       "projects": "प्रोजेक्ट्स",
       "masterPlan": "मास्टर प्लान",
       "houseViewer3d": "3D एलिवेशन",
+      "villa3d": "3D विला",
+      "siteVisit": "साइट विजिट",
       "rewards": "रिवार्ड एवं लेवल्स",
       "joiningKit": "जॉइनिंग किट",
       "about": "हमारे बारे में",
@@ -555,6 +567,8 @@ export const DICTIONARY = {
       "memberPortal": "सदस्य पोर्टल",
       "adminPortal": "सुपर एडमिन",
       "dashboard": "डैशबोर्ड खोलें",
+      "account": "खाता",
+      "signOut": "लॉगआउट",
       "roleSimulator": "पद:",
       "switchRoleTitle": "सक्रिय पद बदलें",
       "roleLabels": {
@@ -1081,15 +1095,19 @@ export const DICTIONARY = {
       "projects": "Projects",
       "masterPlan": "Master Plan",
       "houseViewer3d": "3D Elevation",
+      "villa3d": "3D Villa",
+      "siteVisit": "Site Visit",
       "rewards": "Rewards & Commission",
       "joiningKit": "Joining Kit",
-      "about": "About Us",
-      "contact": "Contact Us",
+      "about": "Hamare Baare Me",
+      "contact": "Contact Karein",
       "portalLogin": "Login Portal",
       "buyerPortal": "Buyer Portal",
       "memberPortal": "Member Portal",
       "adminPortal": "Super Admin",
       "dashboard": "Dashboard Kholein",
+      "account": "Account",
+      "signOut": "Sign Out",
       "roleSimulator": "Role:",
       "switchRoleTitle": "Switch Active Role",
       "roleLabels": {

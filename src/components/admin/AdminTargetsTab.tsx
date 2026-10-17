@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { SalesTarget } from '@/types';
+import { tLang } from '@/lib/i18n';
 
 export function AdminTargetsTab() {
   const {
@@ -28,7 +29,8 @@ export function AdminTargetsTab() {
     assignTarget,
     updateTarget,
     deleteTarget,
-    currentUser
+    currentUser,
+    language
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -253,7 +255,7 @@ export function AdminTargetsTab() {
           className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-4 py-2.5 text-xs font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
         >
           <Plus className="h-4 w-4" />
-          <span>Assign Quota (नया टारगेट तय करें)</span>
+          <span>{tLang(language, 'Assign Quota', 'नया टारगेट तय करें', 'Naya Target Tay Karein')}</span>
         </button>
       </div>
 

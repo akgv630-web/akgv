@@ -31,6 +31,7 @@ import {
 import { COMMISSION_LEVELS_GROUND_TRUTH } from '@/data/groundTruth';
 import { CommissionLevelRule } from '@/types';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 
 export function CommissionRewardsView() {
   const { language, t } = useApp();
@@ -103,8 +104,8 @@ export function CommissionRewardsView() {
   };
 
   const formatLakhCrore = (val: number) => {
-    const croreUnit = language === 'hi' ? 'करोड़' : language === 'hinglish' ? 'Cr' : 'Crore';
-    const lakhUnit = language === 'hi' ? 'लाख' : 'Lakh';
+    const croreUnit = tLang(language, 'Crore', 'करोड़', 'Cr');
+    const lakhUnit = tLang(language, 'Lakh', 'लाख', 'Lakh');
     if (val >= 10000000) {
       return `₹${(val / 10000000).toFixed(val % 10000000 === 0 ? 0 : 2)} ${croreUnit}`;
     }
@@ -112,11 +113,11 @@ export function CommissionRewardsView() {
   };
 
   const getRankTitle = (lvl: CommissionLevelRule) => {
-    return language === 'hi' ? lvl.rankTitleHi : lvl.rankTitleEn;
+    return tLang(language, lvl.rankTitleEn, lvl.rankTitleHi, lvl.rankTitleEn);
   };
 
   const getRewardName = (lvl: CommissionLevelRule) => {
-    return language === 'hi' ? lvl.rewardNameHi : lvl.rewardNameEn;
+    return tLang(language, lvl.rewardNameEn, lvl.rewardNameHi, lvl.rewardNameEn);
   };
 
   const handleWhatsAppInquiryForLevel = (level: CommissionLevelRule) => {
@@ -180,7 +181,7 @@ export function CommissionRewardsView() {
             <label className="text-gray-300">
               {c.verifiedVolumeLabel}{' '}
               <strong className="text-lg text-emerald-400 font-serif">
-                ₹{(testVolumeInr / 100000).toFixed(1)} {language === 'hi' ? 'लाख' : 'Lakh'} (₹{testVolumeInr.toLocaleString('en-IN')})
+                ₹{(testVolumeInr / 100000).toFixed(1)} {tLang(language, 'Lakh', 'लाख', 'Lakh')} (₹{testVolumeInr.toLocaleString('en-IN')})
               </strong>
             </label>
             <span className="text-[#DFC382] font-semibold">
@@ -201,16 +202,16 @@ export function CommissionRewardsView() {
           <div className="flex flex-wrap gap-2 pt-1 text-xs">
             <span className="text-gray-400 text-[11px] self-center">{c.quickPresetsLabel}</span>
             {[
-              { label: language === 'hi' ? '₹15 लाख (सहायक)' : '₹15L (Sales Asst)', val: 1500000 },
-              { label: language === 'hi' ? '₹50 लाख (स्टार)' : '₹50L (Star)', val: 5000000 },
-              { label: language === 'hi' ? '₹1.2 करोड़ (गोल्ड स्टार)' : '₹1.2 Cr (Gold Star)', val: 12000000 },
-              { label: language === 'hi' ? '₹3 करोड़ (सहायक प्रबंधक)' : '₹3 Cr (Asst Mgr)', val: 30000000 },
-              { label: language === 'hi' ? '₹6 करोड़ (प्रबंधक)' : '₹6 Cr (Manager)', val: 60000000 },
-              { label: language === 'hi' ? '₹10 करोड़ (वरिष्ठ प्रबंधक)' : '₹10 Cr (Sr Mgr)', val: 100000000 },
-              { label: language === 'hi' ? '₹15 करोड़ (डायमंड)' : '₹15 Cr (Diamond)', val: 150000000 },
+              { label: tLang(language, '₹15L (Sales Asst)', '₹15 लाख (सहायक)', '₹15L (Sales Asst)'), val: 1500000 },
+              { label: tLang(language, '₹50L (Star)', '₹50 लाख (स्टार)', '₹50L (Star)'), val: 5000000 },
+              { label: tLang(language, '₹1.2 Cr (Gold Star)', '₹1.2 करोड़ (गोल्ड स्टार)', '₹1.2 Cr (Gold Star)'), val: 12000000 },
+              { label: tLang(language, '₹3 Cr (Asst Mgr)', '₹3 करोड़ (सहायक प्रबंधक)', '₹3 Cr (Asst Mgr)'), val: 30000000 },
+              { label: tLang(language, '₹6 Cr (Manager)', '₹6 करोड़ (प्रबंधक)', '₹6 Cr (Manager)'), val: 60000000 },
+              { label: tLang(language, '₹10 Cr (Sr Mgr)', '₹10 करोड़ (वरिष्ठ प्रबंधक)', '₹10 Cr (Sr Mgr)'), val: 100000000 },
+              { label: tLang(language, '₹15 Cr (Diamond)', '₹15 करोड़ (डायमंड)', '₹15 Cr (Diamond)'), val: 150000000 },
             ].map((preset) => (
               <button
-                key={preset.label}
+                key={preset.val}
                 onClick={() => setTestVolumeInr(preset.val)}
                 className={`rounded px-2.5 py-1 text-[11px] border transition ${
                   testVolumeInr === preset.val

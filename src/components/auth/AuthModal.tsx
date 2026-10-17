@@ -20,6 +20,7 @@ import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { UserRole } from '@/types';
 import { resolveAndValidateSponsor, SponsorValidationResult } from '@/lib/supabase/syncService';
+import { tLang } from '@/lib/i18n';
 
 const emptySubscribe = () => () => {};
 
@@ -140,17 +141,13 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     setLoginError('');
     if (!loginIdentifier.trim()) {
       setLoginError(
-        language === 'hi'
-          ? 'कृपया मोबाइल नंबर, ईमेल या सदस्य आईडी दर्ज करें।'
-          : 'Please enter your mobile number, email, or member ID.'
+        tLang(language, 'Please enter your mobile number, email, or member ID.', 'कृपया मोबाइल नंबर, ईमेल या सदस्य आईडी दर्ज करें।', 'Kripya mobile number, email ya member ID enter karein.')
       );
       return;
     }
     if (!loginPassword.trim()) {
       setLoginError(
-        language === 'hi'
-          ? 'कृपया पासवर्ड दर्ज करें।'
-          : 'Please enter your password.'
+        tLang(language, 'Please enter your password.', 'कृपया पासवर्ड दर्ज करें।', 'Kripya password enter karein.')
       );
       return;
     }
@@ -169,14 +166,12 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
       } else {
         setLoginError(
           res.error ||
-            (language === 'hi'
-              ? 'प्रमाणीकरण विफल। क्रेडेंशियल जांचें या व्हाट्सएप हेल्पलाइन से संपर्क करें।'
-              : 'Authentication failed. Please verify credentials or contact the helpline.')
+            tLang(language, 'Authentication failed. Please verify credentials or contact the helpline.', 'प्रमाणीकरण विफल। क्रेडेंशियल जांचें या व्हाट्सएप हेल्पलाइन से संपर्क करें।', 'Authentication fail ho gaya. Credentials check karein ya helpline contact karein.')
         );
       }
     } catch {
       setLoginLoading(false);
-      setLoginError('Authentication service unreachable. Please retry.');
+      setLoginError(tLang(language, 'Authentication service unreachable. Please retry.', 'प्रमाणीकरण सेवा अनुपलब्ध है। कृपया पुनः प्रयास करें।', 'Authentication service unreachable. Kripya retry karein.'));
     }
   };
 
@@ -186,27 +181,21 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
 
     if (!regName.trim() || !regPhone.trim() || !regEmail.trim()) {
       setRegError(
-        language === 'hi'
-          ? 'कृपया नाम, फोन और ईमेल भरें।'
-          : 'Please fill in your name, phone, and email.'
+        tLang(language, 'Please fill in your name, phone, and email.', 'कृपया नाम, फोन और ईमेल भरें।', 'Kripya name, phone aur email bharein.')
       );
       return;
     }
 
     if (!regPassword || regPassword.trim().length < 6) {
       setRegError(
-        language === 'hi'
-          ? 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।'
-          : 'Password must be at least 6 characters long.'
+        tLang(language, 'Password must be at least 6 characters long.', 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।', 'Password kam se kam 6 characters ka hona chahiye.')
       );
       return;
     }
 
     if (sponsorChecking) {
       setRegError(
-        language === 'hi'
-          ? 'स्पॉन्सर सत्यापन प्रगति पर है, कृपया एक क्षण प्रतीक्षा करें...'
-          : 'Sponsor verification is in progress, please wait a moment...'
+        tLang(language, 'Sponsor verification is in progress, please wait a moment...', 'स्पॉन्सर सत्यापन प्रगति पर है, कृपया एक क्षण प्रतीक्षा करें...', 'Sponsor verification progress mein hai, kripya thoda wait karein...')
       );
       return;
     }
@@ -214,9 +203,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     if (!sponsorResult.valid) {
       setRegError(
         sponsorResult.error ||
-          (language === 'hi'
-            ? 'अमान्य स्पॉन्सर कोड। कृपया सक्रिय सदस्य या सलाहकार आईडी दर्ज करें।'
-            : 'Invalid or inactive sponsor ID. Please verify the code.')
+          tLang(language, 'Invalid or inactive sponsor ID. Please verify the code.', 'अमान्य स्पॉन्सर कोड। कृपया सक्रिय सदस्य या सलाहकार आईडी दर्ज करें।', 'Invalid sponsor code. Kripya active member ID enter karein.')
       );
       return;
     }
@@ -252,7 +239,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
   const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!forgotIdentifier.trim()) {
-      setForgotMsg(language === 'hi' ? 'कृपया ईमेल या मोबाइल दर्ज करें' : 'Please enter an email or phone');
+      setForgotMsg(tLang(language, 'Please enter an email or phone', 'कृपया ईमेल या मोबाइल दर्ज करें', 'Kripya email ya mobile enter karein'));
       return;
     }
 
@@ -262,9 +249,9 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
       setForgotLoading(false);
       if (res.success) {
         setForgotSent(true);
-        setForgotMsg('Password reset link sent to your email inbox.');
+        setForgotMsg(tLang(language, 'Password reset link sent to your email inbox.', 'पासवर्ड रीसेट लिंक आपके ईमेल पर भेज दिया गया है।', 'Password reset link aapke email par bhej diya gaya hai.'));
       } else {
-        setForgotMsg(res.error || 'Could not send reset email. Contact support.');
+        setForgotMsg(res.error || tLang(language, 'Could not send reset email. Contact support.', 'रीसेट ईमेल नहीं भेजा जा सका। कृपया सहायता डेस्क से संपर्क करें।', 'Reset email nahi bhej paye. Support se contact karein.'));
       }
     } else {
       setForgotLoading(false);
@@ -278,7 +265,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
     );
     window.open(`https://wa.me/916306917991?text=${text}`, '_blank');
     setForgotSent(true);
-    setForgotMsg('Support ticket initiated via WhatsApp (+91 6306917991).');
+    setForgotMsg(tLang(language, 'Support ticket initiated via WhatsApp (+91 6306917991).', 'व्हाट्सएप सहायता टिकट प्रारंभ किया गया (+91 6306917991)।', 'WhatsApp helpline ticket start kiya gaya (+91 6306917991).'));
   };
 
   return createPortal(
@@ -312,7 +299,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           </button>
         </div>
 
-        {/* Navigation Tabs - Self-registration disabled, unified sign in */}
+        {/* Navigation Tabs */}
         <div className="flex border-b border-white/10 bg-[#050A17]/60 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('login')}
@@ -322,7 +309,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                 : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
-            {language === 'hi' ? 'लॉग इन (Sign In)' : 'Sign In'}
+            {tLang(language, 'Sign In', 'लॉग इन', 'Sign In')}
           </button>
           
           <button
@@ -333,7 +320,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                 : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
-            {language === 'hi' ? 'पासवर्ड सहायता' : 'Password Help'}
+            {tLang(language, 'Password Help', 'पासवर्ड सहायता', 'Password Help')}
           </button>
         </div>
 
@@ -346,21 +333,22 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                 <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/30 p-6 text-center space-y-2">
                   <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto" />
                   <h3 className="font-bold text-white text-base">
-                    {language === 'hi' ? 'लॉगिन सफल!' : 'Login Successful!'}
+                    {tLang(language, 'Login Successful!', 'लॉगिन सफल!', 'Login Safal!')}
                   </h3>
                   <p className="text-xs text-emerald-200">
-                    {language === 'hi'
-                      ? `स्वागत है, ${loggedInName || currentUser?.fullName || 'उपयोगकर्ता'}`
-                      : `Welcome back, ${loggedInName || currentUser?.fullName || 'User'}`}
+                    {tLang(
+                      language,
+                      `Welcome back, ${loggedInName || currentUser?.fullName || 'User'}`,
+                      `स्वागत है, ${loggedInName || currentUser?.fullName || 'उपयोगकर्ता'}`,
+                      `Welcome, ${loggedInName || currentUser?.fullName || 'User'}`
+                    )}
                   </p>
                 </div>
               ) : (
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1">
-                      {language === 'hi'
-                        ? 'मोबाइल / ईमेल / सदस्य आईडी (Member ID)'
-                        : 'Mobile Number / Email / Member ID (e.g. AKGV-HQ-001 or 6306917991)'}
+                      {tLang(language, 'Mobile Number / Email / Member ID', 'मोबाइल नंबर / ईमेल / सदस्य आईडी', 'Mobile Number / Email / Member ID')}
                     </label>
                     <div className="relative">
                       <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -377,14 +365,14 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-xs font-semibold text-gray-300">
-                        {language === 'hi' ? 'पासवर्ड' : 'Password'}
+                        {tLang(language, 'Password', 'पासवर्ड', 'Password')}
                       </label>
                       <button
                         type="button"
                         onClick={() => setActiveTab('forgot')}
                         className="text-[11px] text-[#DFC382] hover:underline"
                       >
-                        {language === 'hi' ? 'भूल गए?' : 'Forgot?'}
+                        {tLang(language, 'Forgot?', 'भूल गए?', 'Bhool gaye?')}
                       </button>
                     </div>
                     <div className="relative">
@@ -398,9 +386,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                       />
                     </div>
                     <p className="mt-1 text-[10px] text-gray-400">
-                      {language === 'hi'
-                        ? 'सुरक्षित पोर्टल पहुंच के लिए अपना अधिकृत पासवर्ड दर्ज करें।'
-                        : 'Enter your authorized corporate or member password.'}
+                      {tLang(language, 'Enter your authorized corporate or member password.', 'सुरक्षित पोर्टल पहुंच के लिए अपना अधिकृत पासवर्ड दर्ज करें।', 'Portal access ke liye apna authorized password enter karein.')}
                     </p>
                   </div>
 
@@ -420,7 +406,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                       <RefreshCw className="h-4 w-4 animate-spin" />
                     ) : (
                       <>
-                        <span>{language === 'hi' ? 'सुरक्षित पोर्टल लॉगिन' : 'Secure Portal Login'}</span>
+                        <span>{tLang(language, 'Secure Portal Login', 'सुरक्षित पोर्टल लॉगिन', 'Secure Portal Login')}</span>
                         <ArrowRight className="h-4 w-4" />
                       </>
                     )}
@@ -432,13 +418,16 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
               <div className="border-t border-white/10 pt-3.5 space-y-2 text-xs">
                 <div className="flex items-center gap-1.5 text-[#DFC382] font-semibold text-[11px]">
                   <ShieldCheck className="h-4 w-4 text-[#C7A35A]" />
-                  <span>{language === 'hi' ? 'आधिकारिक पोर्टल सहायता' : 'Authorized Access & IT Assistance'}</span>
+                  <span>{tLang(language, 'Authorized Access & IT Assistance', 'आधिकारिक पोर्टल सहायता', 'Authorized Access & IT Help')}</span>
                 </div>
                 <div className="rounded-xl border border-white/5 bg-[#050A17] p-3 text-[11px] text-gray-300 leading-relaxed space-y-1">
                   <p>
-                    {language === 'hi'
-                      ? 'कॉर्पोरेट या सहयोगी पोर्टल क्रेडेंशियल सहायता के लिए, सीधे आधिकारिक आईटी डेस्क से संपर्क करें:'
-                      : 'For enterprise account access, member verification, or credential assistance, contact corporate administration:'}
+                    {tLang(
+                      language,
+                      'For enterprise account access, member verification, or credential assistance, contact corporate administration:',
+                      'कॉर्पोरेट या सहयोगी पोर्टल क्रेडेंशियल सहायता के लिए, सीधे आधिकारिक आईटी डेस्क से संपर्क करें:',
+                      'Enterprise account access ya credential help ke liye corporate admin se contact karein:'
+                    )}
                   </p>
                   <p className="font-mono text-[10px] text-[#DFC382]">
                     support@akgv.in • +91 6306917991 • Head Office, Varanasi
@@ -452,15 +441,18 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           {activeTab === 'forgot' && (
             <div className="p-6 space-y-4">
               <p className="text-xs text-gray-300 leading-relaxed">
-                {language === 'hi'
-                  ? 'अपना पंजीकृत मोबाइल नंबर या ईमेल आईडी दर्ज करें। आप सीधे व्हाट्सएप हेल्पलाइन से भी पासवर्ड रीसेट प्राप्त कर सकते हैं।'
-                  : 'Enter your registered email address for an automated reset link, or use the verified WhatsApp support desk.'}
+                {tLang(
+                  language,
+                  'Enter your registered email address for an automated reset link, or use the verified WhatsApp support desk.',
+                  'अपना पंजीकृत मोबाइल नंबर या ईमेल आईडी दर्ज करें। आप सीधे व्हाट्सएप हेल्पलाइन से भी पासवर्ड रीसेट प्राप्त कर सकते हैं।',
+                  'Apna registered email ya mobile dalein reset link ke liye, ya WhatsApp helpline use karein.'
+                )}
               </p>
 
               <form onSubmit={handleForgotSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-300 mb-1">
-                    {language === 'hi' ? 'पंजीकृत ईमेल या मोबाइल' : 'Registered Email or Mobile'}
+                    {tLang(language, 'Registered Email or Mobile', 'पंजीकृत ईमेल या मोबाइल', 'Registered Email ya Mobile')}
                   </label>
                   <input
                     type="text"
@@ -482,7 +474,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                   disabled={forgotLoading}
                   className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2 font-bold text-xs text-[#0B1734] shadow-md transition disabled:opacity-50"
                 >
-                  {forgotLoading ? 'Processing...' : 'Send Password Reset Link'}
+                  {forgotLoading ? tLang(language, 'Processing...', 'प्रक्रिया जारी है...', 'Processing...') : tLang(language, 'Send Password Reset Link', 'पासवर्ड रीसेट लिंक भेजें', 'Password Reset Link Bhejein')}
                 </button>
               </form>
 
@@ -492,7 +484,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                   onClick={handleSendWhatsappReset}
                   className="w-full rounded-xl bg-[#25D366] py-2.5 font-bold text-xs text-white shadow-md hover:bg-emerald-600 transition flex items-center justify-center gap-2"
                 >
-                  <span>Reset via Official WhatsApp (+91 6306917991)</span>
+                  <span>{tLang(language, 'Reset via Official WhatsApp (+91 6306917991)', 'व्हाट्सएप से पासवर्ड रीसेट करें (+91 6306917991)', 'WhatsApp se Reset karein (+91 6306917991)')}</span>
                   <ExternalLink className="h-4 w-4" />
                 </button>
                 <button
@@ -500,7 +492,7 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
                   onClick={() => setActiveTab('login')}
                   className="w-full rounded-xl border border-white/10 bg-white/5 py-2 text-xs text-gray-300 hover:text-white transition"
                 >
-                  Back to Sign In
+                  {tLang(language, 'Back to Sign In', 'लॉग इन पर वापस', 'Sign In par wapas')}
                 </button>
               </div>
             </div>

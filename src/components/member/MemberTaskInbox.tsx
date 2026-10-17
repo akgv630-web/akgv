@@ -22,9 +22,10 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { TaskReminder, TaskCategory } from '@/types';
+import { tLang } from '@/lib/i18n';
 
 export function MemberTaskInbox() {
-  const { tasks, currentUser, toggleTask, updateTask } = useApp();
+  const { tasks, currentUser, toggleTask, updateTask, language } = useApp();
 
   const [filterCategory, setFilterCategory] = useState<'ALL' | TaskCategory>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'pending' | 'completed'>('ALL');
@@ -304,7 +305,7 @@ export function MemberTaskInbox() {
                       href={task.targetRoute}
                       className="flex items-center gap-1.5 rounded-xl border border-[#C7A35A]/50 bg-[#C7A35A]/10 px-3 py-1.5 text-xs font-semibold text-[#DFC382] hover:bg-[#C7A35A]/20 transition"
                     >
-                      <span>Open Record (रिकॉर्ड खोलें)</span>
+                      <span>{tLang(language, 'Open Record', 'रिकॉर्ड खोलें', 'Record Kholein')}</span>
                       <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
                   )}

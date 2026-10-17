@@ -842,10 +842,9 @@ describe('P0 Security Hardening & Remediation Verification Suite', () => {
       expect(syncCode).toContain('authUserId: data.auth_user_id || data.id,');
     });
 
-    it('renders email verification notice and buyer onboarding without associate joining kit prompt in AuthModal', () => {
-      expect(authModalCode).toContain('Verification Email Sent!');
-      expect(authModalCode).toContain('Buyer Account Active:');
-      expect(authModalCode).toContain('Create Buyer Account');
+    it('enforces single unified sign in and prevents public self-registration without associate joining kit prompt in AuthModal', () => {
+      expect(authModalCode).toContain('Authorized Access & IT Assistance');
+      expect(authModalCode).toContain('Secure Portal Login');
       expect(authModalCode).not.toContain('Please collect your ₹999 physical joining kit');
     });
   });

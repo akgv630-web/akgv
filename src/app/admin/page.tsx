@@ -52,6 +52,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 import { KycStatus, Plot, PlotStatus, Profile, UserRole } from '@/types';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { PlotManagementModal } from '@/components/admin/PlotManagementModal';
@@ -148,6 +149,7 @@ export default function SuperAdminPage() {
     targets,
     gpsEvidences,
     messages,
+    language,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
@@ -797,11 +799,16 @@ export default function SuperAdminPage() {
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-[#C7A35A]" />
                 <h2 className="font-serif text-lg font-bold text-white">
-                  Team & Associates Governance (सदस्य एवं टीम नियंत्रण)
+                  {tLang(language, 'Team & Associates Governance', 'सदस्य एवं टीम नियंत्रण', 'Team & Associates Governance')}
                 </h2>
               </div>
               <p className="text-xs text-gray-300">
-                View every associate, manager, sub-admin, and buyer working on the platform. Add new members, edit profile details, toggle active access, or remove accounts.
+                {tLang(
+                  language,
+                  'View every associate, manager, sub-admin, and buyer working on the platform. Add new members, edit profile details, toggle active access, or remove accounts.',
+                  'प्लेटफ़ॉर्म पर कार्यरत प्रत्येक सहयोगी, प्रबंधक, उप-प्रशासक और खरीदार को देखें। नए सदस्य जोड़ें, प्रोफ़ाइल विवरण संपादित करें, सक्रिय पहुंच टॉगल करें, या खाते हटाएं।',
+                  'Platform par active har associate, manager, sub-admin aur buyer ko dekhein. Naye members add karein, profile edit karein ya access manage karein.'
+                )}
               </p>
             </div>
 
@@ -810,7 +817,7 @@ export default function SuperAdminPage() {
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-2.5 text-xs font-bold text-[#0B1734] shadow-lg transition hover:brightness-110 active:scale-95"
             >
               <UserPlus className="h-4 w-4" />
-              <span>Enroll New Member (नया सदस्य जोड़ें)</span>
+              <span>{tLang(language, 'Enroll New Member', 'नया सदस्य जोड़ें', 'Naya Member Add Karein')}</span>
             </button>
           </div>
 
@@ -1325,7 +1332,7 @@ export default function SuperAdminPage() {
                   <div className="flex items-center gap-2">
                     <UserPlus className="h-5 w-5 text-[#C7A35A]" />
                     <h3 className="font-serif text-sm font-bold text-white">
-                      Enroll New Team Member (नया सदस्य जोड़ें)
+                      {tLang(language, 'Enroll New Team Member', 'नया टीम सदस्य जोड़ें', 'Naya Team Member Add Karein')}
                     </h3>
                   </div>
                   <button
@@ -1344,7 +1351,7 @@ export default function SuperAdminPage() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     if (!newMemberName.trim() || !newMemberPhone.trim()) {
-                      alert('Please provide member name and phone number.');
+                      alert(tLang(language, 'Please provide member name and phone number.', 'कृपया सदस्य का नाम और फोन नंबर दर्ज करें।', 'Kripya member ka naam aur phone number enter karein.'));
                       return;
                     }
                     const profile = createSponsorMember({
@@ -1369,7 +1376,14 @@ export default function SuperAdminPage() {
                       password: newMemberPassword.trim() || 'akgv@2026',
                       loginUrl,
                     });
-                    setMemberActionNotice(`नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! आईडी: ${profile.memberId || profile.email}`);
+                    setMemberActionNotice(
+                      tLang(
+                        language,
+                        `New member "${profile.fullName}" enrolled successfully! ID: ${profile.memberId || profile.email}`,
+                        `नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! आईडी: ${profile.memberId || profile.email}`,
+                        `Naya member "${profile.fullName}" add ho gaya! ID: ${profile.memberId || profile.email}`
+                      )
+                    );
                     setNewMemberName('');
                     setNewMemberPhone('');
                     setNewMemberEmail('');
@@ -1383,45 +1397,55 @@ export default function SuperAdminPage() {
                     <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/40 p-4 space-y-3 text-xs animate-in fade-in">
                       <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
                         <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                        <span>खाता तैयार! लॉगिन क्रेडेंशियल (Login Credentials Generated)</span>
+                        <span>{tLang(language, 'Account Ready! Login Credentials Generated', 'खाता तैयार! लॉगिन क्रेडेंशियल जारी', 'Account Ready! Login Credentials Generated')}</span>
                       </div>
                       
                       <div className="rounded-xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 text-xs space-y-1.5 font-mono">
                         <div className="text-gray-300 font-sans font-semibold text-[11px] text-[#DFC382]">
-                          आधिकारिक लॉगिन विवरण (Official Login Details):
+                          {tLang(language, 'Official Login Details:', 'आधिकारिक लॉगिन विवरण:', 'Official Login Details:')}
                         </div>
-                        <div className="text-white">👤 नाम: <span className="font-bold text-emerald-300">{createdSponsorFeedback.name}</span></div>
-                        <div className="text-white">🆔 लॉगिन आईडी: <span className="font-bold text-[#DFC382] bg-black/50 px-2 py-0.5 rounded border border-[#C7A35A]/30">{createdSponsorFeedback.code}</span></div>
-                        <div className="text-white">📧 ईमेल: <span className="text-gray-300">{createdSponsorFeedback.email}</span></div>
-                        <div className="text-white">📱 फोन: <span className="text-gray-300">{createdSponsorFeedback.phone}</span></div>
-                        <div className="text-white">🔑 पासवर्ड: <span className="font-bold text-emerald-300 bg-black/50 px-2 py-0.5 rounded border border-emerald-500/30">{createdSponsorFeedback.password}</span></div>
-                        <div className="text-white">🌐 लॉगिन लिंक: <span className="text-sky-300 underline">{createdSponsorFeedback.loginUrl}</span></div>
+                        <div className="text-white">👤 {tLang(language, 'Name:', 'नाम:', 'Naam:')} <span className="font-bold text-emerald-300">{createdSponsorFeedback.name}</span></div>
+                        <div className="text-white">🆔 {tLang(language, 'Login ID:', 'लॉगिन आईडी:', 'Login ID:')} <span className="font-bold text-[#DFC382] bg-black/50 px-2 py-0.5 rounded border border-[#C7A35A]/30">{createdSponsorFeedback.code}</span></div>
+                        <div className="text-white">📧 {tLang(language, 'Email:', 'ईमेल:', 'Email:')} <span className="text-gray-300">{createdSponsorFeedback.email}</span></div>
+                        <div className="text-white">📱 {tLang(language, 'Phone:', 'फोन:', 'Phone:')} <span className="text-gray-300">{createdSponsorFeedback.phone}</span></div>
+                        <div className="text-white">🔑 {tLang(language, 'Password:', 'पासवर्ड:', 'Password:')} <span className="font-bold text-emerald-300 bg-black/50 px-2 py-0.5 rounded border border-emerald-500/30">{createdSponsorFeedback.password}</span></div>
+                        <div className="text-white">🌐 {tLang(language, 'Login Link:', 'लॉगिन लिंक:', 'Login Link:')} <span className="text-sky-300 underline">{createdSponsorFeedback.loginUrl}</span></div>
                       </div>
 
                       <div className="flex flex-wrap gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() => {
-                            const msg = `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code} (या ईमेल: ${createdSponsorFeedback.email} / फोन: ${createdSponsorFeedback.phone})\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`;
+                            const msg = tLang(
+                              language,
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Credentials\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code} (or Email: ${createdSponsorFeedback.email} / Phone: ${createdSponsorFeedback.phone})\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the link and sign in using these credentials.`,
+                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code} (या ईमेल: ${createdSponsorFeedback.email} / फोन: ${createdSponsorFeedback.phone})\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`,
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Details\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code}\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is link par jaakar login karein.`
+                            );
                             navigator.clipboard.writeText(msg);
-                            setMemberActionNotice('लॉगिन विवरण और लिंक क्लिपबोर्ड पर कॉपी हो गया!');
+                            setMemberActionNotice(tLang(language, 'Login details copied to clipboard!', 'लॉगिन विवरण क्लिपबोर्ड पर कॉपी हो गया!', 'Login details clipboard par copy ho gaya!'));
                             setTimeout(() => setMemberActionNotice(null), 4000);
                           }}
                           className="rounded-lg bg-[#C7A35A] px-3.5 py-1.5 font-bold text-[#0B1734] text-[11px] flex items-center gap-1.5 hover:brightness-110 transition"
                         >
                           <Copy className="h-3.5 w-3.5" />
-                          <span>Copy Full Credentials & Link</span>
+                          <span>{tLang(language, 'Copy Credentials & Link', 'क्रेडेंशियल कॉपी करें', 'Copy Credentials')}</span>
                         </button>
                         <a
                           href={`https://wa.me/?text=${encodeURIComponent(
-                            `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code}\n📧 ईमेल: ${createdSponsorFeedback.email}\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`
+                            tLang(
+                              language,
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Credentials\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the link and sign in using these credentials.`,
+                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code}\n📧 ईमेल: ${createdSponsorFeedback.email}\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`,
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Details\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code}\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is link par jaakar login karein.`
+                            )
                           )}`}
                           target="_blank"
                           rel="noreferrer"
                           className="rounded-lg bg-[#25D366] px-3.5 py-1.5 font-bold text-white text-[11px] flex items-center gap-1.5 hover:brightness-110 transition"
                         >
                           <Phone className="h-3.5 w-3.5" />
-                          <span>Share on WhatsApp</span>
+                          <span>{tLang(language, 'Share on WhatsApp', 'व्हाट्सएप पर भेजें', 'WhatsApp Par Share Karein')}</span>
                         </a>
                       </div>
                     </div>
@@ -1429,7 +1453,7 @@ export default function SuperAdminPage() {
 
                   <div>
                     <label className="block text-gray-300 font-semibold mb-1">
-                      Full Name (पूरा नाम) <span className="text-[#C7A35A]">*</span>
+                      {tLang(language, 'Full Name', 'पूरा नाम', 'Poora Naam')} <span className="text-[#C7A35A]">*</span>
                     </label>
                     <input
                       type="text"
@@ -1444,7 +1468,7 @@ export default function SuperAdminPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Mobile Number (मोबाइल नंबर) <span className="text-[#C7A35A]">*</span>
+                        {tLang(language, 'Mobile Number', 'मोबाइल नंबर', 'Mobile Number')} <span className="text-[#C7A35A]">*</span>
                       </label>
                       <input
                         type="tel"
@@ -1458,7 +1482,7 @@ export default function SuperAdminPage() {
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Email Address (वैकल्पिक)
+                        {tLang(language, 'Email Address (Optional)', 'ईमेल आईडी (वैकल्पिक)', 'Email Address (Optional)')}
                       </label>
                       <input
                         type="email"
@@ -1474,35 +1498,35 @@ export default function SuperAdminPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Native City / District (गृह जिला / शहर)
+                        {tLang(language, 'Native City / District', 'गृह जिला / शहर', 'Native City / District')}
                       </label>
                       <select
                         value={newMemberCity}
                         onChange={(e) => setNewMemberCity(e.target.value)}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                       >
-                        <option value="Varanasi">Varanasi (वाराणसी)</option>
-                        <option value="Chandauli">Chandauli (चंदौली)</option>
-                        <option value="Mirzapur">Mirzapur (मिर्जापुर)</option>
-                        <option value="Prayagraj">Prayagraj (प्रयागराज)</option>
-                        <option value="Ghazipur">Ghazipur (गाजीपुर)</option>
-                        <option value="Bhadohi">Bhadohi (भदोही)</option>
-                        <option value="Jaunpur">Jaunpur (जौनपुर)</option>
+                        <option value="Varanasi">{tLang(language, 'Varanasi', 'वाराणसी', 'Varanasi')}</option>
+                        <option value="Chandauli">{tLang(language, 'Chandauli', 'चंदौली', 'Chandauli')}</option>
+                        <option value="Mirzapur">{tLang(language, 'Mirzapur', 'मिर्जापुर', 'Mirzapur')}</option>
+                        <option value="Prayagraj">{tLang(language, 'Prayagraj', 'प्रयागराज', 'Prayagraj')}</option>
+                        <option value="Ghazipur">{tLang(language, 'Ghazipur', 'गाजीपुर', 'Ghazipur')}</option>
+                        <option value="Bhadohi">{tLang(language, 'Bhadohi', 'भदोही', 'Bhadohi')}</option>
+                        <option value="Jaunpur">{tLang(language, 'Jaunpur', 'जौनपुर', 'Jaunpur')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Assigned Branch Office (संबद्ध शाखा)
+                        {tLang(language, 'Assigned Branch Office', 'संबद्ध शाखा कार्यालय', 'Assigned Branch Office')}
                       </label>
                       <select
                         value={newMemberBranch}
                         onChange={(e) => setNewMemberBranch(e.target.value)}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                       >
-                        <option value="Rampur Head Office">Rampur Head Office (रामपुर प्रधान कार्यालय)</option>
-                        <option value="Lahartara Branch">Lahartara Branch (लहरतारा शाखा, निकट कैंट)</option>
-                        <option value="Mirza Murad Branch">Mirza Murad Branch (मिर्जामुराद शाखा, NH-19)</option>
+                        <option value="Rampur Head Office">{tLang(language, 'Rampur Head Office', 'रामपुर प्रधान कार्यालय', 'Rampur Head Office')}</option>
+                        <option value="Lahartara Branch">{tLang(language, 'Lahartara Branch (Near Cantt)', 'लहरतारा शाखा (निकट कैंट)', 'Lahartara Branch (Cantt ke paas)')}</option>
+                        <option value="Mirza Murad Branch">{tLang(language, 'Mirza Murad Branch (NH-19)', 'मिर्जामुराद शाखा (NH-19)', 'Mirza Murad Branch (NH-19)')}</option>
                       </select>
                     </div>
                   </div>
@@ -1510,43 +1534,43 @@ export default function SuperAdminPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Role Assignment (पद)
+                        {tLang(language, 'Role Assignment', 'पद आवंटन', 'Role Assignment')}
                       </label>
                       <select
                         value={newMemberRole}
                         onChange={(e) => setNewMemberRole(e.target.value as UserRole)}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                       >
-                        <option value="sub_admin">Sub-Admin (Branch Coordinator)</option>
-                        <option value="senior_member">Senior Manager / Sponsor</option>
-                        <option value="junior_member">Field Associate / Agent</option>
-                        <option value="buyer">Client / Plot Buyer</option>
+                        <option value="sub_admin">{tLang(language, 'Sub-Admin (Branch Coordinator)', 'सब-एडमिन (शाखा समन्वयक)', 'Sub-Admin (Branch Coordinator)')}</option>
+                        <option value="senior_member">{tLang(language, 'Senior Manager / Sponsor', 'वरिष्ठ प्रबंधक / स्पॉन्सर', 'Senior Manager / Sponsor')}</option>
+                        <option value="junior_member">{tLang(language, 'Field Associate / Agent', 'फील्ड एसोसिएट / एजेंट', 'Field Associate / Agent')}</option>
+                        <option value="buyer">{tLang(language, 'Client / Plot Buyer', 'ग्राहक / प्लॉट खरीदार', 'Client / Plot Buyer')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Initial MLM Level (लेवल)
+                        {tLang(language, 'Initial MLM Level', 'प्रारंभिक एमएलएम लेवल', 'Initial MLM Level')}
                       </label>
                       <select
                         value={newMemberLevel}
                         onChange={(e) => setNewMemberLevel(Number(e.target.value))}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                       >
-                        <option value={1}>Level 1: Sales Assistant (4% Comm)</option>
-                        <option value={2}>Level 2: Star Associate (5% Comm)</option>
-                        <option value={3}>Level 3: Gold Star (6% Comm)</option>
-                        <option value={4}>Level 4: Diamond Star (7% Comm)</option>
-                        <option value={5}>Level 5: Platinum Leader (8% Comm)</option>
-                        <option value={6}>Level 6: Crown Leader (9% Comm)</option>
-                        <option value={7}>Level 7: Director (10% Comm)</option>
+                        <option value={1}>{tLang(language, 'Level 1: Sales Assistant (4% Comm)', 'लेवल 1: सेल्स असिस्टेंट (4% कमीशन)', 'Level 1: Sales Assistant (4% Comm)')}</option>
+                        <option value={2}>{tLang(language, 'Level 2: Star Associate (5% Comm)', 'लेवल 2: स्टार एसोसिएट (5% कमीशन)', 'Level 2: Star Associate (5% Comm)')}</option>
+                        <option value={3}>{tLang(language, 'Level 3: Gold Star (6% Comm)', 'लेवल 3: गोल्ड स्टार (6% कमीशन)', 'Level 3: Gold Star (6% Comm)')}</option>
+                        <option value={4}>{tLang(language, 'Level 4: Diamond Star (7% Comm)', 'लेवल 4: डायमंड स्टार (7% कमीशन)', 'Level 4: Diamond Star (7% Comm)')}</option>
+                        <option value={5}>{tLang(language, 'Level 5: Platinum Leader (8% Comm)', 'लेवल 5: प्लेटिनम लीडर (8% कमीशन)', 'Level 5: Platinum Leader (8% Comm)')}</option>
+                        <option value={6}>{tLang(language, 'Level 6: Crown Leader (9% Comm)', 'लेवल 6: क्राउन लीडर (9% कमीशन)', 'Level 6: Crown Leader (9% Comm)')}</option>
+                        <option value={7}>{tLang(language, 'Level 7: Director (10% Comm)', 'लेवल 7: निदेशक (10% कमीशन)', 'Level 7: Director (10% Comm)')}</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-gray-300 font-semibold mb-1">
-                      Reporting Sponsor (सीनियर स्पॉन्सर)
+                      {tLang(language, 'Reporting Sponsor', 'सीनियर स्पॉन्सर', 'Reporting Sponsor')}
                     </label>
                     <select
                       value={newMemberSponsorId}
@@ -1568,7 +1592,7 @@ export default function SuperAdminPage() {
 
                   <div>
                     <label className="block text-gray-300 font-semibold mb-1">
-                      Residential Address (स्थायी पता)
+                      {tLang(language, 'Residential Address', 'स्थायी पता', 'Residential Address')}
                     </label>
                     <input
                       type="text"
@@ -1582,7 +1606,7 @@ export default function SuperAdminPage() {
                   {/* Initial Assigned Password */}
                   <div>
                     <label className="block text-gray-300 font-semibold mb-1">
-                      Portal Login Password (लॉगिन पासवर्ड) <span className="text-[#C7A35A]">*</span>
+                      {tLang(language, 'Portal Login Password', 'पोर्टल लॉगिन पासवर्ड', 'Portal Login Password')} <span className="text-[#C7A35A]">*</span>
                     </label>
                     <input
                       type="text"
@@ -1593,7 +1617,12 @@ export default function SuperAdminPage() {
                       className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
                     />
                     <p className="mt-1 text-[10px] text-gray-400">
-                      डिफ़ॉल्ट पासवर्ड <span className="font-mono text-[#DFC382]">akgv@2026</span> रखा गया है। एडमिन चाहें तो इसे बदल सकते हैं।
+                      {tLang(
+                        language,
+                        'Default password is set to akgv@2026. Admin can customize it before creation.',
+                        'डिफ़ॉल्ट पासवर्ड akgv@2026 रखा गया है। एडमिन चाहें तो इसे बदल सकते हैं।',
+                        'Default password akgv@2026 set kiya gaya hai. Admin chahein to ise badal sakte hain.'
+                      )}
                     </p>
                   </div>
 
@@ -1713,23 +1742,25 @@ export default function SuperAdminPage() {
                         onChange={(e) => setEditKycStatus(e.target.value as KycStatus)}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
                       >
-                        <option value="verified">Verified (सत्यापित)</option>
-                        <option value="pending">Pending Review</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="rejected">Rejected</option>
+                        <option value="verified">{tLang(language, 'Verified', 'सत्यापित', 'Verified')}</option>
+                        <option value="pending">{tLang(language, 'Pending Review', 'समीक्षाधीन', 'Pending Review')}</option>
+                        <option value="submitted">{tLang(language, 'Submitted', 'जमा किया', 'Submitted')}</option>
+                        <option value="rejected">{tLang(language, 'Rejected', 'अस्वीकृत', 'Rejected')}</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-gray-300 font-semibold mb-1">Account Access</label>
+                      <label className="block text-gray-300 font-semibold mb-1">
+                        {tLang(language, 'Account Access', 'खाता पहुंच', 'Account Access')}
+                      </label>
                       <select
                         value={editIsActive ? 'active' : 'suspended'}
                         onChange={(e) => setEditIsActive(e.target.value === 'active')}
                         disabled={editingMember.id === currentUser.id}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none disabled:opacity-50"
                       >
-                        <option value="active">Active Access (सक्रिय)</option>
-                        <option value="suspended">Suspended / Blocked (निलंबित)</option>
+                        <option value="active">{tLang(language, 'Active Access', 'सक्रिय पहुंच', 'Active Access')}</option>
+                        <option value="suspended">{tLang(language, 'Suspended / Blocked', 'निलंबित / अवरुद्ध', 'Suspended / Blocked')}</option>
                       </select>
                     </div>
                   </div>
@@ -1738,35 +1769,35 @@ export default function SuperAdminPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Native City / District (गृह जिला / शहर)
+                        {tLang(language, 'Native City / District', 'गृह जिला / शहर', 'City / District')}
                       </label>
                       <select
                         value={editCity}
                         onChange={(e) => setEditCity(e.target.value)}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
                       >
-                        <option value="Varanasi">Varanasi (वाराणसी)</option>
-                        <option value="Chandauli">Chandauli (चंदौली)</option>
-                        <option value="Mirzapur">Mirzapur (मिर्जापुर)</option>
-                        <option value="Prayagraj">Prayagraj (प्रयागराज)</option>
-                        <option value="Ghazipur">Ghazipur (गाजीपुर)</option>
-                        <option value="Bhadohi">Bhadohi (भदोही)</option>
-                        <option value="Jaunpur">Jaunpur (जौनपुर)</option>
+                        <option value="Varanasi">{tLang(language, 'Varanasi', 'वाराणसी', 'Varanasi')}</option>
+                        <option value="Chandauli">{tLang(language, 'Chandauli', 'चंदौली', 'Chandauli')}</option>
+                        <option value="Mirzapur">{tLang(language, 'Mirzapur', 'मिर्जापुर', 'Mirzapur')}</option>
+                        <option value="Prayagraj">{tLang(language, 'Prayagraj', 'प्रयागराज', 'Prayagraj')}</option>
+                        <option value="Ghazipur">{tLang(language, 'Ghazipur', 'गाजीपुर', 'Ghazipur')}</option>
+                        <option value="Bhadohi">{tLang(language, 'Bhadohi', 'भदोही', 'Bhadohi')}</option>
+                        <option value="Jaunpur">{tLang(language, 'Jaunpur', 'जौनपुर', 'Jaunpur')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Assigned Branch Office (संबद्ध शाखा)
+                        {tLang(language, 'Assigned Branch Office', 'संबद्ध शाखा कार्यालय', 'Assigned Branch Office')}
                       </label>
                       <select
                         value={editBranchLocation}
                         onChange={(e) => setEditBranchLocation(e.target.value)}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
                       >
-                        <option value="Rampur Head Office">Rampur Head Office (रामपुर प्रधान कार्यालय)</option>
-                        <option value="Lahartara Branch">Lahartara Branch (लहरतारा शाखा, निकट कैंट)</option>
-                        <option value="Mirza Murad Branch">Mirza Murad Branch (मिर्जामुराद शाखा, NH-19)</option>
+                        <option value="Rampur Head Office">{tLang(language, 'Rampur Head Office', 'रामपुर प्रधान कार्यालय', 'Rampur Head Office')}</option>
+                        <option value="Lahartara Branch">{tLang(language, 'Lahartara Branch (Near Cantt)', 'लहरतारा शाखा (निकट कैंट)', 'Lahartara Branch (Cantt ke paas)')}</option>
+                        <option value="Mirza Murad Branch">{tLang(language, 'Mirza Murad Branch (NH-19)', 'मिर्जामुराद शाखा (NH-19)', 'Mirza Murad Branch (NH-19)')}</option>
                       </select>
                     </div>
                   </div>
@@ -1775,7 +1806,7 @@ export default function SuperAdminPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        MLM Tier Level (लेवल)
+                        {tLang(language, 'MLM Tier Level', 'एमएलएम लेवल', 'MLM Tier Level')}
                       </label>
                       <select
                         value={editLevel}
@@ -1786,19 +1817,19 @@ export default function SuperAdminPage() {
                         }}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-blue-400 focus:outline-none"
                       >
-                        <option value={1}>Level 1: Sales Assistant (4% Comm)</option>
-                        <option value={2}>Level 2: Star Associate (5% Comm)</option>
-                        <option value={3}>Level 3: Gold Star (6% Comm)</option>
-                        <option value={4}>Level 4: Diamond Star (7% Comm)</option>
-                        <option value={5}>Level 5: Platinum Leader (8% Comm)</option>
-                        <option value={6}>Level 6: Crown Leader (9% Comm)</option>
-                        <option value={7}>Level 7: Director (10% Comm)</option>
+                        <option value={1}>{tLang(language, 'Level 1: Sales Assistant (4% Comm)', 'लेवल 1: सेल्स असिस्टेंट (4% कमीशन)', 'Level 1: Sales Assistant (4% Comm)')}</option>
+                        <option value={2}>{tLang(language, 'Level 2: Star Associate (5% Comm)', 'लेवल 2: स्टार एसोसिएट (5% कमीशन)', 'Level 2: Star Associate (5% Comm)')}</option>
+                        <option value={3}>{tLang(language, 'Level 3: Gold Star (6% Comm)', 'लेवल 3: गोल्ड स्टार (6% कमीशन)', 'Level 3: Gold Star (6% Comm)')}</option>
+                        <option value={4}>{tLang(language, 'Level 4: Diamond Star (7% Comm)', 'लेवल 4: डायमंड स्टार (7% कमीशन)', 'Level 4: Diamond Star (7% Comm)')}</option>
+                        <option value={5}>{tLang(language, 'Level 5: Platinum Leader (8% Comm)', 'लेवल 5: प्लेटिनम लीडर (8% कमीशन)', 'Level 5: Platinum Leader (8% Comm)')}</option>
+                        <option value={6}>{tLang(language, 'Level 6: Crown Leader (9% Comm)', 'लेवल 6: क्राउन लीडर (9% कमीशन)', 'Level 6: Crown Leader (9% Comm)')}</option>
+                        <option value={7}>{tLang(language, 'Level 7: Director (10% Comm)', 'लेवल 7: निदेशक (10% कमीशन)', 'Level 7: Director (10% Comm)')}</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Official Rank Title (पदनाम)
+                        {tLang(language, 'Official Rank Title', 'आधिकारिक पदनाम', 'Official Rank Title')}
                       </label>
                       <input
                         type="text"
@@ -1814,7 +1845,7 @@ export default function SuperAdminPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Business Volume (₹)
+                        {tLang(language, 'Business Volume (₹)', 'कुल बिज़नेस (₹)', 'Business Volume (₹)')}
                       </label>
                       <input
                         type="number"
@@ -1828,7 +1859,7 @@ export default function SuperAdminPage() {
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Plots Closed Count
+                        {tLang(language, 'Plots Closed Count', 'पूर्ण किए गए प्लॉट्स', 'Plots Closed Count')}
                       </label>
                       <input
                         type="number"
@@ -1841,7 +1872,7 @@ export default function SuperAdminPage() {
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        Joined Date (तारीख)
+                        {tLang(language, 'Joined Date', 'जुड़ने की तिथि', 'Joined Date')}
                       </label>
                       <input
                         type="date"
@@ -1855,7 +1886,7 @@ export default function SuperAdminPage() {
                   {/* Full Address */}
                   <div>
                     <label className="block text-gray-300 font-semibold mb-1">
-                      Residential Address (स्थायी पता)
+                      {tLang(language, 'Residential Address', 'स्थायी पता', 'Residential Address')}
                     </label>
                     <input
                       type="text"
@@ -1907,7 +1938,7 @@ export default function SuperAdminPage() {
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="h-5 w-5 text-[#C7A35A]" />
                       <h3 className="font-serif text-sm sm:text-base font-bold text-white">
-                        Executive Member Dossier (सदस्य संपूर्ण विवरण)
+                        {tLang(language, 'Executive Member Dossier', 'सदस्य संपूर्ण विवरण', 'Executive Member Dossier')}
                       </h3>
                     </div>
                     <button
@@ -1948,65 +1979,67 @@ export default function SuperAdminPage() {
                           {getRoleBadge(viewingMember.role).label}
                         </span>
                         <div className="text-[10px] text-gray-400">
-                          Account:{' '}
+                          {tLang(language, 'Account:', 'खाता स्थिति:', 'Account:')}{' '}
                           <strong className={viewingMember.isActive ? 'text-emerald-400' : 'text-red-400'}>
-                            {viewingMember.isActive ? 'ACTIVE ACCESS' : 'SUSPENDED'}
+                            {viewingMember.isActive
+                              ? tLang(language, 'ACTIVE ACCESS', 'सक्रिय पहुंच', 'ACTIVE ACCESS')
+                              : tLang(language, 'SUSPENDED', 'निलंबित', 'SUSPENDED')}
                           </strong>
                         </div>
                       </div>
                     </div>
 
-                    {/* SECTION 1: Geographic & Branch Information (कहाँ के हैं) */}
+                    {/* SECTION 1: Geographic & Branch Information */}
                     <div className="rounded-xl border border-white/10 bg-[#050A17] p-4 space-y-2">
                       <div className="flex items-center gap-1.5 text-[#DFC382] font-bold text-xs border-b border-white/5 pb-1.5">
                         <MapPin className="h-4 w-4 text-[#C7A35A]" />
-                        <span>1. Regional & Branch Details (कहाँ के निवासी हैं एवं संबद्ध शाखा)</span>
+                        <span>{tLang(language, '1. Regional & Branch Details', '1. क्षेत्रीय एवं शाखा विवरण', '1. Regional aur Branch Details')}</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         <div>
-                          <span className="text-gray-400 text-[10px] block">Native City / District (गृह जिला / शहर):</span>
+                          <span className="text-gray-400 text-[10px] block">{tLang(language, 'Native City / District:', 'गृह जिला / शहर:', 'Native City / District:')}</span>
                           <strong className="text-white text-xs block font-serif">
-                            {viewingMember.city || 'Varanasi (वाराणसी)'}
+                            {viewingMember.city || tLang(language, 'Varanasi', 'वाराणसी', 'Varanasi')}
                           </strong>
                         </div>
                         <div>
-                          <span className="text-gray-400 text-[10px] block">Assigned Branch Office (संबद्ध शाखा कार्यालय):</span>
+                          <span className="text-gray-400 text-[10px] block">{tLang(language, 'Assigned Branch Office:', 'संबद्ध शाखा कार्यालय:', 'Assigned Branch Office:')}</span>
                           <strong className="text-[#DFC382] text-xs block">
-                            {viewingMember.branchLocation || 'Rampur Head Office'}
+                            {viewingMember.branchLocation || tLang(language, 'Rampur Head Office', 'रामपुर प्रधान कार्यालय', 'Rampur Head Office')}
                           </strong>
                         </div>
                         <div className="sm:col-span-2">
-                          <span className="text-gray-400 text-[10px] block">Permanent Residential / Office Address (स्थायी पता):</span>
+                          <span className="text-gray-400 text-[10px] block">{tLang(language, 'Permanent Residential / Office Address:', 'स्थायी निवास / कार्यालय पता:', 'Permanent Residential / Office Address:')}</span>
                           <p className="text-gray-200 text-xs mt-0.5">
-                            {viewingMember.address || 'Address registered with branch records (Varanasi Region, Uttar Pradesh)'}
+                            {viewingMember.address || tLang(language, 'Address registered with branch records (Varanasi Region, Uttar Pradesh)', 'शाखा रिकॉर्ड में पंजीकृत पता (वाराणसी क्षेत्र, उत्तर प्रदेश)', 'Branch records me registered address (Varanasi Region, UP)')}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* SECTION 2: Tenure & Enrollment Record (कब से जुड़े हैं) */}
+                    {/* SECTION 2: Tenure & Enrollment Record */}
                     <div className="rounded-xl border border-white/10 bg-[#050A17] p-4 space-y-2">
                       <div className="flex items-center gap-1.5 text-blue-300 font-bold text-xs border-b border-white/5 pb-1.5">
                         <Calendar className="h-4 w-4 text-blue-400" />
-                        <span>2. Enrollment & Active Tenure (कब से जुड़े हैं / कार्यकाल)</span>
+                        <span>{tLang(language, '2. Enrollment & Active Tenure', '2. नामांकन एवं सक्रिय कार्यकाल', '2. Enrollment aur Active Tenure')}</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center sm:text-left">
                         <div className="rounded-lg bg-white/5 p-2.5">
-                          <span className="text-gray-400 text-[10px] block">Joining Date</span>
+                          <span className="text-gray-400 text-[10px] block">{tLang(language, 'Joining Date', 'जुड़ने की तिथि', 'Joining Date')}</span>
                           <strong className="text-white text-xs block">{joinedFormatted}</strong>
                         </div>
                         <div className="rounded-lg bg-emerald-950/40 border border-emerald-500/20 p-2.5">
-                          <span className="text-emerald-300 text-[10px] block">Active Duration</span>
+                          <span className="text-emerald-300 text-[10px] block">{tLang(language, 'Active Duration', 'सक्रिय अवधि', 'Active Duration')}</span>
                           <strong className="text-emerald-400 text-xs block">{tenureFormatted}</strong>
                         </div>
                         <div className="rounded-lg bg-white/5 p-2.5">
-                          <span className="text-gray-400 text-[10px] block">Member ID</span>
+                          <span className="text-gray-400 text-[10px] block">{tLang(language, 'Member ID', 'सदस्य आईडी', 'Member ID')}</span>
                           <strong className="text-[#DFC382] font-mono text-xs block">
                             {viewingMember.memberId || 'N/A'}
                           </strong>
                         </div>
                         <div className="rounded-lg bg-white/5 p-2.5">
-                          <span className="text-gray-400 text-[10px] block">KYC Verification</span>
+                          <span className="text-gray-400 text-[10px] block">{tLang(language, 'KYC Verification', 'केवाईसी सत्यापन', 'KYC Verification')}</span>
                           <strong className="text-emerald-400 text-xs block uppercase">
                             {viewingMember.kycStatus || 'VERIFIED'}
                           </strong>
@@ -2014,12 +2047,12 @@ export default function SuperAdminPage() {
                       </div>
                     </div>
 
-                    {/* SECTION 3: Rank, MLM Level & Performance Record (लेवल एवं बिज़नेस) */}
+                    {/* SECTION 3: Rank, MLM Level & Performance Record */}
                     <div className="rounded-xl border border-[#C7A35A]/30 bg-[#0B1734] p-4 space-y-2.5">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <div className="flex items-center gap-1.5 text-[#DFC382] font-bold text-xs">
                           <Award className="h-4 w-4 text-[#C7A35A]" />
-                          <span>3. Professional Rank, Level & Volume (पद, लेवल एवं बिज़नेस रिपोर्ट)</span>
+                          <span>{tLang(language, '3. Professional Rank, Level & Volume', '3. व्यावसायिक पद, स्तर एवं बिज़नेस', '3. Professional Rank, Level aur Volume')}</span>
                         </div>
                         <div className="flex items-center gap-0.5 text-amber-400">
                           {Array.from({ length: levelInfo.level }).map((_, i) => (
@@ -2089,10 +2122,10 @@ export default function SuperAdminPage() {
                         <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
                           <div className="flex items-center gap-1.5 text-emerald-300 font-bold text-xs">
                             <Home className="h-4 w-4 text-emerald-400" />
-                            <span>4. Client Property Portfolio (क्रेता भूखंड विवरण एवं भुगतान)</span>
+                            <span>{tLang(language, '4. Client Property Portfolio', '4. खरीदार भूखंड विवरण एवं भुगतान', '4. Client Property Portfolio')}</span>
                           </div>
                           <span className="text-emerald-400 font-bold text-[11px]">
-                            {memberBookings.length} Plot(s) Linked
+                            {memberBookings.length} {tLang(language, 'Plot(s) Linked', 'भूखंड जुड़े', 'Plot(s) Linked')}
                           </span>
                         </div>
 
@@ -2237,9 +2270,11 @@ export default function SuperAdminPage() {
                   </div>
                   <div>
                     <h3 className="font-serif text-base font-bold text-white">
-                      Confirm Member Removal (सदस्य हटाएं)
+                      {tLang(language, 'Confirm Member Removal', 'सदस्य हटाने की पुष्टि करें', 'Member Removal Confirm Karein')}
                     </h3>
-                    <span className="text-[11px] text-gray-400">Permanent System Action</span>
+                    <span className="text-[11px] text-gray-400">
+                      {tLang(language, 'Permanent System Action', 'स्थायी सिस्टम कार्रवाई', 'Permanent System Action')}
+                    </span>
                   </div>
                 </div>
 
@@ -2315,7 +2350,7 @@ export default function SuperAdminPage() {
               className="self-start sm:self-auto rounded-xl bg-gradient-to-r from-[#C7A35A] via-[#DFC382] to-[#9E7E36] px-5 py-2.5 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 transition flex items-center gap-2 hover:scale-[1.02] shrink-0"
             >
               <Plus className="h-4 w-4" />
-              <span>Register New Plot / नया प्लॉट जोड़ें</span>
+              <span>{tLang(language, 'Register New Plot', 'नया प्लॉट जोड़ें', 'Naya Plot Register Karein')}</span>
             </button>
           </div>
 
@@ -2560,7 +2595,7 @@ export default function SuperAdminPage() {
                     onClick={() => setDeletingPlot(null)}
                     className="rounded-xl border border-white/15 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 transition"
                   >
-                    Cancel / रद्द करें
+                    {tLang(language, 'Cancel', 'रद्द करें', 'Cancel')}
                   </button>
                   {!bookings.some((b) => b.plotId === deletingPlot.id && b.status !== 'cancelled') && (
                     <button
@@ -2571,7 +2606,7 @@ export default function SuperAdminPage() {
                       }}
                       className="rounded-xl bg-red-600 px-5 py-2 text-xs font-bold text-white hover:bg-red-700 transition"
                     >
-                      Confirm Delete / हटाएं
+                      {tLang(language, 'Confirm Delete', 'हटाने की पुष्टि करें', 'Delete Confirm Karein')}
                     </button>
                   )}
                 </div>

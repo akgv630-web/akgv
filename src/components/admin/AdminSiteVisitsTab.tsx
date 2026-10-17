@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { SiteVisit, SiteVisitStatus, Profile } from '@/types';
+import { tLang } from '@/lib/i18n';
 
 export function AdminSiteVisitsTab() {
   const {
@@ -30,7 +31,8 @@ export function AdminSiteVisitsTab() {
     assignSiteVisit,
     updateSiteVisitStatus,
     deleteSiteVisit,
-    bookSiteVisit
+    bookSiteVisit,
+    language
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -275,7 +277,7 @@ export function AdminSiteVisitsTab() {
           className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-4 py-2.5 text-xs font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
         >
           <Plus className="h-4 w-4" />
-          <span>Schedule Visit (नयी विजिट जोड़ें)</span>
+          <span>{tLang(language, 'Schedule Visit', 'विजिट शेड्यूल करें', 'Visit Schedule Karein')}</span>
         </button>
       </div>
 

@@ -554,7 +554,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         } catch {}
         return { success: true, profile: found };
       } else {
-        return { success: false, error: 'Incorrect password. (अधिकृत डिफ़ॉल्ट पासवर्ड: akgv@2026)' };
+        return { success: false, error: 'Incorrect password.' };
       }
     }
 
@@ -854,14 +854,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const defaultRank =
       data.rankTitle ||
       (assignedRole === 'super_admin'
-        ? 'Director (कंपनी निदेशक)'
+        ? 'Director'
         : assignedRole === 'sub_admin'
-        ? 'Platinum Leader (क्षेत्रीय प्रभारी)'
+        ? 'Platinum Leader'
         : assignedRole === 'senior_member'
-        ? 'Diamond Star (वरिष्ठ प्रबंधक)'
+        ? 'Diamond Star'
         : assignedRole === 'buyer'
-        ? 'Verified Client (सत्यापित क्रेता)'
-        : 'Sales Assistant (फील्ड एजेंट)');
+        ? 'Verified Client'
+        : 'Sales Assistant');
 
     const newProfile: Profile = {
       id: `usr-${Date.now()}`,
@@ -1772,6 +1772,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     status: ClientEnquiry['status'],
     notes?: string
   ): Promise<{ success: boolean; error?: string }> => {
+    const isStaff = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin' || currentUser?.role === 'senior_member' || currentUser?.role === 'junior_member';
+    if (!isStaff) {
+      throw new Error('Access denied: Only staff can update enquiry status.');
+    }
     const patch: Partial<ClientEnquiry> = {
       status,
       ...(notes !== undefined ? { notes } : {}),

@@ -18,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 import { ClientEnquiry } from '@/types';
 
 export function AdminEnquiriesTab() {
@@ -29,7 +30,8 @@ export function AdminEnquiriesTab() {
     updateEnquiryStatus,
     deleteEnquiry,
     allProfiles,
-    currentUser
+    currentUser,
+    language
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,11 +77,21 @@ export function AdminEnquiriesTab() {
 
     const res = await assignEnquiry(assigningEnquiry.id, staff.id, staff.fullName, staff.memberId);
     if (res.success) {
-      setActionNotice({ text: `लीड "${assigningEnquiry.clientName}" सफलतापूर्वक ${staff.fullName} को सौंपी गई।` });
+      setActionNotice({
+        text: tLang(
+          language,
+          `Lead "${assigningEnquiry.clientName}" successfully assigned to ${staff.fullName}.`,
+          `लीड "${assigningEnquiry.clientName}" सफलतापूर्वक ${staff.fullName} को सौंपी गई।`,
+          `Lead "${assigningEnquiry.clientName}" safaltapoorvak ${staff.fullName} ko assign ho gayi.`
+        )
+      });
       setAssigningEnquiry(null);
       setSelectedStaffId('');
     } else {
-      setActionNotice({ text: res.error || 'असाइनमेंट विफल रहा।', isError: true });
+      setActionNotice({
+        text: res.error || tLang(language, 'Assignment failed.', 'असाइनमेंट विफल रहा।', 'Assignment fail ho gaya.'),
+        isError: true
+      });
     }
   };
 
@@ -89,19 +101,27 @@ export function AdminEnquiriesTab() {
 
     const res = await addEnquiryFollowUp(followUpEnquiry.id, followUpSummary.trim(), nextFollowUpDate || undefined);
     if (res.success) {
-      setActionNotice({ text: 'फॉलो-अप विवरण सफलतापूर्वक दर्ज किया गया।' });
+      setActionNotice({
+        text: tLang(language, 'Follow-up details recorded successfully.', 'फॉलो-अप विवरण सफलतापूर्वक दर्ज किया गया।', 'Follow-up details record ho gayi.')
+      });
       setFollowUpEnquiry(null);
       setFollowUpSummary('');
       setNextFollowUpDate('');
     } else {
-      setActionNotice({ text: res.error || 'त्रुटि दर्ज हुई।', isError: true });
+      setActionNotice({
+        text: res.error || tLang(language, 'An error occurred.', 'त्रुटि दर्ज हुई।', 'Error hua.'),
+        isError: true
+      });
     }
   };
 
   const handleCreateEnquiry = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClientName.trim() || !newClientPhone.trim()) {
-      setActionNotice({ text: 'ग्राहक का नाम और फ़ोन नंबर अनिवार्य हैं।', isError: true });
+      setActionNotice({
+        text: tLang(language, 'Client name and phone number are required.', 'ग्राहक का नाम और फ़ोन नंबर अनिवार्य हैं।', 'Client name aur phone number zaroori hain.'),
+        isError: true
+      });
       return;
     }
 
@@ -116,7 +136,14 @@ export function AdminEnquiriesTab() {
       notes: newNotes.trim() || undefined,
     });
 
-    setActionNotice({ text: `नयी लीड "${newClientName}" सफलतापूर्वक पंजीकृत की गई।` });
+    setActionNotice({
+      text: tLang(
+        language,
+        `New lead "${newClientName}" registered successfully.`,
+        `नयी लीड "${newClientName}" सफलतापूर्वक पंजीकृत की गई।`,
+        `Nayi lead "${newClientName}" register ho gayi.`
+      )
+    });
     setIsCreateModalOpen(false);
     setNewClientName('');
     setNewClientPhone('');
@@ -129,23 +156,31 @@ export function AdminEnquiriesTab() {
       {/* Top Banner & Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4 shadow-lg">
-          <span className="text-xs text-gray-400 block font-medium">कुल लीड्स (Total Inquiries)</span>
+          <span className="text-xs text-gray-400 block font-medium">
+            {tLang(language, 'Total Inquiries', 'कुल पूछताछ', 'Total Inquiries')}
+          </span>
           <span className="text-2xl font-serif font-bold text-white mt-1 block">{enquiries.length}</span>
         </div>
         <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 shadow-lg">
-          <span className="text-xs text-blue-300 block font-medium">नयी लीड्स (New)</span>
+          <span className="text-xs text-blue-300 block font-medium">
+            {tLang(language, 'New Leads', 'नयी लीड्स', 'New Leads')}
+          </span>
           <span className="text-2xl font-serif font-bold text-blue-400 mt-1 block">
             {enquiries.filter((e) => e.status === 'new').length}
           </span>
         </div>
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-lg">
-          <span className="text-xs text-amber-300 block font-medium">संपर्क / विजिट शेड्यूल्ड</span>
+          <span className="text-xs text-amber-300 block font-medium">
+            {tLang(language, 'Contacted / Scheduled', 'संपर्क / विजिट शेड्यूल्ड', 'Contacted / Scheduled')}
+          </span>
           <span className="text-2xl font-serif font-bold text-amber-400 mt-1 block">
             {enquiries.filter((e) => e.status === 'contacted' || e.status === 'visit_scheduled').length}
           </span>
         </div>
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-lg">
-          <span className="text-xs text-emerald-300 block font-medium">बुकिंग में परिवर्तित (Booked)</span>
+          <span className="text-xs text-emerald-300 block font-medium">
+            {tLang(language, 'Converted to Bookings', 'बुकिंग में परिवर्तित', 'Booked Leads')}
+          </span>
           <span className="text-2xl font-serif font-bold text-emerald-400 mt-1 block">
             {enquiries.filter((e) => e.status === 'booked').length}
           </span>
@@ -174,7 +209,7 @@ export function AdminEnquiriesTab() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="ग्राहक नाम, फ़ोन या सदस्य खोजें..."
+              placeholder={tLang(language, 'Search client name, phone or member...', 'ग्राहक नाम, फ़ोन या सदस्य खोजें...', 'Client name, phone ya member search karein...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-[#050A17] pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
@@ -186,12 +221,12 @@ export function AdminEnquiriesTab() {
             onChange={(e) => setStatusFilter(e.target.value as 'ALL' | ClientEnquiry['status'])}
             className="rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
           >
-            <option value="ALL">सभी स्थितियां (All Status)</option>
-            <option value="new">नयी लीड (New)</option>
-            <option value="contacted">संपर्क किया (Contacted)</option>
-            <option value="visit_scheduled">विजिट निर्धारित (Visit Scheduled)</option>
-            <option value="booked">बुक किया (Booked)</option>
-            <option value="lost">बंद / रुचि नहीं (Lost)</option>
+            <option value="ALL">{tLang(language, 'All Statuses', 'सभी स्थितियां', 'All Statuses')}</option>
+            <option value="new">{tLang(language, 'New', 'नयी लीड', 'New')}</option>
+            <option value="contacted">{tLang(language, 'Contacted', 'संपर्क किया', 'Contacted')}</option>
+            <option value="visit_scheduled">{tLang(language, 'Visit Scheduled', 'विजिट निर्धारित', 'Visit Scheduled')}</option>
+            <option value="booked">{tLang(language, 'Booked', 'बुक किया', 'Booked')}</option>
+            <option value="lost">{tLang(language, 'Lost', 'बंद / रुचि नहीं', 'Lost')}</option>
           </select>
         </div>
 
@@ -200,7 +235,7 @@ export function AdminEnquiriesTab() {
           className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-4 py-2.5 text-xs font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
         >
           <Plus className="h-4 w-4" />
-          <span>नयी लीड जोड़ें (Add Lead)</span>
+          <span>{tLang(language, 'Add Lead', 'नयी लीड जोड़ें', 'Nayi Lead Jodein')}</span>
         </button>
       </div>
 
@@ -209,7 +244,9 @@ export function AdminEnquiriesTab() {
         {filteredEnquiries.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <User className="h-12 w-12 mx-auto text-gray-500 mb-3 opacity-60" />
-            <p className="text-sm font-semibold">कोई पूछताछ नहीं मिली (No Inquiries Found)</p>
+            <p className="text-sm font-semibold">
+              {tLang(language, 'No Inquiries Found', 'कोई पूछताछ नहीं मिली', 'Koi Inquiry Nahi Mili')}
+            </p>
           </div>
         ) : (
           filteredEnquiries.map((enq) => (
@@ -257,19 +294,30 @@ export function AdminEnquiriesTab() {
                   <span className="flex items-center gap-1">
                     <UserCheck className="h-3.5 w-3.5 text-[#DFC382]" />
                     <span>
-                      सौंपा गया: {enq.assignedMemberName ? <strong className="text-white">{enq.assignedMemberName}</strong> : <span className="text-red-400">अनसाइंड (Unassigned)</span>}
+                      {tLang(language, 'Assigned to:', 'सौंपा गया:', 'Assigned:')}{' '}
+                      {enq.assignedMemberName ? (
+                        <strong className="text-white">{enq.assignedMemberName}</strong>
+                      ) : (
+                        <span className="text-red-400">{tLang(language, 'Unassigned', 'अनसाइंड', 'Unassigned')}</span>
+                      )}
                     </span>
                   </span>
 
                   {enq.budgetInr && (
-                    <span>बजट: <strong className="text-emerald-400 font-mono">₹{(enq.budgetInr / 100000).toFixed(1)} Lakh</strong></span>
+                    <span>
+                      {tLang(language, 'Budget:', 'बजट:', 'Budget:')}{' '}
+                      <strong className="text-emerald-400 font-mono">₹{(enq.budgetInr / 100000).toFixed(1)} Lakh</strong>
+                    </span>
                   )}
 
-                  <span>पंजीकृत: {new Date(enq.createdAt).toLocaleDateString('en-IN')}</span>
+                  <span>
+                    {tLang(language, 'Registered:', 'पंजीकृत:', 'Registered:')}{' '}
+                    {new Date(enq.createdAt).toLocaleDateString('en-IN')}
+                  </span>
 
                   {enq.followUps && enq.followUps.length > 0 && (
                     <span className="text-[#DFC382] font-semibold">
-                      फॉलो-अप नोट्स: {enq.followUps.length}
+                      {tLang(language, 'Follow-up Notes:', 'फॉलो-अप नोट्स:', 'Follow-up Notes:')} {enq.followUps.length}
                     </span>
                   )}
                 </div>
@@ -281,7 +329,9 @@ export function AdminEnquiriesTab() {
                       <div key={flw.id} className="text-[11px] text-gray-300">
                         <span className="text-gray-400 font-mono">{flw.date}:</span> {flw.summary}
                         {flw.nextFollowUpDate && (
-                          <span className="text-amber-400 ml-2">(अगला फॉलो-अप: {flw.nextFollowUpDate})</span>
+                          <span className="text-amber-400 ml-2">
+                            ({tLang(language, 'Next follow-up:', 'अगला फॉलो-अप:', 'Next follow-up:')} {flw.nextFollowUpDate})
+                          </span>
                         )}
                       </div>
                     ))}
@@ -296,11 +346,11 @@ export function AdminEnquiriesTab() {
                   onChange={(e) => updateEnquiryStatus(enq.id, e.target.value as ClientEnquiry['status'])}
                   className="rounded-xl border border-white/10 bg-[#050A17] px-2.5 py-1.5 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
                 >
-                  <option value="new">New</option>
-                  <option value="contacted">Contacted</option>
-                  <option value="visit_scheduled">Visit Scheduled</option>
-                  <option value="booked">Booked</option>
-                  <option value="lost">Lost</option>
+                  <option value="new">{tLang(language, 'New', 'नयी लीड', 'New')}</option>
+                  <option value="contacted">{tLang(language, 'Contacted', 'संपर्क किया', 'Contacted')}</option>
+                  <option value="visit_scheduled">{tLang(language, 'Visit Scheduled', 'विजिट निर्धारित', 'Visit Scheduled')}</option>
+                  <option value="booked">{tLang(language, 'Booked', 'बुक किया', 'Booked')}</option>
+                  <option value="lost">{tLang(language, 'Lost', 'बंद / रुचि नहीं', 'Lost')}</option>
                 </select>
 
                 <button
@@ -310,21 +360,32 @@ export function AdminEnquiriesTab() {
                   }}
                   className="rounded-xl border border-[#C7A35A]/40 bg-[#C7A35A]/10 px-3 py-1.5 text-xs font-semibold text-[#DFC382] hover:bg-[#C7A35A]/20 transition"
                 >
-                  असाइन करें
+                  {tLang(language, 'Assign', 'असाइन करें', 'Assign Karein')}
                 </button>
 
                 <button
                   onClick={() => setFollowUpEnquiry(enq)}
                   className="rounded-xl border border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-300 hover:bg-white/10 transition"
                 >
-                  फॉलो-अप जोड़ें
+                  {tLang(language, 'Add Follow-up', 'फॉलो-अप जोड़ें', 'Follow-up Jodein')}
                 </button>
 
                 <button
                   onClick={async () => {
-                    if (confirm(`क्या आप लीड "${enq.clientName}" को हटाना चाहते हैं?`)) {
+                    if (
+                      confirm(
+                        tLang(
+                          language,
+                          `Are you sure you want to delete lead "${enq.clientName}"?`,
+                          `क्या आप लीड "${enq.clientName}" को हटाना चाहते हैं?`,
+                          `Kya aap lead "${enq.clientName}" delete karna chahte hain?`
+                        )
+                      )
+                    ) {
                       await deleteEnquiry(enq.id);
-                      setActionNotice({ text: 'लीड हटा दी गई।' });
+                      setActionNotice({
+                        text: tLang(language, 'Lead deleted.', 'लीड हटा दी गई।', 'Lead delete ho gayi.')
+                      });
                     }
                   }}
                   className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/20 transition"
@@ -341,19 +402,23 @@ export function AdminEnquiriesTab() {
       {assigningEnquiry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-3xl border border-[#C7A35A]/50 bg-[#0B1734] p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-serif font-bold text-white">लीड सौंपें (Assign Lead)</h3>
+            <h3 className="text-base font-serif font-bold text-white">
+              {tLang(language, 'Assign Lead', 'लीड सौंपें', 'Lead Assign Karein')}
+            </h3>
             <p className="text-xs text-gray-300">
-              ग्राहक: <strong className="text-white">{assigningEnquiry.clientName}</strong> ({assigningEnquiry.clientPhone})
+              {tLang(language, 'Client:', 'ग्राहक:', 'Client:')} <strong className="text-white">{assigningEnquiry.clientName}</strong> ({assigningEnquiry.clientPhone})
             </p>
 
             <div>
-              <label className="block text-gray-300 text-xs font-semibold mb-1">सक्रिय सदस्य चुनें</label>
+              <label className="block text-gray-300 text-xs font-semibold mb-1">
+                {tLang(language, 'Select Active Member', 'सक्रिय सदस्य चुनें', 'Active Member Select Karein')}
+              </label>
               <select
                 value={selectedStaffId}
                 onChange={(e) => setSelectedStaffId(e.target.value)}
                 className="w-full rounded-xl border border-[#C7A35A]/50 bg-[#050A17] p-2.5 text-xs text-[#DFC382] focus:outline-none"
               >
-                <option value="">-- सदस्य चुनें --</option>
+                <option value="">{tLang(language, '-- Select Member --', '-- सदस्य चुनें --', '-- Member Select Karein --')}</option>
                 {eligibleAssignees.map((mem) => (
                   <option key={mem.id} value={mem.id}>
                     {mem.fullName} ({mem.memberId || mem.id}) • {mem.branchLocation || 'Head Office'}
@@ -365,16 +430,16 @@ export function AdminEnquiriesTab() {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={() => setAssigningEnquiry(null)}
-                className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-300"
+                className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 transition"
               >
-                रद्द करें
+                {tLang(language, 'Cancel', 'रद्द करें', 'Cancel')}
               </button>
               <button
                 onClick={handleAssignConfirm}
                 disabled={!selectedStaffId}
-                className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-5 py-2 text-xs font-bold text-[#0B1734] disabled:opacity-50"
+                className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-5 py-2 text-xs font-bold text-[#0B1734] disabled:opacity-50 hover:brightness-110 transition"
               >
-                पुष्टि करें
+                {tLang(language, 'Confirm Assignment', 'पुष्टि करें', 'Confirm Assignment')}
               </button>
             </div>
           </div>
@@ -385,18 +450,22 @@ export function AdminEnquiriesTab() {
       {followUpEnquiry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-md rounded-3xl border border-[#C7A35A]/50 bg-[#0B1734] p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-serif font-bold text-white">फॉलो-अप लॉग दर्ज करें</h3>
+            <h3 className="text-base font-serif font-bold text-white">
+              {tLang(language, 'Log Follow-up', 'फॉलो-अप लॉग दर्ज करें', 'Follow-up Log Karein')}
+            </h3>
             <p className="text-xs text-gray-300">
-              ग्राहक: <strong className="text-white">{followUpEnquiry.clientName}</strong>
+              {tLang(language, 'Client:', 'ग्राहक:', 'Client:')} <strong className="text-white">{followUpEnquiry.clientName}</strong>
             </p>
 
             <form onSubmit={handleFollowUpSubmit} className="space-y-3 text-xs">
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">बातचीत का सारांश (Summary) *</label>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  {tLang(language, 'Discussion Summary *', 'बातचीत का सारांश *', 'Discussion Summary *')}
+                </label>
                 <textarea
                   required
                   rows={3}
-                  placeholder="उदा. ग्राहक से फोन पर बात हुई, उन्होंने रविवार को रामपुर साइट पर पिलर देखने की इच्छा जताई..."
+                  placeholder={tLang(language, 'e.g. Discussed with client over phone, requested plot boundary visit this Sunday...', 'उदा. ग्राहक से फोन पर बात हुई, उन्होंने रविवार को रामपुर साइट पर पिलर देखने की इच्छा जताई...', 'e.g. Phone par baat hui, Sunday ko site visit chahte hain...')}
                   value={followUpSummary}
                   onChange={(e) => setFollowUpSummary(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2.5 text-white placeholder-gray-500 focus:outline-none"
@@ -404,7 +473,9 @@ export function AdminEnquiriesTab() {
               </div>
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">अगली फॉलो-अप तिथि (Next Date)</label>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  {tLang(language, 'Next Follow-up Date', 'अगली फॉलो-अप तिथि', 'Next Follow-up Date')}
+                </label>
                 <input
                   type="date"
                   value={nextFollowUpDate}
@@ -417,15 +488,15 @@ export function AdminEnquiriesTab() {
                 <button
                   type="button"
                   onClick={() => setFollowUpEnquiry(null)}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-300"
+                  className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 transition"
                 >
-                  रद्द करें
+                  {tLang(language, 'Cancel', 'रद्द करें', 'Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-5 py-2 text-xs font-bold text-[#0B1734]"
+                  className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-5 py-2 text-xs font-bold text-[#0B1734] hover:brightness-110 transition"
                 >
-                  सहेजें
+                  {tLang(language, 'Save Follow-up', 'सहेजें', 'Save Karein')}
                 </button>
               </div>
             </form>
@@ -437,15 +508,19 @@ export function AdminEnquiriesTab() {
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="relative w-full max-w-lg rounded-3xl border border-[#C7A35A]/50 bg-[#0B1734] p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-serif font-bold text-white">नयी ग्राहक पूछताछ पंजीकृत करें</h3>
+            <h3 className="text-base font-serif font-bold text-white">
+              {tLang(language, 'Register New Client Inquiry', 'नयी ग्राहक पूछताछ पंजीकृत करें', 'Nayi Client Inquiry Register Karein')}
+            </h3>
 
             <form onSubmit={handleCreateEnquiry} className="space-y-3 text-xs">
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">ग्राहक का नाम *</label>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  {tLang(language, 'Client Name *', 'ग्राहक का नाम *', 'Client Name *')}
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="उदा. श्री रामेश्वर नाथ त्रिपाठी"
+                  placeholder={tLang(language, 'e.g. Rameshwar Nath Tripathi', 'उदा. श्री रामेश्वर नाथ त्रिपाठी', 'e.g. Rameshwar Nath Tripathi')}
                   value={newClientName}
                   onChange={(e) => setNewClientName(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2.5 text-white placeholder-gray-500 focus:outline-none"
@@ -454,7 +529,9 @@ export function AdminEnquiriesTab() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">फ़ोन नंबर *</label>
+                  <label className="block text-gray-300 font-semibold mb-1">
+                    {tLang(language, 'Phone Number *', 'फ़ोन नंबर *', 'Phone Number *')}
+                  </label>
                   <input
                     type="tel"
                     required
@@ -465,7 +542,9 @@ export function AdminEnquiriesTab() {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">अनुमानित बजट (₹)</label>
+                  <label className="block text-gray-300 font-semibold mb-1">
+                    {tLang(language, 'Estimated Budget (₹)', 'अनुमानित बजट (₹)', 'Estimated Budget (₹)')}
+                  </label>
                   <input
                     type="number"
                     value={newBudget}
@@ -476,7 +555,9 @@ export function AdminEnquiriesTab() {
               </div>
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">ईमेल (वैकल्पिक)</label>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  {tLang(language, 'Email (Optional)', 'ईमेल (वैकल्पिक)', 'Email (Optional)')}
+                </label>
                 <input
                   type="email"
                   placeholder="client@gmail.com"
@@ -487,10 +568,12 @@ export function AdminEnquiriesTab() {
               </div>
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">प्राथमिक आवश्यकता / विवरण</label>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  {tLang(language, 'Requirement / Notes', 'प्राथमिक आवश्यकता / विवरण', 'Requirement / Notes')}
+                </label>
                 <textarea
                   rows={2}
-                  placeholder="कॉर्नर प्लॉट, 30 फीट मुख्य सड़क, दाखिल-खारिज आदि..."
+                  placeholder={tLang(language, 'Corner plot, 30ft main road, registry mutation, etc.', 'कॉर्नर प्लॉट, 30 फीट मुख्य सड़क, दाखिल-खारिज आदि...', 'Corner plot, 30ft road, dakhil-kharij etc.')}
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2.5 text-white placeholder-gray-500 focus:outline-none"
@@ -501,15 +584,15 @@ export function AdminEnquiriesTab() {
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-300"
+                  className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-white/5 transition"
                 >
-                  रद्द करें
+                  {tLang(language, 'Cancel', 'रद्द करें', 'Cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-5 py-2 text-xs font-bold text-[#0B1734]"
+                  className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-5 py-2 text-xs font-bold text-[#0B1734] hover:brightness-110 transition"
                 >
-                  लीड जोड़ें
+                  {tLang(language, 'Add Lead', 'लीड जोड़ें', 'Lead Jodein')}
                 </button>
               </div>
             </form>

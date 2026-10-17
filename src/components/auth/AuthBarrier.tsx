@@ -20,10 +20,10 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
 
   const roleText =
     requiredRole === 'admin'
-      ? { en: 'Super Admin / Sub Admin Control Centre', hi: 'प्रशासनिक नियंत्रण केंद्र (Admin Portal)' }
+      ? { en: 'Super Admin Control Centre', hi: 'प्रशासनिक नियंत्रण केंद्र', hinglish: 'Super Admin Control Centre' }
       : requiredRole === 'member'
-      ? { en: 'Associate & Team Management Dashboard', hi: 'एसोसिएट एवं टीम प्रबंधन डैशबोर्ड (Member Portal)' }
-      : { en: 'Buyer & Investor Client Portal', hi: 'क्रेता एवं निवेशक पोर्टल (Buyer Portal)' };
+      ? { en: 'Associate & Team Management Dashboard', hi: 'एसोसिएट एवं टीम प्रबंधन डैशबोर्ड', hinglish: 'Associate & Team Management Dashboard' }
+      : { en: 'Buyer & Investor Client Portal', hi: 'क्रेता एवं निवेशक पोर्टल', hinglish: 'Buyer & Investor Client Portal' };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-16">
@@ -33,11 +33,11 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
         </div>
 
         <span className="mt-4 inline-block rounded-full border border-[#C7A35A]/30 bg-[#C7A35A]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#DFC382]">
-          Authentication Required / प्रमाणीकरण आवश्यक
+          {language === 'hi' ? 'प्रमाणीकरण आवश्यक' : language === 'hinglish' ? 'Authentication Zaroori Hai' : 'Authentication Required'}
         </span>
 
         <h2 className="mt-3 font-serif text-xl sm:text-2xl font-bold text-white">
-          {language === 'hi' ? roleText.hi : roleText.en}
+          {language === 'hi' ? roleText.hi : language === 'hinglish' ? roleText.hinglish : roleText.en}
         </h2>
 
         <p className="mt-2 text-xs sm:text-sm text-gray-300 leading-relaxed">
@@ -54,7 +54,7 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
             className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-3 text-xs sm:text-sm font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
           >
             <KeyRound className="h-4 w-4" />
-            <span>{language === 'hi' ? 'लॉगिन करें' : 'Sign In Now'}</span>
+            <span>{language === 'hi' ? 'लॉगिन करें' : language === 'hinglish' ? 'Login Karein' : 'Sign In Now'}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
 
@@ -63,7 +63,7 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
             className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-xs sm:text-sm font-semibold text-gray-300 hover:bg-white/10 hover:text-white transition"
           >
             <Home className="h-4 w-4" />
-            <span>{language === 'hi' ? 'मुख्य पृष्ठ पर लौटें' : 'Back to Home'}</span>
+            <span>{language === 'hi' ? 'मुख्य पृष्ठ पर लौटें' : language === 'hinglish' ? 'Home Par Jaayein' : 'Back to Home'}</span>
           </Link>
         </div>
       </div>
@@ -88,16 +88,18 @@ export function UnauthorizedBarrier({
         </div>
 
         <span className="mt-4 inline-block rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-red-400">
-          Access Restricted / अनधिकृत प्रवेश
+          {language === 'hi' ? 'अनधिकृत प्रवेश' : language === 'hinglish' ? 'Access Restricted' : 'Access Restricted'}
         </span>
 
         <h2 className="mt-2 font-serif text-xl font-bold text-white">
-          {language === 'hi' ? 'अनुमति अस्वीकृत' : 'Permission Denied'}
+          {language === 'hi' ? 'अनुमति अस्वीकृत' : language === 'hinglish' ? 'Permission Denied' : 'Permission Denied'}
         </h2>
 
         <p className="mt-2 text-xs sm:text-sm text-gray-300 leading-relaxed">
           {language === 'hi'
             ? `आप वर्तमान में ${currentRole} के रूप में लॉगिन हैं। इस पृष्ठ को देखने के लिए ${requiredRole} भूमिका आवश्यक है।`
+            : language === 'hinglish'
+            ? `Aap current time me ${currentRole} ke roop me login hain. Is page ke liye ${requiredRole} role zaroori hai.`
             : `You are logged in with role "${currentRole}". This dashboard requires "${requiredRole}" authorization.`}
         </p>
 
@@ -107,7 +109,7 @@ export function UnauthorizedBarrier({
             className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-2.5 text-xs font-bold text-[#0B1734] shadow hover:brightness-110"
           >
             <Home className="h-4 w-4" />
-            <span>Home</span>
+            <span>{language === 'hi' ? 'होम' : language === 'hinglish' ? 'Home' : 'Home'}</span>
           </Link>
         </div>
       </div>

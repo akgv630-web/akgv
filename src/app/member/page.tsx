@@ -36,6 +36,7 @@ import { MemberSiteVisitsTab } from '@/components/member/MemberSiteVisitsTab';
 import { MemberTargetsTab } from '@/components/member/MemberTargetsTab';
 import { InAppNotificationDrawer } from '@/components/common/InAppNotificationDrawer';
 import { AuthBarrier, UnauthorizedBarrier } from '@/components/auth/AuthBarrier';
+import { tLang } from '@/lib/i18n';
 
 export function MemberPortalPage() {
   const { currentUser, kitIssues, language, allProfiles, updateMember, tasks, enquiries, siteVisits, targets } = useApp();
@@ -166,14 +167,14 @@ export function MemberPortalPage() {
                 {currentUser.fullName}
               </h1>
               <span className="rounded-full bg-[#C7A35A]/20 px-3 py-0.5 text-xs font-bold text-[#DFC382] border border-[#C7A35A]/40">
-                {currentLevel.rankTitleHi} ({currentLevel.rankTitleEn})
+                {tLang(language, currentLevel.rankTitleEn, currentLevel.rankTitleHi, currentLevel.rankTitleEn)}
               </span>
               <button
                 onClick={() => setIsPhotoStudioOpen(true)}
                 className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-white/10 hover:bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#DFC382] border border-[#C7A35A]/30 transition"
               >
                 <Camera className="h-3 w-3" />
-                <span>{currentUser.avatarUrl ? 'फोटो बदलें' : 'फोटो लगाएं'}</span>
+                <span>{currentUser.avatarUrl ? tLang(language, 'Change Photo', 'फोटो बदलें', 'Photo Badlein') : tLang(language, 'Upload Photo', 'फोटो लगाएं', 'Photo Lagayein')}</span>
               </button>
             </div>
             <p className="text-xs text-gray-300 mt-1">
@@ -207,7 +208,7 @@ export function MemberPortalPage() {
           }`}
         >
           <CheckSquare className="h-4 w-4" />
-          <span>Aaj Ke Kaam (आज के काम)</span>
+          <span>{tLang(language, 'My Daily Tasks', 'आज के काम', 'Aaj Ke Kaam')}</span>
           {myPendingTasksCount > 0 && (
             <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-500/30">
               {myPendingTasksCount}
@@ -342,7 +343,7 @@ export function MemberPortalPage() {
             <AssociateIdCard
               name={currentUser.fullName}
               memberId={currentUser.memberId || 'AKGV0001'}
-              rank={`${currentLevel.rankTitleHi} (${currentLevel.rankTitleEn})`}
+              rank={tLang(language, currentLevel.rankTitleEn, currentLevel.rankTitleHi, currentLevel.rankTitleEn)}
               phone={currentUser.phone}
               email={currentUser.email}
               joinedDate="15 Jan 2026"
@@ -358,8 +359,8 @@ export function MemberPortalPage() {
               <Camera className="h-4 w-4 text-[#C7A35A]" />
               <span>
                 {currentUser.avatarUrl
-                  ? 'आईडी फोटो बदलें एवं फिल्टर लगाएं (Edit Photo & Filters)'
-                  : 'आईडी कार्ड में अपनी फोटो लगाएं (Upload ID Photo)'}
+                  ? tLang(language, 'Edit Photo & Filters', 'आईडी फोटो बदलें एवं फिल्टर लगाएं', 'Photo Badlein & Filters Lagayein')
+                  : tLang(language, 'Upload ID Photo', 'आईडी कार्ड में अपनी फोटो लगाएं', 'ID Photo Upload Karein')}
               </span>
             </button>
           </div>
@@ -539,46 +540,46 @@ export function MemberPortalPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-emerald-500/40 bg-[#0B1734] p-5 space-y-3">
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                {language === 'hi' ? 'लेवल 1 प्राप्त' : 'Level 1 Achieved'}
+                {tLang(language, 'Level 1 Achieved', 'लेवल 1 प्राप्त', 'Level 1 Achieved')}
               </span>
               <h3 className="font-serif text-lg font-bold text-white">
-                {language === 'hi' ? 'स्मार्टफोन' : 'Smartphone'}
+                {tLang(language, 'Smartphone', 'स्मार्टफोन', 'Smartphone')}
               </h3>
               <p className="text-xs text-gray-400">
-                {language === 'hi' ? 'बिजनेस टारगेट: ₹1L - ₹20L पूर्ण' : 'Business Target: ₹1L - ₹20L achieved.'}
+                {tLang(language, 'Business Target: ₹1L - ₹20L achieved.', 'बिजनेस टारगेट: ₹1L - ₹20L पूर्ण', 'Business Target: ₹1L - ₹20L complete')}
               </p>
               <span className="block text-xs font-semibold text-emerald-400">
-                {language === 'hi' ? '✓ सफलतापूर्वक वितरित' : '✓ Fulfilled & Handed Over'}
+                {tLang(language, '✓ Fulfilled & Handed Over', '✓ सफलतापूर्वक वितरित', '✓ Fulfilled & Handed Over')}
               </span>
             </div>
 
             <div className="rounded-2xl border border-emerald-500/40 bg-[#0B1734] p-5 space-y-3">
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                {language === 'hi' ? 'लेवल 2 प्राप्त' : 'Level 2 Achieved'}
+                {tLang(language, 'Level 2 Achieved', 'लेवल 2 प्राप्त', 'Level 2 Achieved')}
               </span>
               <h3 className="font-serif text-lg font-bold text-white">
-                {language === 'hi' ? 'गोवा यात्रा (ट्रिप)' : 'Goa Trip'}
+                {tLang(language, 'Goa Trip', 'गोवा यात्रा (ट्रिप)', 'Goa Trip')}
               </h3>
               <p className="text-xs text-gray-400">
-                {language === 'hi' ? 'बिजनेस टारगेट: ₹21L - ₹80L पूर्ण' : 'Business Target: ₹21L - ₹80L achieved.'}
+                {tLang(language, 'Business Target: ₹21L - ₹80L achieved.', 'बिजनेस टारगेट: ₹21L - ₹80L पूर्ण', 'Business Target: ₹21L - ₹80L complete')}
               </p>
               <span className="block text-xs font-semibold text-emerald-400">
-                {language === 'hi' ? '✓ सफलतापूर्वक वितरित' : '✓ Fulfilled & Handed Over'}
+                {tLang(language, '✓ Fulfilled & Handed Over', '✓ सफलतापूर्वक वितरित', '✓ Fulfilled & Handed Over')}
               </span>
             </div>
 
             <div className="rounded-2xl border border-[#C7A35A] bg-[#050A17] p-5 space-y-3">
               <span className="rounded-full bg-[#C7A35A]/20 px-2 py-0.5 text-[10px] font-bold text-[#DFC382]">
-                {language === 'hi' ? 'लेवल 3 (वर्तमान लक्ष्य)' : 'Level 3 (Current Milestone)'}
+                {tLang(language, 'Level 3 (Current Milestone)', 'लेवल 3 (वर्तमान लक्ष्य)', 'Level 3 (Current Goal)')}
               </span>
               <h3 className="font-serif text-lg font-bold text-white">
-                {language === 'hi' ? 'स्पोर्ट्स बाइक' : 'Sports Bike'}
+                {tLang(language, 'Sports Bike', 'स्पोर्ट्स बाइक', 'Sports Bike')}
               </h3>
               <p className="text-xs text-gray-400">
-                {language === 'hi' ? 'बिजनेस टारगेट: ₹81L - ₹1.5 Cr प्रगति पर' : 'Business Target: ₹81L - ₹1.5 Cr in progress.'}
+                {tLang(language, 'Business Target: ₹81L - ₹1.5 Cr in progress.', 'बिजनेस टारगेट: ₹81L - ₹1.5 Cr प्रगति पर', 'Business Target: ₹81L - ₹1.5 Cr progress par')}
               </p>
               <span className="block text-xs font-semibold text-[#DFC382]">
-                {language === 'hi' ? 'पात्र — दावा समीक्षाधीन' : 'Eligible — Claim under review'}
+                {tLang(language, 'Eligible — Claim under review', 'पात्र — दावा समीक्षाधीन', 'Eligible — Claim review mein')}
               </span>
             </div>
           </div>

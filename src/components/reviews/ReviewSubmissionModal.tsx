@@ -10,6 +10,7 @@ import {
   X
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 import { ReviewRecord } from '@/types';
 
 interface ReviewSubmissionModalProps {
@@ -18,7 +19,7 @@ interface ReviewSubmissionModalProps {
 }
 
 export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModalProps) {
-  const { currentUser, addReview } = useApp();
+  const { currentUser, addReview, language } = useApp();
 
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number>(0);
@@ -51,19 +52,19 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
     setErrorMsg('');
 
     if (!authorName.trim()) {
-      setErrorMsg('Please enter your full name (कृपया अपना पूरा नाम दर्ज करें).');
+      setErrorMsg(tLang(language, 'Please enter your full name.', 'कृपया अपना पूरा नाम दर्ज करें।', 'Kripya apna poora naam darj karein.'));
       return;
     }
     if (!title.trim()) {
-      setErrorMsg('Please write a short title for your review (रिव्यू का शीर्षक लिखें).');
+      setErrorMsg(tLang(language, 'Please write a short title for your review.', 'रिव्यू का शीर्षक लिखें।', 'Review ka title likhein.'));
       return;
     }
     if (comment.trim().length < 15) {
-      setErrorMsg('Please provide at least 15 characters of detailed feedback (कृपया कम से कम 15 अक्षरों में अपना अनुभव लिखें).');
+      setErrorMsg(tLang(language, 'Please provide at least 15 characters of detailed feedback.', 'कृपया कम से कम 15 अक्षरों में अपना अनुभव लिखें।', 'Kripya kam se kam 15 aksharon me apna feedback likhein.'));
       return;
     }
     if (!certifiedGenuine) {
-      setErrorMsg('Please confirm that your review is based on genuine direct experience.');
+      setErrorMsg(tLang(language, 'Please confirm that your review is based on genuine direct experience.', 'कृपया पुष्टि करें कि आपकी समीक्षा वास्तविक अनुभव पर आधारित है।', 'Kripya confirm karein ki aapka review genuine experience par based hai.'));
       return;
     }
 
@@ -105,10 +106,15 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
               <CheckCircle2 className="h-10 w-10" />
             </div>
             <h3 className="font-serif text-2xl font-bold text-white">
-              धन्यवाद! आपका रिव्यू दर्ज कर लिया गया है
+              {tLang(language, 'Thank You! Your Review Has Been Recorded', 'धन्यवाद! आपका रिव्यू दर्ज कर लिया गया है', 'Dhanyawaad! Aapka Review Submit Ho Gaya')}
             </h3>
             <p className="text-xs text-gray-300 max-w-md mx-auto">
-              Your genuine review has been successfully recorded and published to our real-time feedback registry.
+              {tLang(
+                language,
+                'Your genuine review has been successfully recorded and published to our real-time feedback registry.',
+                'आपकी वास्तविक समीक्षा दर्ज कर ली गई है और लाइव फ़ीडबैक रजिस्ट्री में प्रकाशित कर दी गई है।',
+                'Aapka genuine review real-time feedback registry me record ho gaya hai.'
+              )}
             </p>
           </div>
         ) : (
@@ -120,10 +126,15 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
                 <span>Verified Client Feedback Portal</span>
               </div>
               <h2 className="font-serif text-xl sm:text-2xl font-bold text-white">
-                Share Your Direct Experience with AKGV Infra City
+                {tLang(language, 'Share Your Direct Experience with AKGV Infra City', 'एकेजीवी इन्फ्रा सिटी के साथ अपना प्रत्यक्ष अनुभव साझा करें', 'AKGV Infra City ke sath apna experience share karein')}
               </h2>
               <p className="text-xs text-gray-400">
-                रजिस्ट्री, साइट विजिट, प्लॉट सीमांकन और शाखा सेवा पर अपना प्रामाणिक अनुभव साझा करें।
+                {tLang(
+                  language,
+                  'Share your authentic experience on registry, site visits, plot demarcation, and branch service.',
+                  'रजिस्ट्री, साइट विजिट, प्लॉट सीमांकन और शाखा सेवा पर अपना प्रामाणिक अनुभव साझा करें।',
+                  'Registry, site visit, plot demarcation aur branch service par feedback share karein.'
+                )}
               </p>
             </div>
 
@@ -137,7 +148,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
             {/* Interactive Star Rating */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2 text-center">
               <label className="text-xs font-semibold text-gray-300 block">
-                Overall Rating / आपकी रेटिंग:
+                {tLang(language, 'Overall Rating:', 'आपकी रेटिंग:', 'Aapki Rating:')}
               </label>
               <div className="flex items-center justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => {
@@ -171,7 +182,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-300 block mb-1">
-                  Full Name / आपका नाम <span className="text-[#C7A35A]">*</span>
+                  {tLang(language, 'Full Name', 'आपका नाम', 'Poora Naam')} <span className="text-[#C7A35A]">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
@@ -188,7 +199,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
 
               <div>
                 <label className="text-xs font-medium text-gray-300 block mb-1">
-                  Mobile Number / मोबाइल नंबर
+                  {tLang(language, 'Mobile Number', 'मोबाइल नंबर', 'Mobile Number')}
                 </label>
                 <input
                   type="tel"
@@ -198,7 +209,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
                   className="w-full rounded-xl border border-white/15 bg-[#050A17] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
                 />
                 <span className="text-[10px] text-gray-500 mt-0.5 block">
-                  Strictly confidential, never displayed publicly.
+                  {tLang(language, 'Strictly confidential, never displayed publicly.', 'गोपनीय रखा जाएगा, सार्वजनिक रूप से प्रदर्शित नहीं होगा।', 'Strictly confidential, publicly display nahi hoga.')}
                 </span>
               </div>
             </div>
@@ -207,34 +218,34 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-300 block mb-1">
-                  Your Association / आपका परिचय
+                  {tLang(language, 'Your Association', 'आपका परिचय', 'Aapka Parichay')}
                 </label>
                 <select
                   value={authorRole}
                   onChange={(e) => setAuthorRole(e.target.value as ReviewRecord['authorRole'])}
                   className="w-full rounded-xl border border-white/15 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
                 >
-                  <option value="buyer">Verified Plot Buyer (प्लॉट क्रेता)</option>
-                  <option value="visitor">Site Inspection Visitor (साइट दर्शक)</option>
-                  <option value="associate">Field Associate / Advisor (एसोसिएट)</option>
-                  <option value="public">General Public / Enquirer (सामान्य नागरिक)</option>
+                  <option value="buyer">{tLang(language, 'Verified Plot Buyer', 'सत्यापित प्लॉट क्रेता', 'Verified Plot Buyer')}</option>
+                  <option value="visitor">{tLang(language, 'Site Inspection Visitor', 'साइट दर्शक / आगंतुक', 'Site Visit Visitor')}</option>
+                  <option value="associate">{tLang(language, 'Field Associate / Advisor', 'फील्ड एसोसिएट / सलाहकार', 'Field Associate')}</option>
+                  <option value="public">{tLang(language, 'General Public / Enquirer', 'सामान्य नागरिक / पूछताछकर्ता', 'General Enquirer')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="text-xs font-medium text-gray-300 block mb-1">
-                  Topic / विषय
+                  {tLang(language, 'Topic / Category', 'विषय / श्रेणी', 'Topic / Category')}
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as ReviewRecord['category'])}
                   className="w-full rounded-xl border border-white/15 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
                 >
-                  <option value="plot_purchase">Plot Booking & Title (प्लॉट रजिस्ट्री)</option>
-                  <option value="site_visit">Accompanied Site Visit (साइट निरीक्षण)</option>
-                  <option value="legal_registry">Legal & Dakhil-Kharij (दाखिल-खारिज)</option>
-                  <option value="staff_support">Branch Staff Support (शाखा सहयोग)</option>
-                  <option value="corporate_trust">Developer Transparency (पारदर्शिता)</option>
+                  <option value="plot_purchase">{tLang(language, 'Plot Booking & Title Registry', 'प्लॉट बुकिंग एवं रजिस्ट्री', 'Plot Booking & Registry')}</option>
+                  <option value="site_visit">{tLang(language, 'Accompanied Site Visit', 'साइट निरीक्षण एवं विजिट', 'Accompanied Site Visit')}</option>
+                  <option value="legal_registry">{tLang(language, 'Legal & Dakhil-Kharij Mutation', 'कानूनी दस्तावेज एवं दाखिल-खारिज', 'Legal & Dakhil-Kharij')}</option>
+                  <option value="staff_support">{tLang(language, 'Branch Staff Support', 'शाखा कर्मियों का सहयोग', 'Branch Staff Support')}</option>
+                  <option value="corporate_trust">{tLang(language, 'Developer Transparency & Trust', 'डेवलपर पारदर्शिता एवं विश्वास', 'Developer Transparency')}</option>
                 </select>
               </div>
             </div>
@@ -243,7 +254,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-300 block mb-1">
-                  Branch Office Visited / शाखा कार्यालय
+                  {tLang(language, 'Branch Office Visited', 'शाखा कार्यालय', 'Branch Office Visited')}
                 </label>
                 <select
                   value={branchLocation}
@@ -258,7 +269,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
 
               <div>
                 <label className="text-xs font-medium text-gray-300 block mb-1">
-                  Plot Number (If Booked / यदि बुक किया है)
+                  {tLang(language, 'Plot Number (If Booked)', 'प्लॉट नंबर (यदि बुक किया है)', 'Plot Number (Agar book kiya hai)')}
                 </label>
                 <input
                   type="text"
@@ -273,7 +284,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
             {/* Title & Comment */}
             <div>
               <label className="text-xs font-medium text-gray-300 block mb-1">
-                Headline / मुख्य शीर्षक <span className="text-[#C7A35A]">*</span>
+                {tLang(language, 'Headline', 'मुख्य शीर्षक', 'Headline')} <span className="text-[#C7A35A]">*</span>
               </label>
               <input
                 type="text"
@@ -287,7 +298,7 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
 
             <div>
               <label className="text-xs font-medium text-gray-300 block mb-1">
-                Detailed Feedback / आपका विस्तृत अनुभव <span className="text-[#C7A35A]">*</span>
+                {tLang(language, 'Detailed Feedback', 'आपका विस्तृत अनुभव', 'Detailed Feedback')} <span className="text-[#C7A35A]">*</span>
               </label>
               <textarea
                 required
@@ -308,7 +319,12 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
                 className="mt-0.5 rounded border-white/20 bg-[#050A17] text-[#C7A35A] focus:ring-0"
               />
               <span>
-                I certify that this feedback is based on my genuine personal interaction with AKGV Infra City Private Limited. (मैं प्रमाणित करता/करती हूँ कि यह समीक्षा मेरे प्रत्यक्ष अनुभव पर आधारित है।)
+                {tLang(
+                  language,
+                  'I certify that this feedback is based on my genuine personal interaction with AKGV Infra City Private Limited.',
+                  'मैं प्रमाणित करता/करती हूँ कि यह समीक्षा मेरे प्रत्यक्ष व्यक्तिगत अनुभव पर आधारित है।',
+                  'Main certify karta/karti hoon ki ye feedback direct personal experience par based hai.'
+                )}
               </span>
             </label>
 
@@ -319,14 +335,14 @@ export function ReviewSubmissionModal({ isOpen, onClose }: ReviewSubmissionModal
                 onClick={onClose}
                 className="rounded-xl border border-white/15 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/5 transition"
               >
-                Cancel / रद्द करें
+                {tLang(language, 'Cancel', 'रद्द करें', 'Cancel')}
               </button>
               <button
                 type="submit"
                 className="rounded-xl bg-gradient-to-r from-[#C7A35A] via-[#DFC382] to-[#9E7E36] px-6 py-2.5 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 transition flex items-center gap-1.5"
               >
                 <ShieldCheck className="h-4 w-4" />
-                <span>Submit Real Review / रिव्यू सबमिट करें</span>
+                <span>{tLang(language, 'Submit Real Review', 'रिव्यू सबमिट करें', 'Review Submit Karein')}</span>
               </button>
             </div>
           </form>

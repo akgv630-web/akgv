@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 import { TaskCategory, TaskPriority, TaskReminder, TaskRelatedRecordType } from '@/types';
 
 export function AdminTaskCenter() {
@@ -35,7 +36,8 @@ export function AdminTaskCenter() {
     bookings,
     gpsEvidences,
     plots,
-    currentUser
+    currentUser,
+    language
   } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,17 +100,26 @@ export function AdminTaskCenter() {
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setActionNotice({ text: 'कृपया कार्य का शीर्षक (Title) दर्ज करें।', isError: true });
+      setActionNotice({
+        text: tLang(language, 'Please enter task title.', 'कृपया कार्य का शीर्षक दर्ज करें।', 'Kripya task ka title darj karein.'),
+        isError: true
+      });
       return;
     }
     if (!assigneeId) {
-      setActionNotice({ text: 'कृपया कार्य सौंपने के लिए सदस्य का चयन करें।', isError: true });
+      setActionNotice({
+        text: tLang(language, 'Please select a member to assign.', 'कृपया कार्य सौंपने के लिए सदस्य का चयन करें।', 'Kripya task assign karne ke liye member select karein.'),
+        isError: true
+      });
       return;
     }
 
     const assignee = eligibleAssignees.find((p) => p.id === assigneeId);
     if (!assignee) {
-      setActionNotice({ text: 'चयनित सदस्य अमान्य है।', isError: true });
+      setActionNotice({
+        text: tLang(language, 'Selected member is invalid.', 'चयनित सदस्य अमान्य है।', 'Selected member invalid hai.'),
+        isError: true
+      });
       return;
     }
 
@@ -134,7 +145,14 @@ export function AdminTaskCenter() {
         createdByName: currentUser?.fullName || 'Super Admin',
       });
 
-      setActionNotice({ text: `कार्य "${newTask.title}" सफलतापूर्वक ${assignee.fullName} को सौंपा गया।` });
+      setActionNotice({
+        text: tLang(
+          language,
+          `Task "${newTask.title}" successfully assigned to ${assignee.fullName}.`,
+          `कार्य "${newTask.title}" सफलतापूर्वक ${assignee.fullName} को सौंपा गया।`,
+          `Task "${newTask.title}" safaltapoorvak ${assignee.fullName} ko assign kiya gaya.`
+        )
+      });
       setIsCreateModalOpen(false);
       // Reset Form
       setTitle('');
@@ -146,7 +164,10 @@ export function AdminTaskCenter() {
       setRelatedRecordId('');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setActionNotice({ text: `त्रुटि: ${msg}`, isError: true });
+      setActionNotice({
+        text: tLang(language, `Error: ${msg}`, `त्रुटि: ${msg}`, `Error: ${msg}`),
+        isError: true
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -180,19 +201,27 @@ export function AdminTaskCenter() {
       {/* Top Banner & KPI Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-white/10 bg-[#0B1734]/80 p-4 shadow-lg backdrop-blur-md">
-          <span className="text-xs text-gray-400 block font-medium">कुल कार्य (Total Tasks)</span>
+          <span className="text-xs text-gray-400 block font-medium">
+            {tLang(language, 'Total Tasks', 'कुल कार्य', 'Total Tasks')}
+          </span>
           <span className="text-2xl font-serif font-bold text-white mt-1 block">{totalCount}</span>
         </div>
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-lg backdrop-blur-md">
-          <span className="text-xs text-amber-300 block font-medium">लंबित कार्य (Pending)</span>
+          <span className="text-xs text-amber-300 block font-medium">
+            {tLang(language, 'Pending Tasks', 'लंबित कार्य', 'Pending Tasks')}
+          </span>
           <span className="text-2xl font-serif font-bold text-amber-400 mt-1 block">{pendingCount}</span>
         </div>
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-lg backdrop-blur-md">
-          <span className="text-xs text-emerald-300 block font-medium">पूर्ण कार्य (Completed)</span>
+          <span className="text-xs text-emerald-300 block font-medium">
+            {tLang(language, 'Completed Tasks', 'पूर्ण कार्य', 'Completed Tasks')}
+          </span>
           <span className="text-2xl font-serif font-bold text-emerald-400 mt-1 block">{completedCount}</span>
         </div>
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 shadow-lg backdrop-blur-md">
-          <span className="text-xs text-red-300 block font-medium">उच्च प्राथमिकता (Urgent/High)</span>
+          <span className="text-xs text-red-300 block font-medium">
+            {tLang(language, 'High Priority', 'उच्च प्राथमिकता', 'High Priority')}
+          </span>
           <span className="text-2xl font-serif font-bold text-red-400 mt-1 block">{urgentCount}</span>
         </div>
       </div>
@@ -219,7 +248,7 @@ export function AdminTaskCenter() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="कार्य, सदस्य या निर्देश खोजें..."
+              placeholder={tLang(language, 'Search tasks, members or instructions...', 'कार्य, सदस्य या निर्देश खोजें...', 'Tasks, members ya instructions search karein...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-[#050A17] pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
@@ -231,9 +260,9 @@ export function AdminTaskCenter() {
             onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'pending' | 'completed')}
             className="rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
           >
-            <option value="ALL">सभी स्थितियां (All Status)</option>
-            <option value="pending">लंबित (Pending)</option>
-            <option value="completed">पूर्ण (Completed)</option>
+            <option value="ALL">{tLang(language, 'All Statuses', 'सभी स्थितियां', 'All Statuses')}</option>
+            <option value="pending">{tLang(language, 'Pending', 'लंबित', 'Pending')}</option>
+            <option value="completed">{tLang(language, 'Completed', 'पूर्ण', 'Completed')}</option>
           </select>
 
           <select
@@ -241,13 +270,13 @@ export function AdminTaskCenter() {
             onChange={(e) => setCategoryFilter(e.target.value as 'ALL' | TaskCategory)}
             className="rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
           >
-            <option value="ALL">सभी श्रेणियां (All Categories)</option>
-            <option value="site_visit">साइट विजिट (Site Visit)</option>
-            <option value="client_followup">क्लाइंट फॉलो-अप (Client Follow-up)</option>
-            <option value="payment_verification">भुगतान सत्यापन (Payment Verification)</option>
-            <option value="field_inspection">फील्ड निरीक्षण (Field Inspection)</option>
-            <option value="plot">प्लॉट जानकारी (Plot Enquiry)</option>
-            <option value="general">सामान्य (General)</option>
+            <option value="ALL">{tLang(language, 'All Categories', 'सभी श्रेणियां', 'All Categories')}</option>
+            <option value="site_visit">{tLang(language, 'Site Visit', 'साइट विजिट', 'Site Visit')}</option>
+            <option value="client_followup">{tLang(language, 'Client Follow-up', 'क्लाइंट फॉलो-अप', 'Client Follow-up')}</option>
+            <option value="payment_verification">{tLang(language, 'Payment Verification', 'भुगतान सत्यापन', 'Payment Verification')}</option>
+            <option value="field_inspection">{tLang(language, 'Field Inspection', 'फील्ड निरीक्षण', 'Field Inspection')}</option>
+            <option value="plot">{tLang(language, 'Plot Enquiry', 'प्लॉट पूछताछ', 'Plot Enquiry')}</option>
+            <option value="general">{tLang(language, 'General', 'सामान्य', 'General')}</option>
           </select>
         </div>
 
@@ -256,7 +285,7 @@ export function AdminTaskCenter() {
           className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-4 py-2.5 text-xs font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
         >
           <Plus className="h-4 w-4" />
-          <span>नया कार्य बनाएं (Assign Task)</span>
+          <span>{tLang(language, 'Create Task', 'नया कार्य बनाएं', 'Naya Task Banayein')}</span>
         </button>
       </div>
 
@@ -265,9 +294,13 @@ export function AdminTaskCenter() {
         {filteredTasks.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <ListTodo className="h-12 w-12 mx-auto text-gray-500 mb-3 opacity-60" />
-            <p className="text-sm font-semibold">कोई कार्य नहीं मिला (No Tasks Found)</p>
+            <p className="text-sm font-semibold">
+              {tLang(language, 'No Tasks Found', 'कोई कार्य नहीं मिला', 'Koi Task Nahi Mila')}
+            </p>
             <p className="text-xs text-gray-500 mt-1">
-              {tasks.length === 0 ? 'अभी तक कोई कार्य नहीं सौंपा गया है।' : 'वर्तमान फ़िल्टर में कोई कार्य उपलब्ध नहीं है।'}
+              {tasks.length === 0
+                ? tLang(language, 'No tasks assigned yet.', 'अभी तक कोई कार्य नहीं सौंपा गया है।', 'Abhi tak koi task assign nahi kiya gaya hai.')
+                : tLang(language, 'No tasks available in current filter.', 'वर्तमान फ़िल्टर में कोई कार्य उपलब्ध नहीं है।', 'Current filter me koi task available nahi hai.')}
             </p>
           </div>
         ) : (
@@ -334,19 +367,19 @@ export function AdminTaskCenter() {
 
                   {task.completionNotes && (
                     <div className="ml-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2 text-xs text-emerald-300">
-                      <strong>कार्य पूर्ण विवरण:</strong> {task.completionNotes}
+                      <strong>{tLang(language, 'Completion Notes:', 'कार्य पूर्ण विवरण:', 'Completion Notes:')}</strong> {task.completionNotes}
                     </div>
                   )}
 
                   <div className="flex flex-wrap items-center gap-4 text-[11px] text-gray-400 pl-7 pt-1">
                     <span className="flex items-center gap-1">
                       <UserCheck className="h-3.5 w-3.5 text-[#DFC382]" />
-                      <span>सौंपा गया: <strong className="text-white">{task.assignedToName}</strong> ({task.assignedToMemberId})</span>
+                      <span>{tLang(language, 'Assigned to:', 'सौंपा गया:', 'Assigned:')} <strong className="text-white">{task.assignedToName}</strong> ({task.assignedToMemberId})</span>
                     </span>
 
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                      <span>अंतिम तिथि: {task.dueDate} {task.dueTime ? `• ${task.dueTime}` : ''}</span>
+                      <span>{tLang(language, 'Due:', 'अंतिम तिथि:', 'Due:')} {task.dueDate} {task.dueTime ? `• ${task.dueTime}` : ''}</span>
                     </span>
 
                     {task.targetRoute && (
@@ -355,7 +388,7 @@ export function AdminTaskCenter() {
                         className="inline-flex items-center gap-1 text-[#DFC382] hover:underline font-semibold"
                       >
                         <ExternalLink className="h-3 w-3" />
-                        <span>संबंधित रिकॉर्ड खोलें (Open Deep Link)</span>
+                        <span>{tLang(language, 'Open Related Record', 'संबंधित रिकॉर्ड खोलें', 'Related Record Kholein')}</span>
                       </Link>
                     )}
                   </div>
@@ -364,13 +397,15 @@ export function AdminTaskCenter() {
                 <div className="flex items-center gap-2 self-end md:self-center pl-7 md:pl-0">
                   <button
                     onClick={async () => {
-                      if (confirm(`क्या आप कार्य "${task.title}" को हटाना चाहते हैं?`)) {
+                      if (confirm(tLang(language, `Are you sure you want to delete task "${task.title}"?`, `क्या आप कार्य "${task.title}" को हटाना चाहते हैं?`, `Kya aap task "${task.title}" delete karna chahte hain?`))) {
                         await deleteTask(task.id);
-                        setActionNotice({ text: 'कार्य सफलतापूर्वक हटा दिया गया।' });
+                        setActionNotice({
+                          text: tLang(language, 'Task successfully deleted.', 'कार्य सफलतापूर्वक हटा दिया गया।', 'Task delete ho gaya.')
+                        });
                       }
                     }}
                     className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/20 transition"
-                    title="कार्य हटाएं"
+                    title={tLang(language, 'Delete Task', 'कार्य हटाएं', 'Task Delete Karein')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -391,8 +426,12 @@ export function AdminTaskCenter() {
                   <ListTodo className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-serif font-bold text-white">नया कार्य सौंपें (Assign Daily Task)</h2>
-                  <p className="text-xs text-gray-400">सदस्य को कार्य सौंपें और संबंधित रिकॉर्ड को लिंक करें।</p>
+                  <h2 className="text-lg font-serif font-bold text-white">
+                    {tLang(language, 'Assign Daily Task', 'नया कार्य सौंपें', 'Naya Task Assign Karein')}
+                  </h2>
+                  <p className="text-xs text-gray-400">
+                    {tLang(language, 'Assign task to a team member and link database records.', 'सदस्य को कार्य सौंपें और संबंधित रिकॉर्ड को लिंक करें।', 'Member ko task assign karein aur record link karein.')}
+                  </p>
                 </div>
               </div>
               <button
@@ -406,12 +445,12 @@ export function AdminTaskCenter() {
             <form onSubmit={handleCreateTask} className="space-y-4 text-xs">
               <div>
                 <label className="block text-gray-300 font-semibold mb-1">
-                  कार्य का शीर्षक (Task Title) <span className="text-red-400">*</span>
+                  {tLang(language, 'Task Title', 'कार्य का शीर्षक', 'Task Title')} <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="उदा. कैंट स्टेशन से ग्राहक को पिकअप कर रामपुर साइट पर ले जाएं"
+                  placeholder={tLang(language, 'e.g. Escort client from Cantt station to Rampur site', 'उदा. कैंट स्टेशन से ग्राहक को पिकअप कर रामपुर साइट पर ले जाएं', 'e.g. Cantt station se client pickup karke Rampur site le jayein')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
@@ -419,10 +458,12 @@ export function AdminTaskCenter() {
               </div>
 
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">विस्तृत निर्देश (Instructions & Notes)</label>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  {tLang(language, 'Instructions & Notes', 'विस्तृत निर्देश', 'Instructions & Notes')}
+                </label>
                 <textarea
                   rows={3}
-                  placeholder="ग्राहक का नाम, प्लॉट की प्राथमिकता, वाहन नंबर और विशेष विवरण यहाँ दर्ज करें..."
+                  placeholder={tLang(language, 'Enter client details, plot preference, vehicle details and notes...', 'ग्राहक का नाम, प्लॉट की प्राथमिकता, वाहन नंबर और विशेष विवरण यहाँ दर्ज करें...', 'Client name, plot preference, vehicle number aur notes darj karein...')}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
@@ -432,36 +473,36 @@ export function AdminTaskCenter() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-300 font-semibold mb-1">
-                    कार्य श्रेणी (Task Category) <span className="text-red-400">*</span>
+                    {tLang(language, 'Task Category', 'कार्य श्रेणी', 'Task Category')} <span className="text-red-400">*</span>
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as TaskCategory)}
                     className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                   >
-                    <option value="site_visit">साइट विजिट (Site Visit Escort)</option>
-                    <option value="client_followup">क्लाइंट फॉलो-अप (Client Follow-up)</option>
-                    <option value="payment_verification">भुगतान सत्यापन (Payment Verification)</option>
-                    <option value="field_inspection">फील्ड जीपीएस सीमांकन (Field GPS Inspection)</option>
-                    <option value="plot">प्लॉट पूछताछ (Plot Enquiry)</option>
-                    <option value="booking">बुकिंग फॉलो-अप (Booking Follow-up)</option>
-                    <option value="general">सामान्य कार्य (General Operations)</option>
+                    <option value="site_visit">{tLang(language, 'Site Visit Escort', 'साइट विजिट', 'Site Visit Escort')}</option>
+                    <option value="client_followup">{tLang(language, 'Client Follow-up', 'क्लाइंट फॉलो-अप', 'Client Follow-up')}</option>
+                    <option value="payment_verification">{tLang(language, 'Payment Verification', 'भुगतान सत्यापन', 'Payment Verification')}</option>
+                    <option value="field_inspection">{tLang(language, 'Field GPS Inspection', 'फील्ड जीपीएस सीमांकन', 'Field GPS Inspection')}</option>
+                    <option value="plot">{tLang(language, 'Plot Enquiry', 'प्लॉट पूछताछ', 'Plot Enquiry')}</option>
+                    <option value="booking">{tLang(language, 'Booking Follow-up', 'बुकिंग फॉलो-अप', 'Booking Follow-up')}</option>
+                    <option value="general">{tLang(language, 'General Operations', 'सामान्य कार्य', 'General Operations')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-gray-300 font-semibold mb-1">
-                    प्राथमिकता (Priority Level) <span className="text-red-400">*</span>
+                    {tLang(language, 'Priority Level', 'प्राथमिकता', 'Priority Level')} <span className="text-red-400">*</span>
                   </label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high' | 'urgent')}
                     className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white focus:border-[#C7A35A] focus:outline-none"
                   >
-                    <option value="low">कम (Low)</option>
-                    <option value="medium">मध्यम (Medium)</option>
-                    <option value="high">उच्च (High)</option>
-                    <option value="urgent">अति आवश्यक (Urgent)</option>
+                    <option value="low">{tLang(language, 'Low', 'कम', 'Low')}</option>
+                    <option value="medium">{tLang(language, 'Medium', 'मध्यम', 'Medium')}</option>
+                    <option value="high">{tLang(language, 'High', 'उच्च', 'High')}</option>
+                    <option value="urgent">{tLang(language, 'Urgent', 'अति आवश्यक', 'Urgent')}</option>
                   </select>
                 </div>
               </div>
@@ -469,7 +510,7 @@ export function AdminTaskCenter() {
               {/* Assignee Picker */}
               <div>
                 <label className="block text-gray-300 font-semibold mb-1">
-                  किसे सौंपना है? (Assign To Member) <span className="text-red-400">*</span>
+                  {tLang(language, 'Assign To Member', 'किसे सौंपना है?', 'Kisko Assign Karna Hai?')} <span className="text-red-400">*</span>
                 </label>
                 <select
                   required
@@ -477,7 +518,7 @@ export function AdminTaskCenter() {
                   onChange={(e) => setAssigneeId(e.target.value)}
                   className="w-full rounded-xl border border-[#C7A35A]/50 bg-[#050A17] px-3.5 py-2.5 text-[#DFC382] font-semibold focus:border-[#C7A35A] focus:outline-none"
                 >
-                  <option value="">-- सक्रिय सदस्य चुनें (Select Active Member) --</option>
+                  <option value="">{tLang(language, '-- Select Active Member --', '-- सक्रिय सदस्य चुनें --', '-- Active Member Select Karein --')}</option>
                   {eligibleAssignees.map((mem) => (
                     <option key={mem.id} value={mem.id}>
                       {mem.fullName} ({mem.memberId || mem.id}) • {mem.role.toUpperCase()} • {mem.branchLocation || 'Head Office'}
@@ -489,11 +530,13 @@ export function AdminTaskCenter() {
               {/* Related Record Attachment & Deep Link Generator */}
               <div className="rounded-2xl border border-white/10 bg-[#050A17] p-4 space-y-3">
                 <label className="block text-gray-300 font-semibold">
-                  संबंधित रिकॉर्ड लिंक करें (Attach Related Database Record)
+                  {tLang(language, 'Attach Related Database Record', 'संबंधित रिकॉर्ड लिंक करें', 'Related Record Link Karein')}
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <span className="text-[11px] text-gray-400 block mb-1">रिकॉर्ड प्रकार (Record Type)</span>
+                    <span className="text-[11px] text-gray-400 block mb-1">
+                      {tLang(language, 'Record Type', 'रिकॉर्ड प्रकार', 'Record Type')}
+                    </span>
                     <select
                       value={relatedRecordType}
                       onChange={(e) => {
@@ -503,25 +546,27 @@ export function AdminTaskCenter() {
                       }}
                       className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white focus:border-[#C7A35A] focus:outline-none"
                     >
-                      <option value="general">कोई रिकॉर्ड नहीं (General Task)</option>
-                      <option value="site_visit">साइट विजिट (Site Visit)</option>
-                      <option value="enquiry">क्लाइंट लीड (Client Enquiry)</option>
-                      <option value="payment">भुगतान रिकॉर्ड (Payment Record)</option>
-                      <option value="booking">बुकिंग रिकॉर्ड (Plot Booking)</option>
-                      <option value="field_inspection">फील्ड जीपीएस रिकॉर्ड (Field GPS)</option>
-                      <option value="plot">प्लॉट मास्टर प्लान (Plot Master Plan)</option>
+                      <option value="general">{tLang(language, 'None (General Task)', 'कोई रिकॉर्ड नहीं (सामान्य कार्य)', 'None (General Task)')}</option>
+                      <option value="site_visit">{tLang(language, 'Site Visit', 'साइट विजिट', 'Site Visit')}</option>
+                      <option value="enquiry">{tLang(language, 'Client Enquiry', 'क्लाइंट पूछताछ', 'Client Enquiry')}</option>
+                      <option value="payment">{tLang(language, 'Payment Record', 'भुगतान रिकॉर्ड', 'Payment Record')}</option>
+                      <option value="booking">{tLang(language, 'Plot Booking', 'प्लॉट बुकिंग', 'Plot Booking')}</option>
+                      <option value="field_inspection">{tLang(language, 'Field GPS', 'फील्ड जीपीएस', 'Field GPS')}</option>
+                      <option value="plot">{tLang(language, 'Plot Master Plan', 'प्लॉट मास्टर प्लान', 'Plot Master Plan')}</option>
                     </select>
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-gray-400 block mb-1">विशिष्ट रिकॉर्ड चुनें (Select Record)</span>
+                    <span className="text-[11px] text-gray-400 block mb-1">
+                      {tLang(language, 'Select Specific Record', 'विशिष्ट रिकॉर्ड चुनें', 'Specific Record Select Karein')}
+                    </span>
                     <select
                       value={relatedRecordId}
                       onChange={(e) => setRelatedRecordId(e.target.value)}
                       disabled={relatedRecordType === 'general'}
                       className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-white focus:border-[#C7A35A] focus:outline-none disabled:opacity-50"
                     >
-                      <option value="none">-- कोई विशिष्ट रिकॉर्ड नहीं --</option>
+                      <option value="none">{tLang(language, '-- None Selected --', '-- कोई विशिष्ट रिकॉर्ड नहीं --', '-- None Selected --')}</option>
                       {relatedRecordType === 'site_visit' &&
                         siteVisits.map((v) => (
                           <option key={v.id} value={v.id}>
@@ -565,7 +610,7 @@ export function AdminTaskCenter() {
                 {calculatedRoute && (
                   <div className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 p-2 text-[11px] text-gray-300">
                     <ExternalLink className="h-3.5 w-3.5 text-[#DFC382]" />
-                    <span>डीप-लिंक रूट: <code className="text-[#DFC382] font-mono">{calculatedRoute}</code></span>
+                    <span>{tLang(language, 'Deep-link Route:', 'डीप-लिंक रूट:', 'Deep-link Route:')} <code className="text-[#DFC382] font-mono">{calculatedRoute}</code></span>
                   </div>
                 )}
               </div>
@@ -574,7 +619,7 @@ export function AdminTaskCenter() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-300 font-semibold mb-1">
-                    समाप्ति तिथि (Due Date) <span className="text-red-400">*</span>
+                    {tLang(language, 'Due Date', 'समाप्ति तिथि', 'Due Date')} <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="date"
@@ -585,10 +630,12 @@ export function AdminTaskCenter() {
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">समाप्ति समय (Due Time)</label>
+                  <label className="block text-gray-300 font-semibold mb-1">
+                    {tLang(language, 'Due Time', 'समाप्ति समय', 'Due Time')}
+                  </label>
                   <input
                     type="text"
-                    placeholder="उदा. 11:00 AM या 04:00 PM"
+                    placeholder={tLang(language, 'e.g. 11:00 AM or 04:00 PM', 'उदा. 11:00 AM या 04:00 PM', 'e.g. 11:00 AM ya 04:00 PM')}
                     value={dueTime}
                     onChange={(e) => setDueTime(e.target.value)}
                     className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
@@ -600,13 +647,23 @@ export function AdminTaskCenter() {
               {selectedAssignee && (
                 <div className="rounded-2xl border border-[#C7A35A]/40 bg-[#050A17] p-3 text-xs space-y-1">
                   <span className="text-[10px] text-[#DFC382] uppercase font-bold tracking-wider">
-                    असाइनमेंट पूर्वावलोकन (Preview)
+                    {tLang(language, 'Assignment Preview', 'असाइनमेंट पूर्वावलोकन', 'Assignment Preview')}
                   </span>
                   <p className="text-white">
-                    यह कार्य <strong className="text-[#DFC382]">{selectedAssignee.fullName}</strong> ({selectedAssignee.memberId || selectedAssignee.id}) को सौंपा जाएगा।
+                    {tLang(
+                      language,
+                      `This task will be assigned to ${selectedAssignee.fullName} (${selectedAssignee.memberId || selectedAssignee.id}).`,
+                      `यह कार्य ${selectedAssignee.fullName} (${selectedAssignee.memberId || selectedAssignee.id}) को सौंपा जाएगा।`,
+                      `Ye task ${selectedAssignee.fullName} (${selectedAssignee.memberId || selectedAssignee.id}) ko assign hoga.`
+                    )}
                   </p>
                   <p className="text-gray-400 text-[11px]">
-                    वे अपने सदस्य पोर्टल के &quot;Aaj Ke Kaam&quot; टैब में इस कार्य को देखकर पूरा कर सकेंगे।
+                    {tLang(
+                      language,
+                      'They will see this in their member portal "My Tasks" section to complete.',
+                      'वे अपने सदस्य पोर्टल के "आज के काम" टैब में इस कार्य को देखकर पूरा कर सकेंगे।',
+                      'Wo apne member portal ke "Aaj Ke Kaam" tab me ise dekh kar complete kar sakenge.'
+                    )}
                   </p>
                 </div>
               )}
@@ -617,14 +674,16 @@ export function AdminTaskCenter() {
                   onClick={() => setIsCreateModalOpen(false)}
                   className="rounded-xl border border-white/10 px-5 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/10"
                 >
-                  रद्द करें (Cancel)
+                  {tLang(language, 'Cancel', 'रद्द करें', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-6 py-2.5 text-xs font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition disabled:opacity-50"
                 >
-                  {isSubmitting ? 'सहेज रहे हैं...' : 'कार्य असाइन करें (Confirm & Save)'}
+                  {isSubmitting
+                    ? tLang(language, 'Saving...', 'सहेज रहे हैं...', 'Save ho raha hai...')
+                    : tLang(language, 'Confirm & Assign Task', 'कार्य असाइन करें', 'Confirm & Assign Task')}
                 </button>
               </div>
             </form>

@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 import { Plot, PlotStatus } from '@/types';
 import { HOUSE_MODELS, PROJECT_LOCATIONS } from '@/data/groundTruth';
 
@@ -70,7 +71,7 @@ function PlotManagementModalContent({
   plotToEdit,
   onSuccessNotice
 }: PlotManagementModalProps) {
-  const { plots, addPlot, updatePlot } = useApp();
+  const { plots, addPlot, updatePlot, language } = useApp();
   const isEditing = !!plotToEdit;
 
   const initialCoords = plotToEdit
@@ -246,12 +247,14 @@ function PlotManagementModalContent({
               <span>Master Plan Plot Governance Engine</span>
             </div>
             <h2 className="font-serif text-xl sm:text-2xl font-bold text-white">
-              {isEditing ? `Edit Demarcated Plot #${plotToEdit.plotNumber}` : 'Register New Demarcated Plot (नया प्लॉट जोड़ें)'}
+              {isEditing
+                ? tLang(language, `Edit Demarcated Plot #${plotToEdit.plotNumber}`, `भूखंड #${plotToEdit.plotNumber} विवरण संपादित करें`, `Edit Plot #${plotToEdit.plotNumber}`)
+                : tLang(language, 'Register New Demarcated Plot', 'नया भूखंड पंजीकृत करें', 'Naya Plot Register Karein')}
             </h2>
             <p className="text-xs text-gray-400">
               {isEditing
-                ? 'Update dimensions, road width, base pricing, and status on this plot.'
-                : 'Add a new plot to the 1:500 scale master plan with instant blueprint calculation and inventory activation.'}
+                ? tLang(language, 'Update dimensions, road width, base pricing, and status on this plot.', 'इस भूखंड के आयाम, सड़क चौड़ाई, आधार मूल्य एवं स्थिति अपडेट करें।', 'Is plot ki dimensions, road width, base price aur status update karein.')
+                : tLang(language, 'Add a new plot to the 1:500 scale master plan with instant blueprint calculation and inventory activation.', 'मास्टर प्लान में तुरंत ब्लूप्रिंट गणना और इन्वेंट्री सक्रियण के साथ नया प्लॉट जोड़ें।', 'Master plan me instant calculation ke sath naya plot add karein.')}
             </p>
           </div>
 
@@ -266,7 +269,7 @@ function PlotManagementModalContent({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-medium text-gray-300 block mb-1">
-                Select Block / ब्लॉक <span className="text-[#C7A35A]">*</span>
+                {tLang(language, 'Select Block', 'ब्लॉक चुनें', 'Block Select Karein')} <span className="text-[#C7A35A]">*</span>
               </label>
               <div className="flex gap-2">
                 {['A', 'B', 'C', 'D'].map((b) => (
@@ -288,7 +291,7 @@ function PlotManagementModalContent({
 
             <div>
               <label className="text-xs font-medium text-gray-300 block mb-1">
-                Plot Number / प्लॉट नंबर <span className="text-[#C7A35A]">*</span>
+                {tLang(language, 'Plot Number', 'प्लॉट नंबर', 'Plot Number')} <span className="text-[#C7A35A]">*</span>
               </label>
               <input
                 type="text"
@@ -304,7 +307,7 @@ function PlotManagementModalContent({
               />
               {duplicateDetected && (
                 <span className="text-[10px] text-red-400 block mt-1">
-                  ⚠️ This plot number already exists in inventory!
+                  ⚠️ {tLang(language, 'This plot number already exists in inventory!', 'यह प्लॉट नंबर पहले से इन्वेंट्री में मौजूद है!', 'Ye plot number pehle se inventory me hai!')}
                 </span>
               )}
             </div>
@@ -313,7 +316,7 @@ function PlotManagementModalContent({
           {/* Project Location Selection */}
           <div>
             <label className="text-xs font-medium text-gray-300 block mb-1">
-              Project Location / साइट स्थान
+              {tLang(language, 'Project Location', 'साइट स्थान', 'Project Location')}
             </label>
             <select
               value={locationId}
@@ -474,17 +477,17 @@ function PlotManagementModalContent({
 
             <div>
               <label className="text-xs font-medium text-gray-300 block mb-1">
-                Road Facing / दिशा
+                {tLang(language, 'Road Facing', 'दिशा', 'Road Facing')}
               </label>
               <select
                 value={roadFacing}
                 onChange={(e) => setRoadFacing(e.target.value)}
                 className="w-full rounded-xl border border-white/15 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
               >
-                <option value="North">North (उत्तरमुखी)</option>
-                <option value="East">East (पूर्वमुखी - Vastu)</option>
-                <option value="West">West (पश्चिममुखी)</option>
-                <option value="South">South (दक्षिणमुखी)</option>
+                <option value="North">{tLang(language, 'North', 'उत्तरमुखी', 'North')}</option>
+                <option value="East">{tLang(language, 'East (Vastu Compliant)', 'पूर्वमुखी (वास्तु सम्मत)', 'East (Vastu Compliant)')}</option>
+                <option value="West">{tLang(language, 'West', 'पश्चिममुखी', 'West')}</option>
+                <option value="South">{tLang(language, 'South', 'दक्षिणमुखी', 'South')}</option>
                 <option value="Corner (North-East)">Corner (North-East)</option>
                 <option value="Corner (North-West)">Corner (North-West)</option>
                 <option value="Corner (South-East)">Corner (South-East)</option>
@@ -493,16 +496,16 @@ function PlotManagementModalContent({
 
             <div>
               <label className="text-xs font-medium text-gray-300 block mb-1">
-                Plot Status / वर्तमान स्थिति
+                {tLang(language, 'Plot Status', 'वर्तमान स्थिति', 'Plot Status')}
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as PlotStatus)}
                 className="w-full rounded-xl border border-white/15 bg-[#050A17] px-3 py-2 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
               >
-                <option value="available_green">Available (Green) — बिक्री हेतु उपलब्ध</option>
-                <option value="booked_yellow">Booked (Yellow) — टोकन प्राप्त</option>
-                <option value="vacant_red">Vacant / Reserved (Red) — आरक्षित</option>
+                <option value="available_green">{tLang(language, 'Available (Green) — Ready for Sale', 'बिक्री हेतु उपलब्ध (हरा)', 'Available (Green) — Ready for Sale')}</option>
+                <option value="booked_yellow">{tLang(language, 'Booked (Yellow) — Token Received', 'बुक किया गया (पीला) — टोकन प्राप्त', 'Booked (Yellow) — Token Received')}</option>
+                <option value="vacant_red">{tLang(language, 'Vacant / Reserved (Red)', 'आरक्षित / रिक्त (लाल)', 'Vacant / Reserved (Red)')}</option>
               </select>
             </div>
           </div>
@@ -515,13 +518,13 @@ function PlotManagementModalContent({
               onChange={(e) => setIsCornerPlot(e.target.checked)}
               className="rounded border-white/20 bg-[#050A17] text-[#C7A35A] focus:ring-0"
             />
-            <span>Corner Plot (कॉर्नर प्लॉट — दो तरफ खुली सड़क)</span>
+            <span>{tLang(language, 'Corner Plot (Dual road frontage)', 'कॉर्नर प्लॉट (दो तरफ खुली सड़क)', 'Corner Plot (Dual road access)')}</span>
           </label>
 
           {/* Suitable Villa Models */}
           <div className="space-y-2">
             <label className="text-xs font-medium text-gray-300 block">
-              Architectural Elevation Suitability (वास्तु मॉडल)
+              {tLang(language, 'Architectural Elevation Suitability', 'वास्तु एवं भवन मॉडल', 'Architectural Elevation Suitability')}
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {HOUSE_MODELS.map((model) => {
@@ -601,7 +604,7 @@ function PlotManagementModalContent({
           {/* Notes */}
           <div>
             <label className="text-xs font-medium text-gray-300 block mb-1">
-              Administrative Remarks / विशेष विवरण
+              {tLang(language, 'Administrative Remarks / Notes', 'प्रशासनिक टिप्पणी / विशेष विवरण', 'Administrative Remarks / Notes')}
             </label>
             <input
               type="text"
@@ -619,7 +622,7 @@ function PlotManagementModalContent({
               onClick={onClose}
               className="rounded-xl border border-white/15 px-4 py-2.5 text-xs font-semibold text-gray-300 hover:bg-white/5 transition"
             >
-              Cancel / रद्द करें
+              {tLang(language, 'Cancel', 'रद्द करें', 'Cancel')}
             </button>
             <button
               type="submit"
@@ -627,7 +630,7 @@ function PlotManagementModalContent({
               className="rounded-xl bg-gradient-to-r from-[#C7A35A] via-[#DFC382] to-[#9E7E36] px-6 py-2.5 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 transition disabled:opacity-50 flex items-center gap-1.5"
             >
               <CheckCircle2 className="h-4 w-4" />
-              <span>{isEditing ? 'Save Changes / अपडेट करें' : 'Register Plot / प्लॉट जोड़ें'}</span>
+              <span>{isEditing ? tLang(language, 'Save Changes', 'परिवर्तन सहेजें', 'Save Changes') : tLang(language, 'Register Plot', 'प्लॉट जोड़ें', 'Register Plot')}</span>
             </button>
           </div>
         </form>

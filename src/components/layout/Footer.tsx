@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Building, Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
 import { COMPANY_DETAILS, PROJECT_LOCATIONS } from '@/data/groundTruth';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 
 export function Footer() {
   const { language, t } = useApp();
@@ -47,16 +48,22 @@ export function Footer() {
           <div>
             <h3 className="font-serif text-sm font-bold uppercase tracking-wider text-white border-b border-[#C7A35A]/30 pb-2 flex items-center gap-1.5">
               <Building className="h-4 w-4 text-[#C7A35A]" />
-              <span>{language === 'hi' ? 'शाखा कार्यालय' : 'Branch Offices'}</span>
+              <span>{tLang(language, 'Branch Offices', 'शाखा कार्यालय', 'Branch Offices')}</span>
             </h3>
             <ul className="mt-4 space-y-3 text-xs">
               {PROJECT_LOCATIONS.map((loc) => {
-                const localizedCity = language === 'hi' 
-                  ? (loc.slug === 'rampur' ? 'रामपुर शाखा कार्यालय' : loc.slug === 'lahartara' ? 'लहरतारा शाखा कार्यालय' : 'मिर्ज़ा मुराद शाखा कार्यालय')
-                  : loc.name;
-                const localizedHeadline = language === 'hi'
-                  ? (loc.slug === 'rampur' ? 'रिंग रोड फेज-2, रामपुर' : loc.slug === 'lahartara' ? 'कैंट जंक्शन के पास, लहरतारा' : 'NH-19 एक्सप्रेसवे, मिर्ज़ा मुराद')
-                  : (loc.address || loc.roadConnectivity);
+                const localizedCity = tLang(
+                  language,
+                  (loc.slug === 'rampur' ? 'Rampur Branch Office' : loc.slug === 'lahartara' ? 'Lahartara Branch Office' : 'Mirza Murad Branch Office'),
+                  (loc.slug === 'rampur' ? 'रामपुर शाखा कार्यालय' : loc.slug === 'lahartara' ? 'लहरतारा शाखा कार्यालय' : 'मिर्ज़ा मुराद शाखा कार्यालय'),
+                  (loc.slug === 'rampur' ? 'Rampur Branch Office' : loc.slug === 'lahartara' ? 'Lahartara Branch Office' : 'Mirza Murad Branch Office')
+                );
+                const localizedHeadline = tLang(
+                  language,
+                  (loc.address || loc.roadConnectivity),
+                  (loc.slug === 'rampur' ? 'रिंग रोड फेज-2, रामपुर' : loc.slug === 'lahartara' ? 'कैंट जंक्शन के पास, लहरतारा' : 'NH-19 एक्सप्रेसवे, मिर्ज़ा मुराद'),
+                  (loc.address || loc.roadConnectivity)
+                );
 
                 return (
                   <li key={loc.id} className="group">
@@ -86,7 +93,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/site-visit" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
-                  <span className="text-[#C7A35A]">▸</span> {language === 'hi' ? 'साइट विजिट बुक करें' : 'Schedule Site Visit'}
+                  <span className="text-[#C7A35A]">▸</span> {language === 'hi' ? 'साइट विजिट बुक करें' : language === 'hinglish' ? 'Site Visit Book Karein' : 'Schedule Site Visit'}
                 </Link>
               </li>
               <li>
@@ -125,17 +132,17 @@ export function Footer() {
             <ul className="mt-4 space-y-2 text-xs">
               <li>
                 <Link href="/about" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'हमारे बारे में' : 'About Us'}
+                  <ShieldCheck className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'हमारे बारे में' : language === 'hinglish' ? 'Hamare Baare Me' : 'About Us'}
                 </Link>
               </li>
               <li>
                 <Link href="/contact" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'संपर्क करें' : 'Contact Us'}
+                  <Mail className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'संपर्क करें' : language === 'hinglish' ? 'Contact Karein' : 'Contact Us'}
                 </Link>
               </li>
               <li>
                 <Link href="/faq" className="hover:text-[#DFC382] transition flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'अक्सर पूछे जाने वाले प्रश्न (FAQ)' : 'FAQs'}
+                  <ShieldCheck className="h-3.5 w-3.5 text-gray-400" /> {language === 'hi' ? 'अक्सर पूछे जाने वाले प्रश्न' : language === 'hinglish' ? 'Frequently Asked Questions (FAQ)' : 'Frequently Asked Questions'}
                 </Link>
               </li>
               <li>

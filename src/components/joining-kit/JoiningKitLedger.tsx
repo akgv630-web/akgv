@@ -14,6 +14,7 @@ import {
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { JoiningKitIssue } from '@/types';
+import { tLang } from '@/lib/i18n';
 
 export function JoiningKitLedger() {
   const { kitIssues, recordKitIssue, currentUser, t, language } = useApp();
@@ -119,12 +120,12 @@ export function JoiningKitLedger() {
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4">
           <span className="text-xs text-gray-400 block">{c.kpiTotalKits}</span>
-          <span className="font-serif text-2xl font-bold text-white">{totalKitsIssued} {language === 'hi' ? 'किट' : 'Kits'}</span>
+          <span className="font-serif text-2xl font-bold text-white">{totalKitsIssued} {tLang(language, 'Kits', 'किट', 'Kits')}</span>
           <span className="text-[10px] text-gray-400 block mt-1">{c.kpiAcknowledgedSub}</span>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4">
           <span className="text-xs text-gray-400 block">{c.kpiStandardAmount}</span>
-          <span className="font-serif text-2xl font-bold text-[#DFC382]">₹999 / {language === 'hi' ? 'किट' : 'Kit'}</span>
+          <span className="font-serif text-2xl font-bold text-[#DFC382]">₹999 / {tLang(language, 'Kit', 'किट', 'Kit')}</span>
           <span className="text-[10px] text-gray-400 block mt-1">{c.kpiNonCommissionable}</span>
         </div>
         <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-4">

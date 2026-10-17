@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
+import { tLang } from '@/lib/i18n';
 
 export default function FaqPage() {
   const { language } = useApp();
@@ -91,17 +92,18 @@ export default function FaqPage() {
       <div className="text-center space-y-3">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#C7A35A]/40 bg-[#C7A35A]/10 px-4 py-1 text-xs font-semibold text-[#DFC382]">
           <HelpCircle className="h-3.5 w-3.5 text-[#C7A35A]" />
-          <span>Frequently Asked Questions</span>
+          <span>{tLang(language, 'Frequently Asked Questions', 'अक्सर पूछे जाने वाले प्रश्न', 'Frequently Asked Questions')}</span>
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white tracking-tight">
-          {language === 'hi'
-            ? 'अक्सर पूछे जाने वाले महत्वपूर्ण प्रश्न'
-            : 'Frequently Asked Questions (FAQ)'}
+          {tLang(language, 'Frequently Asked Questions (FAQ)', 'अक्सर पूछे जाने वाले महत्वपूर्ण प्रश्न', 'Frequently Asked Questions (FAQ)')}
         </h1>
         <p className="text-xs sm:text-sm text-gray-400 max-w-xl mx-auto">
-          {language === 'hi'
-            ? 'प्लॉट बुकिंग, कानूनी वैधता, सड़कों की चौड़ाई और कंपनी नियमों से संबंधित समस्त जानकारी।'
-            : 'Clear answers on plot booking, registry compliance, township road standards, and associate policies.'}
+          {tLang(
+            language,
+            'Clear answers on plot booking, registry compliance, township road standards, and associate policies.',
+            'प्लॉट बुकिंग, कानूनी वैधता, सड़कों की चौड़ाई और कंपनी नियमों से संबंधित समस्त जानकारी।',
+            'Plot booking, registry rules, road standards aur company policies ki complete jaankari.'
+          )}
         </p>
       </div>
 
@@ -154,10 +156,15 @@ export default function FaqPage() {
       {/* Still Have Questions Box */}
       <div className="rounded-3xl border border-[#C7A35A]/40 bg-[#0B1734] p-8 text-center space-y-4 shadow-xl">
         <h3 className="font-serif text-lg font-bold text-white">
-          {language === 'hi' ? 'क्या आपके पास कोई अन्य प्रश्न है?' : 'Have More Questions About Our Townships?'}
+          {tLang(language, 'Have More Questions About Our Townships?', 'क्या आपके पास कोई अन्य प्रश्न है?', 'Kya aapka koi aur sawal hai?')}
         </h3>
         <p className="text-xs text-gray-300 max-w-md mx-auto">
-          Contact our helpline directly or visit our registered office for free consultation and blueprint copies.
+          {tLang(
+            language,
+            'Contact our helpline directly or visit our registered office for free consultation and blueprint copies.',
+            'हमारी हेल्पलाइन पर सीधे संपर्क करें या मुफ्त परामर्श और लेआउट जानकारी के लिए कार्यालय पधारें।',
+            'Hamari helpline par contact karein ya free consultation aur layout ke liye branch visit karein.'
+          )}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <a
@@ -171,7 +178,7 @@ export default function FaqPage() {
             href="/contact"
             className="rounded-xl border border-white/20 bg-white/5 px-5 py-2.5 font-semibold text-xs text-white hover:bg-white/10 transition"
           >
-            Contact Desk
+            {tLang(language, 'Contact Desk', 'संपर्क डेस्क', 'Contact Desk')}
           </Link>
         </div>
       </div>

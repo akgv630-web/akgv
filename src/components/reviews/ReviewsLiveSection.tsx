@@ -10,11 +10,12 @@ import {
   ThumbsUp
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { tLang } from '@/lib/i18n';
 import { ReviewRecord } from '@/types';
 import { ReviewSubmissionModal } from './ReviewSubmissionModal';
 
 export function ReviewsLiveSection() {
-  const { reviews, voteHelpful } = useApp();
+  const { reviews, voteHelpful, language } = useApp();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterRole, setFilterRole] = useState<'ALL' | 'buyer' | 'visitor' | '5_star'>('ALL');
   const [votedIds, setVotedIds] = useState<Record<string, boolean>>({});
@@ -48,7 +49,7 @@ export function ReviewsLiveSection() {
   const getRoleBadge = (role: ReviewRecord['authorRole']) => {
     switch (role) {
       case 'buyer':
-        return { label: 'Verified Buyer (सत्यापित खरीदार)', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+        return { label: tLang(language, 'Verified Buyer', 'सत्यापित खरीदार', 'Verified Buyer'), color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
       case 'visitor':
         return { label: 'Site Inspection Visitor', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
       case 'associate':
@@ -91,7 +92,12 @@ export function ReviewsLiveSection() {
               Customer & Visitor Feedback Registry
             </h3>
             <p className="text-xs text-gray-300 max-w-xl">
-              वाराणसी, चंदौली एवं मीरजापुर के सम्मानित प्लॉट खरीदारों और साइट विजिटरों की वास्तविक एवं प्रामाणिक प्रतिक्रिया।
+              {tLang(
+                language,
+                'Authentic feedback from valued plot buyers and site visitors across Varanasi, Chandauli, and Mirzapur.',
+                'वाराणसी, चंदौली एवं मीरजापुर के सम्मानित प्लॉट खरीदारों और साइट विजिटरों की वास्तविक एवं प्रामाणिक प्रतिक्रिया।',
+                'Varanasi, Chandauli aur Mirzapur ke buyers aur visitors ka real feedback.'
+              )}
             </p>
           </div>
 
@@ -121,7 +127,7 @@ export function ReviewsLiveSection() {
               className="rounded-xl bg-gradient-to-r from-[#C7A35A] via-[#DFC382] to-[#9E7E36] px-5 py-3 text-xs font-bold text-[#0B1734] shadow-lg hover:brightness-110 transition flex items-center gap-2 hover:scale-[1.02]"
             >
               <PenLine className="h-4 w-4" />
-              <span>Write a Real Review / अपना रिव्यू दें</span>
+              <span>{tLang(language, 'Write a Real Review', 'अपना रिव्यू दें', 'Apna Review Dein')}</span>
             </button>
           </div>
         </div>

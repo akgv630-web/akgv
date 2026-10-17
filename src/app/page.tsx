@@ -20,6 +20,7 @@ import { MasterPlanViewer } from '@/components/master-plan/MasterPlanViewer';
 import { CommissionRewardsView } from '@/components/rewards/CommissionRewardsView';
 import { JoiningKitLedger } from '@/components/joining-kit/JoiningKitLedger';
 import { TrustAndLegalSection } from '@/components/home/TrustAndLegalSection';
+import { tLang } from '@/lib/i18n';
 
 export default function HomePage() {
   const { t, language, cmsContent } = useApp();
@@ -46,9 +47,12 @@ export default function HomePage() {
               >
                 <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
                 <span>
-                  {language === 'hi'
-                    ? cmsContent.announcementBanner.textHi
-                    : cmsContent.announcementBanner.textEn}
+                  {tLang(
+                    language,
+                    cmsContent.announcementBanner.textEn,
+                    cmsContent.announcementBanner.textHi,
+                    cmsContent.announcementBanner.textEn
+                  )}
                 </span>
                 <ArrowRight className="h-3 w-3" />
               </Link>
@@ -95,7 +99,7 @@ export default function HomePage() {
               className="flex items-center justify-center gap-1.5 rounded-xl border border-[#C7A35A]/50 bg-[#0B1734]/80 px-3.5 py-2.5 sm:px-6 sm:py-3.5 text-xs sm:text-sm font-semibold text-[#DFC382] hover:bg-[#C7A35A] hover:text-[#0B1734] transition"
             >
               <Building className="h-4 w-4 shrink-0" />
-              <span>{language === 'hi' ? 'शाखा कार्यालय' : 'Branch Offices'}</span>
+              <span>{tLang(language, 'Branch Offices', 'शाखा कार्यालय', 'Branch Offices')}</span>
             </Link>
 
             <a
@@ -156,12 +160,18 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {PROJECT_LOCATIONS.map((loc) => {
-            const localizedBranchName = language === 'hi'
-              ? (loc.slug === 'rampur' ? 'एकेजीवी इन्फ्रा सिटी — रामपुर शाखा' : loc.slug === 'lahartara' ? 'एकेजीवी इन्फ्रा सिटी — लहरतारा शाखा' : 'एकेजीवी इन्फ्रा सिटी — मिर्ज़ा मुराद शाखा')
-              : loc.name;
-            const localizedHeadline = language === 'hi'
-              ? (loc.slug === 'rampur' ? 'आधिकारिक शाखा कार्यालय एवं सहायता केंद्र' : loc.slug === 'lahartara' ? 'सेंट्रल सिटी शाखा कार्यालय (कैंट के पास)' : 'हाईवे कॉरिडोर शाखा कार्यालय (NH-19)')
-              : loc.headline;
+            const localizedBranchName = tLang(
+              language,
+              loc.name,
+              (loc.slug === 'rampur' ? 'एकेजीवी इन्फ्रा सिटी — रामपुर शाखा' : loc.slug === 'lahartara' ? 'एकेजीवी इन्फ्रा सिटी — लहरतारा शाखा' : 'एकेजीवी इन्फ्रा सिटी — मिर्ज़ा मुराद शाखा'),
+              (loc.slug === 'rampur' ? 'AKGV Infra City — Rampur Branch' : loc.slug === 'lahartara' ? 'AKGV Infra City — Lahartara Branch' : 'AKGV Infra City — Mirza Murad Branch')
+            );
+            const localizedHeadline = tLang(
+              language,
+              loc.headline,
+              (loc.slug === 'rampur' ? 'आधिकारिक शाखा कार्यालय एवं सहायता केंद्र' : loc.slug === 'lahartara' ? 'सेंट्रल सिटी शाखा कार्यालय (कैंट के पास)' : 'हाईवे कॉरिडोर शाखा कार्यालय (NH-19)'),
+              (loc.slug === 'rampur' ? 'Official Branch Office & Support Center' : loc.slug === 'lahartara' ? 'Central City Branch Office (Near Cantt)' : 'Highway Corridor Branch Office (NH-19)')
+            );
 
             return (
               <div
@@ -265,32 +275,38 @@ export default function HomePage() {
             <div className="lg:col-span-7 space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-300">
                 <Box className="h-3.5 w-3.5 text-emerald-400" />
-                <span>{language === 'hi' ? '3D विला आर्किटेक्चरल स्टूडियो' : 'Interactive 3D Villa Experience'}</span>
+                <span>{tLang(language, 'Interactive 3D Villa Experience', '3D विला आर्किटेक्चरल स्टूडियो', 'Interactive 3D Villa Experience')}</span>
               </div>
 
               <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-tight">
-                {language === 'hi'
-                  ? 'अपने प्लॉट पर सपनों का विला 3D में देखें और कस्टमाइज़ करें'
-                  : 'Visualize & Customize Your Dream Villa in Full 3D WebGL'}
+                {tLang(
+                  language,
+                  'Visualize & Customize Your Dream Villa in Full 3D WebGL',
+                  'अपने प्लॉट पर सपनों का विला 3D में देखें और कस्टमाइज़ करें',
+                  'Apne Plot Par Sapno Ka Villa 3D Me Dekhein Aur Customize Karein'
+                )}
               </h2>
 
               <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
-                {language === 'hi'
-                  ? 'AKGV इन्फ्रा सिटी के प्रत्येक प्लॉट पर 3BHK एवं 4BHK विला का डिजिटल फिटमेंट सिम्युलेट करें। दिन, शाम और रात की लाइटिंग में एक्सटीरियर पेंट, पत्थर की फिनिश और कार पोर्च आर्किटेक्चर का वास्तविक 360° अनुभव लें।'
-                  : 'Simulate procedural 3BHK and 4BHK architectural villa fitments directly on selected plots. Rotate, inspect floor spans, toggle day/golden-hour/night illumination, and preview luxury finishes with real-time carpet area calculations.'}
+                {tLang(
+                  language,
+                  'Simulate procedural 3BHK and 4BHK architectural villa fitments directly on selected plots. Rotate, inspect floor spans, toggle day/golden-hour/night illumination, and preview luxury finishes with real-time carpet area calculations.',
+                  'AKGV इन्फ्रा सिटी के प्रत्येक प्लॉट पर 3BHK एवं 4BHK विला का डिजिटल फिटमेंट सिम्युलेट करें। दिन, शाम और रात की लाइटिंग में एक्सटीरियर पेंट, पत्थर की फिनिश और कार पोर्च आर्किटेक्चर का वास्तविक 360° अनुभव लें।',
+                  'AKGV Infra City ke har plot par 3BHK aur 4BHK villa ka digital fitment simulate karein. Din, shaam aur raat ki lighting me luxury finishes ka real 360° experience lein.'
+                )}
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <span className="text-[11px] font-semibold text-gray-400 block">{language === 'hi' ? 'आर्किटेक्चर मॉडल' : 'Villa Models'}</span>
+                  <span className="text-[11px] font-semibold text-gray-400 block">{tLang(language, 'Villa Models', 'आर्किटेक्चर मॉडल', 'Villa Models')}</span>
                   <span className="font-serif text-sm font-bold text-[#DFC382]">3BHK & 4BHK Duplex</span>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <span className="text-[11px] font-semibold text-gray-400 block">{language === 'hi' ? 'लाइटिंग मोड' : 'Lighting Modes'}</span>
+                  <span className="text-[11px] font-semibold text-gray-400 block">{tLang(language, 'Lighting Modes', 'लाइटिंग मोड', 'Lighting Modes')}</span>
                   <span className="font-serif text-sm font-bold text-[#DFC382]">Day • Golden • Night</span>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3 col-span-2 sm:col-span-1">
-                  <span className="text-[11px] font-semibold text-gray-400 block">{language === 'hi' ? 'फिनिश कस्टमाइजेशन' : 'Exterior Themes'}</span>
+                  <span className="text-[11px] font-semibold text-gray-400 block">{tLang(language, 'Exterior Themes', 'फिनिश कस्टमाइजेशन', 'Exterior Themes')}</span>
                   <span className="font-serif text-sm font-bold text-[#DFC382]">Heritage & Modern</span>
                 </div>
               </div>
@@ -301,7 +317,7 @@ export default function HomePage() {
                   className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-3 text-xs sm:text-sm font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
                 >
                   <Box className="h-4 w-4" />
-                  <span>{language === 'hi' ? '3D विला स्टूडियो खोलें' : 'Launch 3D Villa Studio'}</span>
+                  <span>{tLang(language, 'Launch 3D Villa Studio', '3D विला स्टूडियो खोलें', 'Launch 3D Villa Studio')}</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
 
@@ -310,7 +326,7 @@ export default function HomePage() {
                   className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs sm:text-sm font-semibold text-white hover:bg-white/10 transition"
                 >
                   <Layers className="h-4 w-4 text-[#C7A35A]" />
-                  <span>{language === 'hi' ? 'प्लॉट मास्टर प्लान' : 'Explore Master Plan'}</span>
+                  <span>{tLang(language, 'Explore Master Plan', 'प्लॉट मास्टर प्लान', 'Master Plan Dekhein')}</span>
                 </Link>
               </div>
             </div>
@@ -329,20 +345,20 @@ export default function HomePage() {
 
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between text-gray-300">
-                    <span>Sample Villa Configuration:</span>
+                    <span>{tLang(language, 'Sample Villa Configuration:', 'नमूना विला कॉन्फ़िगरेशन:', 'Sample Villa Configuration:')}</span>
                     <span className="font-semibold text-white">Royal Heritage 4BHK</span>
                   </div>
                   <div className="flex justify-between text-gray-300">
-                    <span>Plot Fitment Simulation:</span>
+                    <span>{tLang(language, 'Plot Fitment Simulation:', 'प्लॉट फिटमेंट सिमुलेशन:', 'Plot Fitment Simulation:')}</span>
                     <span className="font-semibold text-emerald-400">Plot #A-04 (1,200 sqft)</span>
                   </div>
                   <div className="flex justify-between text-gray-300">
-                    <span>Ground Coverage:</span>
-                    <span className="font-semibold text-white">68% (Vastu Compliant)</span>
+                    <span>{tLang(language, 'Ground Coverage:', 'ग्राउंड कवरेज:', 'Ground Coverage:')}</span>
+                    <span className="font-semibold text-white">{tLang(language, '68% (Vastu Compliant)', '68% (वास्तु सम्मत)', '68% (Vastu Compliant)')}</span>
                   </div>
                   <div className="flex justify-between text-gray-300">
-                    <span>Estimated Construction:</span>
-                    <span className="font-semibold text-[#DFC382]">₹48.5 Lakhs</span>
+                    <span>{tLang(language, 'Estimated Construction:', 'अनुमानित निर्माण लागत:', 'Estimated Construction:')}</span>
+                    <span className="font-semibold text-[#DFC382]">₹48.5 {tLang(language, 'Lakhs', 'लाख', 'Lakhs')}</span>
                   </div>
                 </div>
 
@@ -351,7 +367,7 @@ export default function HomePage() {
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/10 hover:bg-white/15 py-2.5 text-xs font-semibold text-[#DFC382] border border-white/10 transition"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-[#C7A35A]" />
-                  <span>{language === 'hi' ? '3D में इंटरैक्ट करें →' : 'Simulate 3D Fitment →'}</span>
+                  <span>{tLang(language, 'Simulate 3D Fitment →', '3D में इंटरैक्ट करें →', '3D Fitment Simulate Karein →')}</span>
                 </Link>
               </div>
             </div>
@@ -368,7 +384,7 @@ export default function HomePage() {
       <section id="rewards" className="w-full max-w-7xl mx-auto px-4 sm:px-6 space-y-6 overflow-hidden">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-bold text-[#DFC382] uppercase tracking-wider">
-            {language === 'hi' ? 'प्रोत्साहन एवं पुरस्कार' : language === 'hinglish' ? 'Growth & Rewards' : 'Performance Recognition'}
+            {tLang(language, 'Performance Recognition', 'प्रोत्साहन एवं पुरस्कार', 'Growth & Rewards')}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
             {t.rewards.title}

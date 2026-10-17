@@ -18,9 +18,10 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { CmsContent } from '@/types';
+import { tLang } from '@/lib/i18n';
 
 export function AdminCmsTab() {
-  const { cmsContent, updateCmsContent, currentUser } = useApp();
+  const { cmsContent, updateCmsContent, currentUser, language } = useApp();
 
   const [heroHeadlineEn, setHeroHeadlineEn] = useState(cmsContent.heroHeadlineEn || '');
   const [heroHeadlineHi, setHeroHeadlineHi] = useState(cmsContent.heroHeadlineHi || '');
@@ -221,9 +222,9 @@ export function AdminCmsTab() {
 
           {/* Hindi Hero */}
           <div className="space-y-3 rounded-2xl bg-[#050A17] p-4 border border-white/5">
-            <span className="text-xs font-bold text-[#DFC382] block">हिंदी संस्करण (Hindi Version)</span>
+            <span className="text-xs font-bold text-[#DFC382] block">{tLang(language, 'Hindi Version', 'हिंदी संस्करण', 'Hindi Version')}</span>
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">हीरो मुख्य शीर्षक (Headline)</label>
+              <label className="text-xs text-gray-400">{tLang(language, 'Hero Headline (Hindi)', 'हीरो मुख्य शीर्षक (हिंदी)', 'Hero Headline (Hindi)')}</label>
               <input
                 type="text"
                 value={heroHeadlineHi}
@@ -232,7 +233,7 @@ export function AdminCmsTab() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-400">हीरो उप-शीर्षक (Subtitle)</label>
+              <label className="text-xs text-gray-400">{tLang(language, 'Hero Subtitle (Hindi)', 'हीरो उप-शीर्षक (हिंदी)', 'Hero Subtitle (Hindi)')}</label>
               <textarea
                 rows={3}
                 value={heroSubtitleHi}
@@ -282,7 +283,7 @@ export function AdminCmsTab() {
               type="text"
               value={bannerTextHi}
               onChange={(e) => setBannerTextHi(e.target.value)}
-              placeholder="e.g. नवरात्रि विशेष: तुरंत रजिस्ट्री वाले प्लॉट्स पर 5% की सीधी छूट"
+              placeholder={tLang(language, 'e.g. Navratri Special: 5% Direct Discount on Registry Plots', 'उदा. नवरात्रि विशेष: तुरंत रजिस्ट्री वाले प्लॉट्स पर 5% की सीधी छूट', 'e.g. Navratri Special: Registry plots par 5% direct discount')}
               className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2.5 text-xs text-white focus:border-[#C7A35A] focus:outline-none"
             />
           </div>
@@ -467,7 +468,7 @@ export function AdminCmsTab() {
                 <label className="text-xs text-gray-400">Question (Hindi)</label>
                 <input
                   type="text"
-                  placeholder="e.g. क्या रजिस्ट्री तुरंत होती है?"
+                  placeholder={tLang(language, 'e.g. Is immediate registry available?', 'उदा. क्या रजिस्ट्री तुरंत होती है?', 'e.g. Kya registry turant hoti hai?')}
                   value={newFaqQHi}
                   onChange={(e) => setNewFaqQHi(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#0B1734] p-2 text-xs text-white focus:outline-none"
@@ -492,7 +493,7 @@ export function AdminCmsTab() {
                 <label className="text-xs text-gray-400">Answer (Hindi)</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. हाँ, पूर्ण भुगतान पर तत्काल रजिस्ट्री और कब्जा दिया जाता है..."
+                  placeholder={tLang(language, 'e.g. Yes, immediate registry and possession is granted upon full payment...', 'उदा. हाँ, पूर्ण भुगतान पर तत्काल रजिस्ट्री और कब्जा दिया जाता है...', 'e.g. Haan, full payment par turant registry aur kabza diya jata hai...')}
                   value={newFaqAHi}
                   onChange={(e) => setNewFaqAHi(e.target.value)}
                   className="w-full rounded-xl border border-white/10 bg-[#0B1734] p-2 text-xs text-white focus:outline-none"
