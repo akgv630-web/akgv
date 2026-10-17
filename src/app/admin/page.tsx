@@ -193,13 +193,22 @@ export default function SuperAdminPage() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
+  const [newMemberPassword, setNewMemberPassword] = useState('akgv@2026');
   const [newMemberRole, setNewMemberRole] = useState<UserRole>('junior_member');
   const [newMemberSponsorId, setNewMemberSponsorId] = useState('AKGV-3498');
   const [newMemberCity, setNewMemberCity] = useState('Varanasi');
   const [newMemberBranch, setNewMemberBranch] = useState('Rampur Head Office');
   const [newMemberAddress, setNewMemberAddress] = useState('');
   const [newMemberLevel, setNewMemberLevel] = useState<number>(1);
-  const [createdSponsorFeedback, setCreatedSponsorFeedback] = useState<{ code: string; name: string } | null>(null);
+  const [createdSponsorFeedback, setCreatedSponsorFeedback] = useState<{
+    code: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    password?: string;
+    loginUrl: string;
+  } | null>(null);
 
   // Edit Member Form State
   const [editFullName, setEditFullName] = useState('');
@@ -1348,50 +1357,71 @@ export default function SuperAdminPage() {
                       branchLocation: newMemberBranch.trim(),
                       address: newMemberAddress.trim(),
                       level: Number(newMemberLevel) || 1,
+                      password: newMemberPassword.trim() || 'akgv@2026',
                     });
+                    const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://akgvinfacity.com/login';
                     setCreatedSponsorFeedback({
-                      code: profile.memberId || 'AKGV-NEW',
+                      code: profile.memberId || profile.email || 'AKGV-NEW',
                       name: profile.fullName,
+                      email: profile.email,
+                      phone: profile.phone,
+                      role: profile.role,
+                      password: newMemberPassword.trim() || 'akgv@2026',
+                      loginUrl,
                     });
-                    setMemberActionNotice(`New member "${profile.fullName}" enrolled successfully! Code: ${profile.memberId}`);
+                    setMemberActionNotice(`नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! आईडी: ${profile.memberId || profile.email}`);
                     setNewMemberName('');
                     setNewMemberPhone('');
                     setNewMemberEmail('');
                     setNewMemberAddress('');
-                    setTimeout(() => setMemberActionNotice(null), 5000);
+                    setTimeout(() => setMemberActionNotice(null), 6000);
                   }}
                   className="p-5 space-y-4 text-xs"
                 >
                   {/* Feedback Banner on Generation */}
                   {createdSponsorFeedback && (
-                    <div className="rounded-xl border border-emerald-500/50 bg-emerald-950/40 p-4 space-y-2 text-xs">
+                    <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/40 p-4 space-y-3 text-xs animate-in fade-in">
                       <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Member Enrolled & Code Generated!</span>
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                        <span>खाता तैयार! लॉगिन क्रेडेंशियल (Login Credentials Generated)</span>
                       </div>
-                      <p className="text-gray-200">
-                        Associate <strong>{createdSponsorFeedback.name}</strong> created with Code:{' '}
-                        <strong className="font-mono text-[#DFC382] text-sm bg-black/40 px-2 py-0.5 rounded border border-[#C7A35A]/40">
-                          {createdSponsorFeedback.code}
-                        </strong>
-                      </p>
-                      <div className="flex gap-2 pt-1">
+                      
+                      <div className="rounded-xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 text-xs space-y-1.5 font-mono">
+                        <div className="text-gray-300 font-sans font-semibold text-[11px] text-[#DFC382]">
+                          आधिकारिक लॉगिन विवरण (Official Login Details):
+                        </div>
+                        <div className="text-white">👤 नाम: <span className="font-bold text-emerald-300">{createdSponsorFeedback.name}</span></div>
+                        <div className="text-white">🆔 लॉगिन आईडी: <span className="font-bold text-[#DFC382] bg-black/50 px-2 py-0.5 rounded border border-[#C7A35A]/30">{createdSponsorFeedback.code}</span></div>
+                        <div className="text-white">📧 ईमेल: <span className="text-gray-300">{createdSponsorFeedback.email}</span></div>
+                        <div className="text-white">📱 फोन: <span className="text-gray-300">{createdSponsorFeedback.phone}</span></div>
+                        <div className="text-white">🔑 पासवर्ड: <span className="font-bold text-emerald-300 bg-black/50 px-2 py-0.5 rounded border border-emerald-500/30">{createdSponsorFeedback.password}</span></div>
+                        <div className="text-white">🌐 लॉगिन लिंक: <span className="text-sky-300 underline">{createdSponsorFeedback.loginUrl}</span></div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-1">
                         <button
                           type="button"
-                          onClick={() => handleCopyCode(createdSponsorFeedback.code)}
-                          className="rounded-lg bg-[#C7A35A] px-3 py-1 font-bold text-[#0B1734] text-[11px]"
+                          onClick={() => {
+                            const msg = `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code} (या ईमेल: ${createdSponsorFeedback.email} / फोन: ${createdSponsorFeedback.phone})\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`;
+                            navigator.clipboard.writeText(msg);
+                            setMemberActionNotice('लॉगिन विवरण और लिंक क्लिपबोर्ड पर कॉपी हो गया!');
+                            setTimeout(() => setMemberActionNotice(null), 4000);
+                          }}
+                          className="rounded-lg bg-[#C7A35A] px-3.5 py-1.5 font-bold text-[#0B1734] text-[11px] flex items-center gap-1.5 hover:brightness-110 transition"
                         >
-                          Copy Code
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>Copy Full Credentials & Link</span>
                         </button>
                         <a
                           href={`https://wa.me/?text=${encodeURIComponent(
-                            `Namaste! Your official AKGV Infra City Associate ID is ${createdSponsorFeedback.code}. Please use this to login and work on the portal.`
+                            `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code}\n📧 ईमेल: ${createdSponsorFeedback.email}\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`
                           )}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded-lg bg-[#25D366] px-3 py-1 font-bold text-white text-[11px] flex items-center gap-1"
+                          className="rounded-lg bg-[#25D366] px-3.5 py-1.5 font-bold text-white text-[11px] flex items-center gap-1.5 hover:brightness-110 transition"
                         >
-                          Share on WhatsApp
+                          <Phone className="h-3.5 w-3.5" />
+                          <span>Share on WhatsApp</span>
                         </a>
                       </div>
                     </div>
@@ -1547,6 +1577,24 @@ export default function SuperAdminPage() {
                       onChange={(e) => setNewMemberAddress(e.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
                     />
+                  </div>
+
+                  {/* Initial Assigned Password */}
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">
+                      Portal Login Password (लॉगिन पासवर्ड) <span className="text-[#C7A35A]">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. akgv@2026"
+                      value={newMemberPassword}
+                      onChange={(e) => setNewMemberPassword(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
+                    />
+                    <p className="mt-1 text-[10px] text-gray-400">
+                      डिफ़ॉल्ट पासवर्ड <span className="font-mono text-[#DFC382]">akgv@2026</span> रखा गया है। एडमिन चाहें तो इसे बदल सकते हैं।
+                    </p>
                   </div>
 
                   <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">

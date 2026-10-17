@@ -22,6 +22,7 @@ export interface Profile {
   kycStatus: KycStatus;
   isActive: boolean;
   avatarUrl?: string;
+  password?: string;
   createdAt: string;
 
   // CRM, Geographic & Performance Dossier

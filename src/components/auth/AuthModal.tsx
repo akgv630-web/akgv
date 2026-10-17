@@ -343,44 +343,21 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
           </button>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs - Self-registration disabled, unified sign in */}
         <div className="flex border-b border-white/10 bg-[#050A17]/60 text-xs font-semibold">
           <button
-            onClick={() => {
-              setActiveTab('login');
-              resetRegState();
-            }}
+            onClick={() => setActiveTab('login')}
             className={`flex-1 py-3 text-center transition border-b-2 ${
               activeTab === 'login'
                 ? 'border-[#C7A35A] text-[#DFC382] bg-white/5'
                 : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
-            {language === 'hi' ? 'लॉग इन' : language === 'hinglish' ? 'Login' : 'Sign In'}
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('register');
-              resetRegState();
-            }}
-            className={`flex-1 py-3 text-center transition border-b-2 ${
-              activeTab === 'register'
-                ? 'border-[#C7A35A] text-[#DFC382] bg-white/5'
-                : 'border-transparent text-gray-400 hover:text-white'
-            }`}
-          >
-            {language === 'hi'
-              ? 'नया पंजीकरण'
-              : language === 'hinglish'
-              ? 'Register'
-              : 'Register'}
+            {language === 'hi' ? 'लॉग इन (Sign In)' : 'Sign In'}
           </button>
           {(isDev || isDemo) && (
             <button
-              onClick={() => {
-                setActiveTab('sandbox');
-                resetRegState();
-              }}
+              onClick={() => setActiveTab('sandbox')}
               className={`flex-1 py-3 text-center transition border-b-2 ${
                 activeTab === 'sandbox'
                   ? 'border-[#C7A35A] text-[#DFC382] bg-white/5'
@@ -391,17 +368,14 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
             </button>
           )}
           <button
-            onClick={() => {
-              setActiveTab('forgot');
-              resetRegState();
-            }}
+            onClick={() => setActiveTab('forgot')}
             className={`flex-1 py-3 text-center transition border-b-2 ${
               activeTab === 'forgot'
                 ? 'border-[#C7A35A] text-[#DFC382] bg-white/5'
                 : 'border-transparent text-gray-400 hover:text-white'
             }`}
           >
-            {language === 'hi' ? 'पासवर्ड भूल गए?' : 'Forgot Pass'}
+            {language === 'hi' ? 'पासवर्ड सहायता' : 'Password Help'}
           </button>
         </div>
 
@@ -542,203 +516,31 @@ export function AuthModal({ isOpen, onClose, initialTab = 'login' }: AuthModalPr
             </div>
           )}
 
-          {/* Tab 2: Register with Sponsor ID */}
+          {/* Tab 2: Registration Policy (Self-registration strictly disabled) */}
           {activeTab === 'register' && (
-            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              {emailConfirmationNotice ? (
-                <div className="rounded-2xl border border-blue-500/40 bg-blue-950/20 p-6 text-center space-y-3">
-                  <Mail className="h-12 w-12 text-blue-400 mx-auto" />
-                  <h3 className="font-serif text-lg font-bold text-white">
-                    {language === 'hi' ? 'सत्यापन ईमेल भेजा गया!' : 'Verification Email Sent!'}
-                  </h3>
-                  <div className="rounded-xl bg-[#050A17] p-4 border border-[#C7A35A]/40 text-xs space-y-1">
-                    <span className="text-gray-300 block">
-                      {language === 'hi'
-                        ? 'आपके ईमेल पते पर एक सत्यापन लिंक भेजा गया है:'
-                        : 'A verification link has been sent to your email address:'}
-                    </span>
-                    <span className="font-mono text-sm font-bold text-[#DFC382] block">{registeredEmailSuccess}</span>
-                    <span className="text-[11px] text-gray-400 block mt-2">
-                      {language === 'hi'
-                        ? 'कृपया अपने इनबॉक्स (या स्पैम फ़ोल्डर) की जाँच करें और लॉगिन करने से पहले लिंक पर क्लिक करके अपने खाते की पुष्टि करें।'
-                        : 'Please check your inbox (and spam folder) and verify your email before signing in.'}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEmailConfirmationNotice(false);
-                      setActiveTab('login');
-                      setLoginIdentifier(registeredEmailSuccess || '');
-                    }}
-                    className="rounded-xl bg-[#C7A35A] px-5 py-2 font-bold text-xs text-[#0B1734] hover:brightness-110 transition"
-                  >
-                    {language === 'hi' ? 'लॉगिन स्क्रीन पर जाएं' : 'Proceed to Sign In'}
-                  </button>
-                </div>
-              ) : registeredBuyerName ? (
-                <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-6 text-center space-y-3">
-                  <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto" />
-                  <h3 className="font-serif text-lg font-bold text-white">
-                    {language === 'hi' ? 'पंजीकरण सफल!' : 'Registration Successful!'}
-                  </h3>
-                  <div className="rounded-xl bg-[#050A17] p-4 border border-[#C7A35A]/40 text-xs space-y-2">
-                    <span className="text-gray-400 block">{language === 'hi' ? 'क्रेता खाता सक्रिय:' : 'Buyer Account Active:'}</span>
-                    <span className="font-serif text-base font-bold text-[#DFC382] block">{registeredBuyerName}</span>
-                    <span className="text-[11px] text-emerald-300 block">
-                      {language === 'hi' ? 'पोर्टल भूमिका: प्लॉट खरीदार / निवेशक' : 'Portal Role: Plot Buyer / Investor'}
-                    </span>
-                    {sponsorResult.valid && (
-                      <span className="text-[11px] text-gray-400 block">
-                        Assigned Branch Advisor: {sponsorResult.sponsorName || 'Authorized Associate'} ({sponsorResult.sponsorMemberId || sponsorResult.canonicalSponsorId || 'AKGV-3498'})
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-300">
-                    {language === 'hi'
-                      ? 'आपका सुरक्षित खरीदार खाता तैयार है। अब आप प्रमाणित आवासीय एवं व्यावसायिक प्लॉट देख सकते हैं, साइट विजिट बुक कर सकते हैं, तथा अपने निवेश का विवरण देख सकते हैं।'
-                      : 'Your secure buyer account is ready. You can now explore verified plots, schedule site visits, and manage your property bookings.'}
-                  </p>
-                  <button
-                    onClick={onClose}
-                    className="rounded-xl bg-[#C7A35A] px-5 py-2 font-bold text-xs text-[#0B1734] hover:brightness-110 transition"
-                  >
-                    {language === 'hi' ? 'डैशबोर्ड पर जाएं' : 'Proceed to Dashboard'}
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleRegister} className="space-y-3.5">
-                  {/* Sponsor Code Input with Real-time Check */}
-                  <div className="rounded-2xl border border-[#C7A35A]/40 bg-[#050A17] p-3.5 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-[#DFC382] flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5" />
-                        <span>{language === 'hi' ? 'स्पॉन्सर आईडी / कोड' : 'Sponsor ID / Referral Code'}</span>
-                      </label>
-                      <span className="text-[10px] text-gray-400">Required</span>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="e.g. AKGV-3498 or akgv34..."
-                      value={regSponsorCode}
-                      onChange={(e) => setRegSponsorCode(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-xs font-mono font-bold text-white uppercase placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                    />
-                    {sponsorChecking ? (
-                      <div className="flex items-center gap-1.5 text-[11px] text-[#DFC382] font-medium">
-                        <RefreshCw className="h-3 w-3 shrink-0 animate-spin" />
-                        <span>Verifying sponsor in official registry...</span>
-                      </div>
-                    ) : sponsorResult.valid ? (
-                      <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-                        <CheckCircle2 className="h-3 w-3 shrink-0" />
-                        <span>
-                          Verified: {sponsorResult.sponsorName || 'Authorized Associate'} ({sponsorResult.sponsorMemberId || sponsorResult.canonicalSponsorId || 'Active Associate'})
-                        </span>
-                      </div>
-                    ) : regSponsorCode.trim() ? (
-                      <div className="flex items-center gap-1.5 text-[11px] text-rose-400 font-medium">
-                        <AlertCircle className="h-3 w-3 shrink-0" />
-                        <span>{sponsorResult.error || 'Invalid sponsor ID. Must be an active associate or advisor.'}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-[11px] text-amber-300">
-                        <Sparkles className="h-3 w-3 shrink-0 text-[#C7A35A]" />
-                        <span>
-                          Tip: Use company default sponsor <strong>AKGV-3498</strong> (Vikram Singh)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1">
-                        {language === 'hi' ? 'पूरा नाम' : 'Full Name'}
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Ramesh Kumar"
-                        value={regName}
-                        onChange={(e) => setRegName(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1">
-                        {language === 'hi' ? 'मोबाइल नंबर' : 'Phone Number'}
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="e.g. 98XXXXXXXX"
-                        value={regPhone}
-                        onChange={(e) => setRegPhone(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1">
-                        {language === 'hi' ? 'ईमेल आईडी' : 'Email Address'}
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="e.g. ramesh@gmail.com"
-                        value={regEmail}
-                        onChange={(e) => setRegEmail(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-300 mb-1">
-                        {language === 'hi' ? 'पंजीकरण का प्रकार' : 'Account Role'}
-                      </label>
-                      <div className="w-full rounded-xl border border-white/10 bg-[#0B1734] px-3 py-2 text-xs font-semibold text-[#DFC382] flex items-center justify-between">
-                        <span>{language === 'hi' ? 'प्लॉट खरीदार / निवेशक' : 'Plot Buyer / Investor Portal'}</span>
-                        <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">PUBLIC ONBOARDING</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">
-                      {language === 'hi' ? 'पासवर्ड बनाएं' : 'Create Password'}
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="•••••••• (Min 6 characters)"
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3 py-2 text-xs text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="rounded-xl border border-white/10 bg-[#050A17] p-3 text-[11px] text-gray-400 space-y-1">
-                    <div className="font-semibold text-[#DFC382]">Notice for Business Associates:</div>
-                    <p>
-                      Official field associate and senior manager accounts are provisioned exclusively by AKGV Infra City administration or authorized branch sponsors. Public registration creates secure buyer accounts only.
-                    </p>
-                  </div>
-
-                  {regError && (
-                    <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-2.5 text-xs text-red-300 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span>{regError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={regLoading}
-                    className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-2.5 font-bold text-xs text-[#0B1734] shadow-lg hover:brightness-110 active:scale-[0.99] transition disabled:opacity-50"
-                  >
-                    {regLoading ? 'Creating Account...' : language === 'hi' ? 'खरीदार खाता बनाएं' : 'Create Buyer Account'}
-                  </button>
-                </form>
-              )}
+            <div className="p-6 text-center space-y-4">
+              <ShieldCheck className="h-12 w-12 text-[#C7A35A] mx-auto" />
+              <h3 className="font-serif text-lg font-bold text-white">
+                {language === 'hi' ? 'सेल्फ-पंजीकरण बंद है' : 'Public Registration Closed'}
+              </h3>
+              <div className="rounded-xl border border-white/10 bg-[#050A17] p-4 text-xs text-gray-300 space-y-2 max-w-sm mx-auto">
+                <p>
+                  {language === 'hi'
+                    ? 'AKGV इन्फ्रा सिटी एक प्राइवेट एवं अधिकृत पोर्टल है। यहाँ कोई भी व्यक्ति स्वयं से पंजीकरण नहीं कर सकता।'
+                    : 'AKGV Infra City is an exclusive private portal. Self-registration is strictly disabled.'}
+                </p>
+                <p className="text-[11px] text-[#DFC382]">
+                  {language === 'hi'
+                    ? 'नए एसोसिएट एवं ग्राहक खाते केवल कंपनी एडमिन द्वारा जारी किए जाते हैं। कृपया अपने लॉगिन क्रेडेंशियल्स के लिए कंपनी मुख्यालय (6306917991) से संपर्क करें।'
+                    : 'New accounts are provisioned solely by AKGV Administration. Contact HQ at +91 6306917991 for access.'}
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveTab('login')}
+                className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-2.5 font-bold text-xs text-[#0B1734] hover:brightness-110 transition"
+              >
+                {language === 'hi' ? 'लॉगिन स्क्रीन पर जाएं' : 'Proceed to Sign In'}
+              </button>
             </div>
           )}
 

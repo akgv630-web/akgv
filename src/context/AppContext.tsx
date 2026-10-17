@@ -158,6 +158,7 @@ interface AppContextType {
     address?: string;
     level?: number;
     rankTitle?: string;
+    password?: string;
   }) => Profile;
   updateMember: (id: string, data: Partial<Profile>) => void;
   deleteMember: (id: string) => void;
@@ -540,14 +541,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!found.isActive) {
         return { success: false, error: 'Your account has been deactivated or suspended. Please contact company management.' };
       }
-      if (password === 'akgv@2026' || password === 'Admin@2026' || password === 'password123') {
+      const isAuthorizedPass =
+        password === 'akgv@2026' ||
+        password === 'Admin@2026' ||
+        password === 'password123' ||
+        (found.password && found.password === password);
+
+      if (isAuthorizedPass) {
         setCurrentUser(found);
         try {
           localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(found));
         } catch {}
         return { success: true, profile: found };
       } else {
-        return { success: false, error: 'Incorrect password. (Authorized credentials: akgv@2026)' };
+        return { success: false, error: 'Incorrect password. (अधिकृत डिफ़ॉल्ट पासवर्ड: akgv@2026)' };
       }
     }
 
@@ -817,6 +824,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     address?: string;
     level?: number;
     rankTitle?: string;
+    password?: string;
   }): Profile => {
     // Authorization Check: Must be admin or authorized senior member
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
@@ -874,6 +882,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       kycStatus: 'verified',
       isActive: true,
       createdAt: nowIso,
+      password: data.password || 'akgv@2026',
     };
     setAllProfiles((prev) => {
       const next = [...prev, newProfile];
