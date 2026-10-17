@@ -143,7 +143,7 @@ export default function SuperAdminPage() {
 
   // Member Management State
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
-  const [memberRoleFilter, setMemberRoleFilter] = useState<'ALL' | UserRole>('ALL');
+  const [memberRoleFilter, setMemberRoleFilter] = useState<'ALL' | 'associates' | UserRole>('ALL');
   const [memberStatusFilter, setMemberStatusFilter] = useState<'ALL' | 'active' | 'inactive'>('ALL');
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [viewingMember, setViewingMember] = useState<Profile | null>(null);
@@ -218,7 +218,15 @@ export default function SuperAdminPage() {
   const totalBuyers = allProfiles.filter((p) => p.role === 'buyer').length;
 
   const filteredMembers = allProfiles.filter((p) => {
-    if (memberRoleFilter !== 'ALL' && p.role !== memberRoleFilter) return false;
+    if (memberRoleFilter !== 'ALL') {
+      if (memberRoleFilter === 'associates') {
+        if (p.role !== 'senior_member' && p.role !== 'junior_member' && p.role !== 'sub_admin') {
+          return false;
+        }
+      } else if (p.role !== memberRoleFilter) {
+        return false;
+      }
+    }
     if (memberStatusFilter === 'active' && !p.isActive) return false;
     if (memberStatusFilter === 'inactive' && p.isActive) return false;
     if (memberSearchQuery.trim()) {
@@ -469,76 +477,167 @@ export default function SuperAdminPage() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-1">
-              <span className="text-xs text-gray-400">Total Transcribed Plots</span>
+            {/* 1. Total Transcribed Plots */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('plots');
+                setPlotFilterStatus('ALL');
+                setPlotFilterBlock('ALL');
+                setPlotSearchQuery('');
+              }}
+              className="text-left rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-2 hover:border-[#C7A35A]/60 hover:bg-[#0B1734]/80 transition group active:scale-[0.99] cursor-pointer shadow-md"
+            >
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>Total Transcribed Plots</span>
+                <ChevronRight className="h-4 w-4 text-gray-500 group-hover:text-[#DFC382] group-hover:translate-x-0.5 transition" />
+              </div>
               <span className="font-serif text-3xl font-bold text-white block">{totalPlots}</span>
-              <span className="text-[11px] text-gray-400">Rampur Blueprint Model</span>
-            </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-white/5">
+                <span>Rampur Blueprint Model</span>
+                <span className="text-[10px] text-[#DFC382] font-semibold group-hover:underline">View All →</span>
+              </div>
+            </button>
 
-            <div className="rounded-2xl border border-emerald-500/30 bg-[#0B1734] p-5 space-y-1">
-              <span className="text-xs text-emerald-300">Available Green Plots</span>
+            {/* 2. Available Green Plots */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('plots');
+                setPlotFilterStatus('available_green');
+                setPlotFilterBlock('ALL');
+                setPlotSearchQuery('');
+              }}
+              className="text-left rounded-2xl border border-emerald-500/30 bg-[#0B1734] p-5 space-y-2 hover:border-emerald-400 hover:bg-emerald-950/20 transition group active:scale-[0.99] cursor-pointer shadow-md"
+            >
+              <div className="flex items-center justify-between text-xs text-emerald-300">
+                <span>Available Green Plots</span>
+                <ChevronRight className="h-4 w-4 text-emerald-500 group-hover:text-emerald-300 group-hover:translate-x-0.5 transition" />
+              </div>
               <span className="font-serif text-3xl font-bold text-emerald-400 block">{availablePlots}</span>
-              <span className="text-[11px] text-gray-400">Bookable by Buyers</span>
-            </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-emerald-500/10">
+                <span>Bookable by Buyers</span>
+                <span className="text-[10px] text-emerald-400 font-semibold group-hover:underline">Filter Available →</span>
+              </div>
+            </button>
 
-            <div className="rounded-2xl border border-amber-500/30 bg-[#0B1734] p-5 space-y-1">
-              <span className="text-xs text-amber-300">Confirmed Booked (Yellow)</span>
+            {/* 3. Confirmed Booked (Yellow) */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('plots');
+                setPlotFilterStatus('booked_yellow');
+                setPlotFilterBlock('ALL');
+                setPlotSearchQuery('');
+              }}
+              className="text-left rounded-2xl border border-amber-500/30 bg-[#0B1734] p-5 space-y-2 hover:border-amber-400 hover:bg-amber-950/20 transition group active:scale-[0.99] cursor-pointer shadow-md"
+            >
+              <div className="flex items-center justify-between text-xs text-amber-300">
+                <span>Confirmed Booked (Yellow)</span>
+                <ChevronRight className="h-4 w-4 text-amber-500 group-hover:text-amber-300 group-hover:translate-x-0.5 transition" />
+              </div>
               <span className="font-serif text-3xl font-bold text-amber-400 block">{bookedPlots}</span>
-              <span className="text-[11px] text-gray-400">Locked Inventory</span>
-            </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-amber-500/10">
+                <span>Locked Inventory</span>
+                <span className="text-[10px] text-amber-400 font-semibold group-hover:underline">Filter Booked →</span>
+              </div>
+            </button>
 
-            <div className="rounded-2xl border border-red-500/30 bg-[#0B1734] p-5 space-y-1">
-              <span className="text-xs text-red-300">Vacant / Reserved (Red)</span>
+            {/* 4. Vacant / Reserved (Red) */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('plots');
+                setPlotFilterStatus('vacant_red');
+                setPlotFilterBlock('ALL');
+                setPlotSearchQuery('');
+              }}
+              className="text-left rounded-2xl border border-red-500/30 bg-[#0B1734] p-5 space-y-2 hover:border-red-400 hover:bg-red-950/20 transition group active:scale-[0.99] cursor-pointer shadow-md"
+            >
+              <div className="flex items-center justify-between text-xs text-red-300">
+                <span>Vacant / Reserved (Red)</span>
+                <ChevronRight className="h-4 w-4 text-red-500 group-hover:text-red-300 group-hover:translate-x-0.5 transition" />
+              </div>
               <span className="font-serif text-3xl font-bold text-red-400 block">{vacantPlots}</span>
-              <span className="text-[11px] text-gray-400">Admin-Managed</span>
-            </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-red-500/10">
+                <span>Admin-Managed</span>
+                <span className="text-[10px] text-red-400 font-semibold group-hover:underline">Filter Vacant →</span>
+              </div>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-[#050A17] p-5 space-y-2">
+            {/* 5. Payment Verification Queue */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('payments')}
+              className="text-left rounded-2xl border border-white/10 bg-[#050A17] p-5 space-y-2 hover:border-amber-400/50 hover:bg-amber-950/10 transition group active:scale-[0.99] cursor-pointer shadow-md"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">Payment Verification Queue</span>
                 <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
                   {pendingPayments.length} Pending
                 </span>
               </div>
-              <span className="font-serif text-2xl font-bold text-white block">
+              <span className="font-serif text-2xl font-bold text-white block group-hover:text-amber-200 transition">
                 {pendingPayments.length} Proofs to Review
               </span>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-gray-400 leading-relaxed">
                 Staff must verify transaction references against bank statement before issuing receipt.
               </p>
-            </div>
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-[#DFC382] font-semibold">
+                <span>Open Verification Queue</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+              </div>
+            </button>
 
-            <div className="rounded-2xl border border-white/10 bg-[#050A17] p-5 space-y-2">
+            {/* 6. Offline Cash Kit Treasury */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('kits')}
+              className="text-left rounded-2xl border border-white/10 bg-[#050A17] p-5 space-y-2 hover:border-emerald-400/50 hover:bg-emerald-950/10 transition group active:scale-[0.99] cursor-pointer shadow-md"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">Offline Cash Kit Treasury</span>
                 <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
                   {kitIssues.length} Kits
                 </span>
               </div>
-              <span className="font-serif text-2xl font-bold text-emerald-400 block">
+              <span className="font-serif text-2xl font-bold text-emerald-400 block group-hover:brightness-110 transition">
                 ₹{totalOfflineCash.toLocaleString('en-IN')} Cash
               </span>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-gray-400 leading-relaxed">
                 Collected strictly in cash offline for Bags, Pens, Diaries, and Files.
               </p>
-            </div>
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-emerald-400 font-semibold">
+                <span>Open ₹999 Cash Ledger</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+              </div>
+            </button>
 
-            <div className="rounded-2xl border border-white/10 bg-[#050A17] p-5 space-y-2">
+            {/* 7. Open Customer Support */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('support')}
+              className="text-left rounded-2xl border border-white/10 bg-[#050A17] p-5 space-y-2 hover:border-sky-400/50 hover:bg-sky-950/10 transition group active:scale-[0.99] cursor-pointer shadow-md"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">Open Customer Support</span>
                 <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-bold text-sky-400">
                   {openTickets.length} Open
                 </span>
               </div>
-              <span className="font-serif text-2xl font-bold text-white block">
+              <span className="font-serif text-2xl font-bold text-white block group-hover:text-sky-200 transition">
                 {openTickets.length} Active Tickets
               </span>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-gray-400 leading-relaxed">
                 Customer inquiries regarding registry documentation, site appointments, and plots.
               </p>
-            </div>
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-sky-400 font-semibold">
+                <span>Manage Tickets & Replies</span>
+                <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+              </div>
+            </button>
           </div>
         </div>
       )}
@@ -587,29 +686,109 @@ export default function SuperAdminPage() {
 
           {/* Member KPIs Summary Grid */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
-            <div className="rounded-2xl border border-white/10 bg-[#050A17] p-4 space-y-1">
-              <span className="text-gray-400 text-[11px] block">Total Registered</span>
-              <div className="font-serif text-2xl font-bold text-white">{totalMembers}</div>
-              <span className="text-[10px] text-gray-400">All system profiles</span>
-            </div>
+            {/* Total Registered */}
+            <button
+              type="button"
+              onClick={() => {
+                setMemberRoleFilter('ALL');
+                setMemberStatusFilter('ALL');
+                setMemberSearchQuery('');
+              }}
+              className={`text-left rounded-2xl border p-4 space-y-1 transition group active:scale-[0.98] cursor-pointer shadow-md ${
+                memberRoleFilter === 'ALL' && memberStatusFilter === 'ALL'
+                  ? 'border-[#C7A35A] bg-[#C7A35A]/10 ring-1 ring-[#C7A35A]/40'
+                  : 'border-white/10 bg-[#050A17] hover:border-white/30 hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-[11px] block">Total Registered</span>
+                <span className="text-[10px] text-gray-500 group-hover:text-gray-300 flex items-center gap-0.5">
+                  All <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition" />
+                </span>
+              </div>
+              <div className="font-serif text-2xl font-bold text-white group-hover:text-[#DFC382] transition">
+                {totalMembers}
+              </div>
+              <span className="text-[10px] text-gray-400 block">All system profiles</span>
+            </button>
 
-            <div className="rounded-2xl border border-[#C7A35A]/30 bg-[#050A17] p-4 space-y-1">
-              <span className="text-gray-400 text-[11px] block">Working Associates</span>
-              <div className="font-serif text-2xl font-bold text-[#DFC382]">{workingAssociates}</div>
-              <span className="text-[10px] text-emerald-400">Sponsors & Field staff</span>
-            </div>
+            {/* Working Associates */}
+            <button
+              type="button"
+              onClick={() => {
+                setMemberRoleFilter('associates');
+                setMemberStatusFilter('ALL');
+                setMemberSearchQuery('');
+              }}
+              className={`text-left rounded-2xl border p-4 space-y-1 transition group active:scale-[0.98] cursor-pointer shadow-md ${
+                memberRoleFilter === 'associates'
+                  ? 'border-[#C7A35A] bg-[#C7A35A]/15 ring-2 ring-[#C7A35A]/50'
+                  : 'border-[#C7A35A]/30 bg-[#050A17] hover:border-[#C7A35A] hover:bg-[#C7A35A]/5'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-[11px] block">Working Associates</span>
+                <span className="text-[10px] text-[#DFC382] flex items-center gap-0.5 font-medium">
+                  Filter <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition" />
+                </span>
+              </div>
+              <div className="font-serif text-2xl font-bold text-[#DFC382] group-hover:brightness-110 transition">
+                {workingAssociates}
+              </div>
+              <span className="text-[10px] text-emerald-400 block">Sponsors & Field staff</span>
+            </button>
 
-            <div className="rounded-2xl border border-emerald-500/20 bg-[#050A17] p-4 space-y-1">
-              <span className="text-gray-400 text-[11px] block">Verified Buyers</span>
-              <div className="font-serif text-2xl font-bold text-emerald-400">{totalBuyers}</div>
-              <span className="text-[10px] text-gray-400">Plot investors</span>
-            </div>
+            {/* Verified Buyers */}
+            <button
+              type="button"
+              onClick={() => {
+                setMemberRoleFilter('buyer');
+                setMemberStatusFilter('ALL');
+                setMemberSearchQuery('');
+              }}
+              className={`text-left rounded-2xl border p-4 space-y-1 transition group active:scale-[0.98] cursor-pointer shadow-md ${
+                memberRoleFilter === 'buyer'
+                  ? 'border-emerald-400 bg-emerald-950/30 ring-2 ring-emerald-400/50'
+                  : 'border-emerald-500/20 bg-[#050A17] hover:border-emerald-400/60 hover:bg-emerald-950/15'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-[11px] block">Verified Buyers</span>
+                <span className="text-[10px] text-emerald-400 flex items-center gap-0.5 font-medium">
+                  Filter <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition" />
+                </span>
+              </div>
+              <div className="font-serif text-2xl font-bold text-emerald-400 group-hover:brightness-110 transition">
+                {totalBuyers}
+              </div>
+              <span className="text-[10px] text-gray-400 block">Plot investors</span>
+            </button>
 
-            <div className="rounded-2xl border border-red-500/20 bg-[#050A17] p-4 space-y-1">
-              <span className="text-gray-400 text-[11px] block">Suspended / Inactive</span>
-              <div className="font-serif text-2xl font-bold text-red-400">{suspendedMembers}</div>
-              <span className="text-[10px] text-gray-400">Blocked accounts</span>
-            </div>
+            {/* Suspended / Inactive */}
+            <button
+              type="button"
+              onClick={() => {
+                setMemberRoleFilter('ALL');
+                setMemberStatusFilter('inactive');
+                setMemberSearchQuery('');
+              }}
+              className={`text-left rounded-2xl border p-4 space-y-1 transition group active:scale-[0.98] cursor-pointer shadow-md ${
+                memberStatusFilter === 'inactive'
+                  ? 'border-red-400 bg-red-950/30 ring-2 ring-red-400/50'
+                  : 'border-red-500/20 bg-[#050A17] hover:border-red-400/60 hover:bg-red-950/15'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-[11px] block">Suspended / Inactive</span>
+                <span className="text-[10px] text-red-400 flex items-center gap-0.5 font-medium">
+                  Filter <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition" />
+                </span>
+              </div>
+              <div className="font-serif text-2xl font-bold text-red-400 group-hover:brightness-110 transition">
+                {suspendedMembers}
+              </div>
+              <span className="text-[10px] text-gray-400 block">Blocked accounts</span>
+            </button>
           </div>
 
           {/* Search & Filtering Toolbar */}
@@ -641,7 +820,7 @@ export default function SuperAdminPage() {
                 <span className="text-gray-400 font-semibold mr-1 flex items-center gap-1">
                   <Filter className="h-3.5 w-3.5 text-[#C7A35A]" /> Role:
                 </span>
-                {(['ALL', 'super_admin', 'sub_admin', 'senior_member', 'junior_member', 'buyer'] as const).map((r) => (
+                {(['ALL', 'associates', 'super_admin', 'sub_admin', 'senior_member', 'junior_member', 'buyer'] as const).map((r) => (
                   <button
                     key={r}
                     onClick={() => setMemberRoleFilter(r)}
@@ -653,6 +832,8 @@ export default function SuperAdminPage() {
                   >
                     {r === 'ALL'
                       ? `All (${allProfiles.length})`
+                      : r === 'associates'
+                      ? `Team (${workingAssociates})`
                       : r === 'super_admin'
                       ? 'Admin'
                       : r === 'sub_admin'
