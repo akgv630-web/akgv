@@ -36,7 +36,7 @@ export { INITIAL_PLOTS };
 export const DEMO_PROFILES: Profile[] = [
   {
     id: 'usr-admin-01',
-    email: 'admin@akgvinfacity.com',
+    email: 'yadavpreetrajesh@gmail.com',
     fullName: 'Preet Yadav',
     phone: '6306917991',
     role: 'super_admin',

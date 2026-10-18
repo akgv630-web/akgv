@@ -98,7 +98,10 @@ export async function onRequestPost(context: {
 
     if (cleanIdentifier.includes('@')) {
       const lower = cleanIdentifier.toLowerCase();
-      canonicalEmail = lower === 'admin@akgv.com' ? 'admin@akgvinfacity.com' : lower;
+      canonicalEmail =
+        lower === 'admin@akgv.com' || lower === 'admin@akgvinfacity.com'
+          ? 'yadavpreetrajesh@gmail.com'
+          : lower;
     } else {
       // 1. Attempt database RPC resolution
       const { data: resolvedEmail, error: rpcErr } = await supabaseAdmin.rpc(

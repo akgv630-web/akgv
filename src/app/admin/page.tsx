@@ -68,6 +68,7 @@ import { AdminBroadcastTab } from '@/components/admin/AdminBroadcastTab';
 import { AdminCmsTab } from '@/components/admin/AdminCmsTab';
 import { AuthBarrier, UnauthorizedBarrier } from '@/components/auth/AuthBarrier';
 import { COMMISSION_LEVELS_GROUND_TRUTH } from '@/data/groundTruth';
+import { serverInviteMember, supabaseGetSession } from '@/lib/supabase/syncService';
 
 function formatTenure(dateStr?: string): { joinedFormatted: string; tenureFormatted: string } {
   if (!dateStr) return { joinedFormatted: 'Recent', tenureFormatted: 'Active' };
@@ -314,6 +315,8 @@ export default function SuperAdminPage() {
     activationUrl: string;
     loginUrl: string;
     invitationStatus?: string;
+    emailDelivered?: boolean;
+    dispatchNote?: string;
   } | null>(null);
 
   // Edit Member Form State
@@ -1470,16 +1473,18 @@ export default function SuperAdminPage() {
 
                 {/* Form */}
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
                     if (!newMemberName.trim() || !newMemberPhone.trim()) {
                       alert(tLang(language, 'Please provide member name and phone number.', 'कृपया सदस्य का नाम और फोन नंबर दर्ज करें।', 'Kripya member ka naam aur phone number enter karein.'));
                       return;
                     }
+                    const targetEmail = newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`;
+
                     const profile = createSponsorMember({
                       fullName: newMemberName.trim(),
                       phone: newMemberPhone.trim(),
-                      email: newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`,
+                      email: targetEmail,
                       role: newMemberRole,
                       sponsorId: newMemberSponsorId,
                       city: newMemberCity.trim(),
@@ -1487,10 +1492,41 @@ export default function SuperAdminPage() {
                       address: newMemberAddress.trim(),
                       level: Number(newMemberLevel) || 1,
                     });
-                    const activationUrl = typeof window !== 'undefined'
+
+                    // Trigger server-side invitation email directly to recipient Gmail
+                    let realActionLink: string | null = null;
+                    let emailDelivered = false;
+                    let dispatchNote = '';
+
+                    try {
+                      const session = await supabaseGetSession();
+                      if (session?.access_token) {
+                        const inviteRes = await serverInviteMember(session.access_token, {
+                          email: targetEmail,
+                          fullName: newMemberName.trim(),
+                          phone: newMemberPhone.trim(),
+                          role: newMemberRole,
+                          sponsorId: newMemberSponsorId,
+                          city: newMemberCity.trim(),
+                          branchLocation: newMemberBranch.trim(),
+                          address: newMemberAddress.trim(),
+                          level: Number(newMemberLevel) || 1,
+                        });
+                        if (inviteRes.success) {
+                          realActionLink = inviteRes.actionLink || null;
+                          emailDelivered = Boolean(inviteRes.emailDelivered);
+                          dispatchNote = inviteRes.note || '';
+                        }
+                      }
+                    } catch (err) {
+                      console.warn('Server invitation notice:', err);
+                    }
+
+                    const activationUrl = realActionLink || (typeof window !== 'undefined'
                       ? `${window.location.origin}/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`
-                      : `https://akgvinfacity.com/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`;
+                      : `https://akgvinfacity.com/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`);
                     const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://akgvinfacity.com/login';
+
                     setCreatedSponsorFeedback({
                       code: profile.memberId || profile.email || 'AKGV-NEW',
                       name: profile.fullName,
@@ -1499,14 +1535,16 @@ export default function SuperAdminPage() {
                       role: profile.role,
                       activationUrl,
                       loginUrl,
-                      invitationStatus: profile.invitationStatus || 'pending',
+                      invitationStatus: emailDelivered ? 'delivered' : (profile.invitationStatus || 'pending'),
+                      emailDelivered,
+                      dispatchNote,
                     });
                     setMemberActionNotice(
                       tLang(
                         language,
-                        `New member "${profile.fullName}" enrolled successfully! Member ID: ${profile.memberId || profile.email}. Activation invite generated.`,
-                        `नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! सदस्य आईडी: ${profile.memberId || profile.email}। सक्रियण आमंत्रण लिंक तैयार है।`,
-                        `Naya member "${profile.fullName}" enroll ho gaya! Member ID: ${profile.memberId || profile.email}. Activation link ready hai.`
+                        `New member "${profile.fullName}" enrolled successfully! Member ID: ${profile.memberId || profile.email}.${emailDelivered ? ' Invitation email dispatched.' : ' Activation invite generated.'}`,
+                        `नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! सदस्य आईडी: ${profile.memberId || profile.email}। ${emailDelivered ? 'आमंत्रण ईमेल भेज दिया गया है।' : 'सक्रियण आमंत्रण लिंक तैयार है।'}`,
+                        `Naya member "${profile.fullName}" enroll ho gaya! Member ID: ${profile.memberId || profile.email}.${emailDelivered ? ' Invite email bhej diya gaya hai.' : ' Activation link ready hai.'}`
                       )
                     );
                     setNewMemberName('');
@@ -1534,6 +1572,15 @@ export default function SuperAdminPage() {
                         <div className="text-white">📧 {tLang(language, 'Email:', 'ईमेल:', 'Email:')} <span className="text-gray-300">{createdSponsorFeedback.email}</span></div>
                         <div className="text-white">📱 {tLang(language, 'Phone:', 'फोन:', 'Phone:')} <span className="text-gray-300">{createdSponsorFeedback.phone}</span></div>
                         <div className="text-white">🛡️ {tLang(language, 'Security Status:', 'सुरक्षा स्थिति:', 'Security Status:')} <span className="text-emerald-300 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-500/30">Passwordless Invite (Zero Plaintext)</span></div>
+                        {createdSponsorFeedback.emailDelivered ? (
+                          <div className="text-emerald-300 font-sans font-semibold text-[11px]">
+                            ✉️ {tLang(language, 'Email Status: Invitation email dispatched directly to recipient inbox via Supabase Mailer!', 'ईमेल स्थिति: आमंत्रण ईमेल सीधे प्राप्तकर्ता के इनबॉक्स में भेजा गया!', 'Email Status: Invite email seedha recipient ke inbox me bhej diya gaya!')}
+                          </div>
+                        ) : (
+                          <div className="text-amber-300/90 font-sans text-[11px]">
+                            ✉️ {tLang(language, 'Email Status: Direct activation link ready for copy/WhatsApp dispatch.', 'ईमेल स्थिति: सक्रियण लिंक कॉपी/WhatsApp पर भेजने के लिए तैयार है।', 'Email Status: Direct activation link copy/WhatsApp par bhejne ke liye ready hai.')}
+                          </div>
+                        )}
                         <div className="text-white break-all">🔗 {tLang(language, 'Activation Link:', 'सक्रियण लिंक:', 'Activation Link:')} <span className="text-sky-300 underline font-sans text-[11px]">{createdSponsorFeedback.activationUrl}</span></div>
                       </div>
 
@@ -1607,7 +1654,7 @@ export default function SuperAdminPage() {
 
                     <div>
                       <label className="block text-gray-300 font-semibold mb-1">
-                        {tLang(language, 'Email Address (Optional)', 'ईमेल आईडी (वैकल्पिक)', 'Email Address (Optional)')}
+                        {tLang(language, 'Email Address (Gmail / Any Email)', 'ईमेल आईडी (Gmail / कोई भी ईमेल)', 'Email Address (Gmail / Any Email)')}
                       </label>
                       <input
                         type="email"
@@ -1616,6 +1663,14 @@ export default function SuperAdminPage() {
                         onChange={(e) => setNewMemberEmail(e.target.value)}
                         className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
                       />
+                      <p className="mt-1 text-[10px] text-gray-400">
+                        {tLang(
+                          language,
+                          'Normal Gmail supported. An invitation email will be dispatched to this address.',
+                          'सामान्य Gmail समर्थित है। आमंत्रण ईमेल इसी पते पर भेजा जाएगा।',
+                          'Normal Gmail supported hai. Invite email isi address par jayega.'
+                        )}
+                      </p>
                     </div>
                   </div>
 

@@ -141,10 +141,34 @@ export async function onRequestPost(context: {
 
     const redirectTo = `${appOrigin}/auth/reset?type=invite`;
 
-    // Try generateLink with type: 'invite' to produce a real cryptographically signed verification link
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 4. Send Real Supabase Auth Invitation Email directly to recipient's Gmail
+    let createdAuthUser: any = null;
+    let emailDelivered = false;
+    let actionLink: string | null = null;
+
+    // A. Dispatch official Supabase invite email directly to user's Gmail inbox
+    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      cleanEmail,
+      {
+        redirectTo,
+        data: {
+          full_name: fullName.trim(),
+          role: role,
+        },
+      }
+    );
+
+    if (!inviteError && inviteData?.user) {
+      createdAuthUser = inviteData.user;
+      emailDelivered = true;
+    }
+
+    // B. Also generate cryptographic link so Admin has direct copy/WhatsApp dispatch
+    const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
       type: 'invite',
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       options: {
         redirectTo,
         data: {
@@ -154,17 +178,51 @@ export async function onRequestPost(context: {
       },
     });
 
-    if (linkError) {
-      return new Response(
-        JSON.stringify({
-          error: `Failed to create Supabase Auth invitation: ${linkError.message}`,
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (linkData?.user && !createdAuthUser) {
+      createdAuthUser = linkData.user;
+    }
+    if (linkData?.properties?.action_link) {
+      actionLink = linkData.properties.action_link;
     }
 
-    const createdAuthUser = linkData.user;
-    const actionLink = linkData.properties?.action_link || null;
+    // C. Fallback: If user was not created by invite, create user and generate activation link
+    if (!createdAuthUser) {
+      const { data: createdUsr, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: cleanEmail,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName.trim(),
+          role: role,
+        },
+      });
+
+      if (createdUsr?.user) {
+        createdAuthUser = createdUsr.user;
+        const { data: recData } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: cleanEmail,
+          options: { redirectTo },
+        });
+        actionLink = recData?.properties?.action_link || actionLink;
+      } else {
+        const { data: recData } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: cleanEmail,
+          options: { redirectTo },
+        });
+        if (recData?.user) {
+          createdAuthUser = recData.user;
+          actionLink = recData.properties?.action_link || actionLink;
+        } else {
+          return new Response(
+            JSON.stringify({
+              error: `Failed to create Supabase Auth account: ${inviteError?.message || createErr?.message}`,
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
 
     // 5. Create or Update Linked Profile with Database Sequence Member ID
     const profileId = `usr-${Date.now()}`;
@@ -185,9 +243,6 @@ export async function onRequestPost(context: {
       address: address || null,
       level: Number(level) || 1,
       rank_title: rankTitle || 'Associate Partner',
-      invitation_status: 'sent',
-      invitation_sent_at: nowIso,
-      invited_by: callerProfile?.id || null,
       joined_date: nowIso.slice(0, 10),
       created_at: nowIso,
       updated_at: nowIso,
@@ -217,9 +272,10 @@ export async function onRequestPost(context: {
         profile: insertedProfile,
         actionLink,
         invitationStatus: 'sent',
-        emailDelivered: false,
-        note:
-          'Supabase Auth invitation token created successfully. Custom SMTP delivery awaits provider credentials in Supabase project settings; real cryptographic action link is provided for instant onboarding dispatch.',
+        emailDelivered: emailDelivered,
+        note: emailDelivered
+          ? 'Official Supabase Auth invitation email dispatched directly to recipient Gmail inbox. Direct cryptographic activation link also provided.'
+          : 'Cryptographic activation link generated for onboarding.',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

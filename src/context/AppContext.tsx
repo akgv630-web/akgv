@@ -455,8 +455,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isSupabaseConfigured) {
       try {
         let authEmail = trimmedId;
-        if (authEmail.toLowerCase() === 'admin@akgv.com') {
-          authEmail = 'admin@akgvinfacity.com';
+        const lowerInput = authEmail.toLowerCase();
+        if (lowerInput === 'admin@akgv.com' || lowerInput === 'admin@akgvinfacity.com') {
+          authEmail = 'yadavpreetrajesh@gmail.com';
         }
 
         if (!authEmail.includes('@')) {
@@ -600,7 +601,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 2. Offline / local test sandbox environment: strictly verify password without hardcoded bypass
-    const searchTarget = trimmedId.toLowerCase() === 'admin@akgv.com' ? 'admin@akgvinfacity.com' : trimmedId.toLowerCase();
+    const lowerId = trimmedId.toLowerCase();
+    const searchTarget =
+      lowerId === 'admin@akgv.com' || lowerId === 'admin@akgvinfacity.com'
+        ? 'yadavpreetrajesh@gmail.com'
+        : lowerId;
     const cleanDigits = trimmedId.replace(/\D/g, '');
 
     const found =

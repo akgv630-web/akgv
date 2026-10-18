@@ -31,7 +31,7 @@ INSERT INTO public.profiles (
     updated_at
 ) VALUES (
     'usr-admin-01',
-    'admin@akgvinfacity.com',
+    'yadavpreetrajesh@gmail.com',
     'Preet Yadav',
     '6306917991',
     'super_admin',
@@ -49,7 +49,7 @@ INSERT INTO public.profiles (
     timezone('utc', now()),
     timezone('utc', now())
 ) ON CONFLICT (id) DO UPDATE SET
-    email = 'admin@akgvinfacity.com',
+    email = 'yadavpreetrajesh@gmail.com',
     full_name = 'Preet Yadav',
     phone = '6306917991',
     role = 'super_admin',
@@ -66,7 +66,7 @@ DECLARE
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users') THEN
         -- Check if user exists in auth.users
-        SELECT id INTO v_existing_id FROM auth.users WHERE email = 'admin@akgvinfacity.com' LIMIT 1;
+        SELECT id INTO v_existing_id FROM auth.users WHERE email = 'yadavpreetrajesh@gmail.com' LIMIT 1;
 
         IF v_existing_id IS NULL THEN
             INSERT INTO auth.users (
@@ -89,7 +89,7 @@ BEGIN
                 v_admin_uuid,
                 'authenticated',
                 'authenticated',
-                'admin@akgvinfacity.com',
+                'yadavpreetrajesh@gmail.com',
                 crypt('Admin@2026', gen_salt('bf')),
                 now(),
                 '{"provider": "email", "providers": ["email"]}'::jsonb,
@@ -109,6 +109,6 @@ BEGIN
             full_name = 'Preet Yadav',
             phone = '6306917991',
             role = 'super_admin'
-        WHERE id = 'usr-admin-01' OR email = 'admin@akgvinfacity.com';
+        WHERE id = 'usr-admin-01' OR email = 'yadavpreetrajesh@gmail.com' OR email = 'admin@akgvinfacity.com';
     END IF;
 END $$;
