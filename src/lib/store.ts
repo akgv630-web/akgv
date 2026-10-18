@@ -43,6 +43,7 @@ export const DEMO_PROFILES: Profile[] = [
     memberId: 'AKGV-HQ-001',
     kycStatus: 'verified',
     isActive: true,
+    password: 'Admin@2026',
     city: 'Varanasi',
     branchLocation: 'Rampur Head Office',
     address: 'Near Ring Road Phase-2, Rampur, Varanasi, Uttar Pradesh - 221008',
@@ -62,6 +63,7 @@ export const DEMO_PROFILES: Profile[] = [
     memberId: 'AKGV-SUB-101',
     kycStatus: 'verified',
     isActive: true,
+    password: 'akgv@2026',
     city: 'Varanasi',
     branchLocation: 'Lahartara Branch',
     address: 'GT Road Corridor near Cantt, Lahartara, Varanasi, Uttar Pradesh - 221002',
@@ -81,6 +83,7 @@ export const DEMO_PROFILES: Profile[] = [
     memberId: 'AKGV-3498',
     kycStatus: 'verified',
     isActive: true,
+    password: 'akgv@2026',
     city: 'Varanasi',
     branchLocation: 'Mirza Murad Branch',
     address: 'NH-19 Highway Corridor, Mirza Murad, Varanasi, Uttar Pradesh - 221307',
@@ -101,6 +104,7 @@ export const DEMO_PROFILES: Profile[] = [
     sponsorId: 'usr-sponsor-01',
     kycStatus: 'verified',
     isActive: true,
+    password: 'akgv@2026',
     city: 'Chandauli',
     branchLocation: 'Rampur Head Office',
     address: 'Mughalsarai Station Road, Chandauli, Uttar Pradesh - 232101',
@@ -119,6 +123,7 @@ export const DEMO_PROFILES: Profile[] = [
     role: 'buyer',
     kycStatus: 'verified',
     isActive: true,
+    password: 'akgv@2026',
     city: 'Mirzapur',
     branchLocation: 'Lahartara Branch',
     address: 'Civil Lines, Near Vindhyachal Link Road, Mirzapur, Uttar Pradesh - 231001',
@@ -128,7 +133,7 @@ export const DEMO_PROFILES: Profile[] = [
     plotsClosedCount: 1,
     joinedDate: '2026-04-10',
     createdAt: '2026-04-10T00:00:00Z',
-  }
+  },
 ];
 
 export const INITIAL_BOOKINGS: Booking[] = [

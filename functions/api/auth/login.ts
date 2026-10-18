@@ -97,14 +97,43 @@ export async function onRequestPost(context: {
     let canonicalEmail: string | null = null;
 
     if (cleanIdentifier.includes('@')) {
-      canonicalEmail = cleanIdentifier.toLowerCase();
+      const lower = cleanIdentifier.toLowerCase();
+      canonicalEmail = lower === 'admin@akgv.com' ? 'admin@akgvinfacity.com' : lower;
     } else {
+      // 1. Attempt database RPC resolution
       const { data: resolvedEmail, error: rpcErr } = await supabaseAdmin.rpc(
         'resolve_login_identifier',
         { p_identifier: cleanIdentifier }
       );
 
-      if (rpcErr || !resolvedEmail) {
+      if (!rpcErr && resolvedEmail) {
+        canonicalEmail = resolvedEmail;
+      } else {
+        // 2. Direct service-role fallback lookup on profiles table
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .or(`member_id.ilike.${cleanIdentifier},phone.eq.${cleanIdentifier}`)
+          .maybeSingle();
+
+        if (profile?.email) {
+          canonicalEmail = profile.email.toLowerCase();
+        } else {
+          const digits = cleanIdentifier.replace(/\D/g, '');
+          if (digits.length >= 10) {
+            const { data: pByPhone } = await supabaseAdmin
+              .from('profiles')
+              .select('email')
+              .like('phone', `%${digits.slice(-10)}`)
+              .maybeSingle();
+            if (pByPhone?.email) {
+              canonicalEmail = pByPhone.email.toLowerCase();
+            }
+          }
+        }
+      }
+
+      if (!canonicalEmail) {
         // Return uniform credential error to avoid enumeration
         return new Response(
           JSON.stringify({
@@ -113,7 +142,6 @@ export async function onRequestPost(context: {
           { status: 401, headers: { 'Content-Type': 'application/json' } }
         );
       }
-      canonicalEmail = resolvedEmail;
     }
 
     if (!canonicalEmail) {
