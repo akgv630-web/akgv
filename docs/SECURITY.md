@@ -39,9 +39,26 @@
 - **Risk**: An administrator or compromised account inputs executable HTML/JavaScript in the CMS editor.
 - **Mitigation**: Content fields are rendered using React JSX sanitization. Raw HTML injection (`dangerouslySetInnerHTML`) is prohibited for dynamic database content.
 
+### 2.6 Open Redirect Vulnerability
+- **Risk**: Attackers supply external or pseudo-protocol URLs in `?redirect=` parameters to trick authenticated users into phishing sites upon login.
+- **Mitigation**: Enforced `safeRedirectUrl(target, fallback)` across the application. Explicitly rejects protocol-relative (`//`, `/\`), external schemes (`https://`, `ftp://`), and pseudo-protocols (`javascript:`, `data:`).
+
+### 2.7 Pre-Login Identifier Resolution Under RLS
+- **Risk**: Allowing unauthenticated users to query `public.profiles` to resolve Member IDs or phone numbers leaks associate records. Conversely, blocking anonymous queries breaks non-email logins.
+- **Mitigation**: Implemented `resolve_login_identifier(p_identifier TEXT)` as a PostgreSQL `SECURITY DEFINER` function with strict `search_path = public`. It returns only the canonical email without exposing names, roles, or financial data.
+
+### 2.8 Zero-Plaintext Member Onboarding
+- **Risk**: Storing or emailing randomly generated plaintext passwords exposes initial associate accounts to interception.
+- **Mitigation**: Eliminated plaintext password generation. Admin enrollment generates a cryptographic activation invite link (`/auth/reset?type=invite&email=...`), enabling the member to establish their own confidential credentials directly via Supabase Auth recovery tokens.
+
+### 2.9 Cadastral Inventory & Anti-Mutation Governance
+- **Risk**: Silently mutating plot areas or dimensions to force marketing brochure agreement (+1,500 sq ft) creates contractual and legal liability.
+- **Mitigation**: Retained exact CAD-demarcated plot dimensions (57,470 sq ft) in database and master plan canvas. Exposed transparent Survey Reconciliation Audit Dossier in the Admin portal badged as *"Awaiting Corporate Survey Re-Certification"*.
+
 ---
 
 ## 3. First Admin Bootstrapping Protocol
-1. The initial Super Admin account is provisioned securely during database initialization via Supabase Auth admin API or SQL migration with a unique temporary credential.
+1. The initial Admin account is provisioned securely during database initialization via Supabase Auth admin API or SQL migration with a unique temporary credential.
 2. Upon first login, the administrator is required to update their temporary password.
 3. No universal fallback password exists in the production codebase.
+
