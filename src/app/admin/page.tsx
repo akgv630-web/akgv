@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   AlertCircle,
   AlertTriangle,
@@ -122,7 +123,7 @@ function getLevelInfo(level?: number) {
   };
 }
 
-export default function SuperAdminPage() {
+export default function AdminPage() {
   const {
     plots,
     updatePlotStatus,
@@ -148,6 +149,7 @@ export default function SuperAdminPage() {
     replyToReview,
     deleteReview,
     tasks,
+    toggleTask,
     enquiries,
     siteVisits,
     targets,
@@ -347,6 +349,8 @@ export default function SuperAdminPage() {
   const verifiedPayments = payments.filter((p) => p.status === 'verified');
   const totalOfflineCash = kitIssues.reduce((sum, item) => sum + item.amountReceivedInr, 0);
   const openTickets = supportTickets.filter((t) => t.status === 'open' || t.status === 'in_progress');
+  const pendingAdminTasks = tasks.filter((t) => !t.isCompleted);
+  const completedAdminTasks = tasks.filter((t) => t.isCompleted);
 
   const filteredPlots = plots.filter((p) => {
     if (plotFilterBlock !== 'ALL' && p.block.toUpperCase() !== plotFilterBlock.toUpperCase()) return false;
@@ -892,6 +896,117 @@ export default function SuperAdminPage() {
                 <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition" />
               </div>
             </button>
+          </div>
+
+          {/* Daily Task Action Center Widget on Overview */}
+          <div className="rounded-3xl border border-[#C7A35A]/30 bg-gradient-to-b from-[#0B1734] via-[#050A17] to-[#0B1734] p-5 sm:p-6 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                  <CheckSquare className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-serif text-lg font-bold text-white">
+                      {tLang(language, 'Daily Task Action Center (आज के काम)', 'दैनिक कार्य डेस्क', 'Daily Task Action Center')}
+                    </h3>
+                    <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-300 border border-amber-500/40">
+                      {pendingAdminTasks.length} {tLang(language, 'Pending', 'लंबित', 'Pending')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    {tLang(
+                      language,
+                      'Escort site visits, verify token payments, follow up with inquiries, and track staff completion.',
+                      'साइट विजिट, टोकन भुगतान सत्यापन और पूछताछ का तुरंत निपटारा करें।',
+                      'Site visits, token payment verification aur inquiries ko track karein.'
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('tasks')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-4 py-2 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 active:scale-95 transition"
+                >
+                  <span>{tLang(language, 'Open Full Task Desk', 'पूरा कार्य डेस्क खोलें', 'Open Full Task Desk')}</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Priority Task Cards (Top 4 Pending) */}
+            {pendingAdminTasks.length === 0 ? (
+              <div className="py-6 text-center text-xs text-gray-400">
+                <CheckCircle2 className="h-8 w-8 text-emerald-400 mx-auto mb-2 opacity-80" />
+                <p className="font-semibold text-white">All pending tasks are complete!</p>
+                <p className="text-gray-400 mt-0.5">Click "Open Full Task Desk" to assign new directives to field staff.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {pendingAdminTasks.slice(0, 4).map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex flex-col justify-between rounded-2xl border border-white/10 bg-[#050A17]/90 p-4 space-y-3 hover:border-[#C7A35A]/50 transition shadow-sm"
+                  >
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            task.priority === 'urgent'
+                              ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                              : task.priority === 'high'
+                              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                              : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                          }`}
+                        >
+                          {task.priority}
+                        </span>
+                        <span className="text-[11px] text-gray-400">
+                          Due: <strong className="text-gray-300">{task.dueDate}</strong>
+                        </span>
+                      </div>
+                      <h4 className="font-serif text-sm font-bold text-white line-clamp-1">
+                        {task.title}
+                      </h4>
+                      {task.description && (
+                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                          {task.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 text-xs">
+                      <span className="text-gray-400 text-[11px]">
+                        Assignee: <strong className="text-white">{task.assignedToName}</strong>
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {task.targetRoute && (
+                          <Link
+                            href={task.targetRoute}
+                            className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-semibold text-[#DFC382] hover:bg-white/10 transition"
+                          >
+                            <span>Open</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleTask(task.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 text-[11px] font-bold transition active:scale-95"
+                          title="Mark Completed"
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          <span>Complete</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

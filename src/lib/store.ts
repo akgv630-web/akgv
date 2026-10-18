@@ -588,7 +588,7 @@ export const INITIAL_TASKS: TaskReminder[] = [
   {
     id: 'task-05',
     assigneeId: 'usr-admin-01',
-    assignedToMemberId: 'AKGV-2117',
+    assignedToMemberId: 'AKGV-HQ-001',
     assignedToName: 'Preet Yadav',
     title: 'Field Inspection: Boundary Demarcation Verification on Block B',
     description: 'Inspect physical corner demarcation pillars with GPS camera at Rampur extension and upload geofenced photo proof.',
@@ -604,6 +604,26 @@ export const INITIAL_TASKS: TaskReminder[] = [
     createdBy: 'usr-admin-01',
     createdByName: 'Admin Desk',
     createdAt: '2026-10-16T10:00:00Z'
+  },
+  {
+    id: 'task-06',
+    assigneeId: 'usr-member-01',
+    assignedToMemberId: 'AKGV0042',
+    assignedToName: 'Amit Sharma',
+    title: 'Client Lead Follow-up: Dr. Arvind Mishra (Lahartara Corridor)',
+    description: 'Prospective doctor interested in 1,800 sqft residential plot near Cancer Hospital / Cantt. Schedule site visit for Saturday.',
+    category: 'client_followup',
+    relatedRecordType: 'enquiry',
+    relatedRecordId: 'enq-002',
+    targetRoute: '/member?tab=enquiries&id=enq-002',
+    status: 'pending',
+    dueDate: '2026-10-18',
+    dueTime: '03:00 PM',
+    priority: 'high',
+    isCompleted: false,
+    createdBy: 'usr-admin-01',
+    createdByName: 'Admin Desk',
+    createdAt: '2026-10-16T11:00:00Z'
   }
 ];
 

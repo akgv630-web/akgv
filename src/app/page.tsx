@@ -8,6 +8,7 @@ import {
   Building,
   Calendar,
   CheckCircle2,
+  CheckSquare,
   Clock,
   Layers,
   MapPin,
@@ -23,8 +24,13 @@ import { TrustAndLegalSection } from '@/components/home/TrustAndLegalSection';
 import { tLang } from '@/lib/i18n';
 
 export default function HomePage() {
-  const { t, language, cmsContent } = useApp();
+  const { t, language, cmsContent, currentUser, tasks } = useApp();
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+
+  const isStaff = currentUser && currentUser.role !== 'buyer';
+  const pendingTasksCount = currentUser
+    ? tasks.filter((t) => !t.isCompleted).length
+    : 0;
 
   const faqs = t.faqs;
 
@@ -38,6 +44,58 @@ export default function HomePage() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-5xl text-center space-y-4 sm:space-y-6">
+          {/* Active Associate Task & Lead Action Banner for Logged In Staff */}
+          {isStaff && (
+            <div className="mx-auto max-w-3xl w-full rounded-2xl border border-amber-500/50 bg-gradient-to-r from-amber-950/70 via-[#0B1734] to-[#050A17] p-3.5 sm:p-4 text-left shadow-2xl backdrop-blur-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                    <CheckSquare className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#DFC382]">
+                        {currentUser.role === 'super_admin' ? 'Admin Desk' : 'Associate Workspace'}:
+                      </span>
+                      <span className="text-xs text-white font-semibold">{currentUser.fullName}</span>
+                    </div>
+                    <p className="text-xs text-gray-200 mt-0.5">
+                      {pendingTasksCount > 0
+                        ? tLang(
+                            language,
+                            `⚡ You have ${pendingTasksCount} pending task${pendingTasksCount > 1 ? 's' : ''} to complete today.`,
+                            `⚡ आपके पास आज पूरा करने के लिए ${pendingTasksCount} कार्य लंबित हैं।`,
+                            `⚡ Aapke paas aaj complete karne ke liye ${pendingTasksCount} pending tasks hain.`
+                          )
+                        : tLang(
+                            language,
+                            'All assigned tasks completed! Check incoming leads or view dashboard.',
+                            'सभी कार्य पूरे हैं! नई लीड्स देखें या डैशबोर्ड खोलें।',
+                            'Sabhi tasks complete hain! Nayi leads dekhein ya dashboard kholein.'
+                          )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                  <Link
+                    href={currentUser.role === 'super_admin' || currentUser.role === 'sub_admin' ? '/admin?tab=tasks' : '/member?tab=tasks'}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-3.5 py-1.5 text-xs font-bold text-[#0B1734] shadow hover:brightness-110 active:scale-95 transition"
+                  >
+                    <CheckSquare className="h-3.5 w-3.5" />
+                    <span>{tLang(language, 'Open Tasks Panel', 'टास्क पैनल खोलें', 'Tasks Panel Kholein')}</span>
+                  </Link>
+                  <Link
+                    href={currentUser.role === 'super_admin' || currentUser.role === 'sub_admin' ? '/admin' : '/member'}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/20 transition"
+                  >
+                    <span>{tLang(language, 'Dashboard', 'डैशबोर्ड', 'Dashboard')}</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Dynamic Announcement Banner from CMS */}
           {cmsContent?.announcementBanner?.isActive && (
             <div className="flex justify-center">

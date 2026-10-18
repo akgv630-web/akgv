@@ -154,21 +154,26 @@ export function MemberPortalPage() {
     if (!currentUser) return false;
     const uid = currentUser.id;
     const memId = currentUser.memberId;
-    const isPreet =
-      memId === 'AKGV-2117' ||
-      currentUser.fullName?.toLowerCase().includes('preet') ||
-      memId === 'AKGV-HQ-001';
 
     if (assigneeId === uid || assigneeId === memId) return true;
     if (assignedToMemberId === uid || assignedToMemberId === memId) return true;
     if (memId && assignedToMemberId && assignedToMemberId.toLowerCase() === memId.toLowerCase()) return true;
-    if (isPreet && (assignedToMemberId === 'AKGV-2117' || assigneeId === 'AKGV-2117')) return true;
+    if (memId && assigneeId && assigneeId.toLowerCase() === memId.toLowerCase()) return true;
+    const isPreet =
+      memId === 'AKGV-2117' ||
+      memId === 'AKGV-HQ-001' ||
+      currentUser.fullName?.toLowerCase().includes('preet');
+
+    if (isPreet && (assignedToMemberId === 'AKGV-2117' || assigneeId === 'AKGV-2117' || assignedToMemberId === 'AKGV-HQ-001' || assigneeId === 'usr-admin-01')) return true;
     if (currentUser.memberId === 'AKGV-3498' && (assignedToMemberId === 'usr-sponsor-01' || assignedToMemberId === 'AKGV-3498')) return true;
+    if (currentUser.memberId === 'AKGV0042' && (assignedToMemberId === 'usr-member-01' || assignedToMemberId === 'AKGV0042')) return true;
+    if (currentUser.memberId === 'AKGV-SUB-101' && (assignedToMemberId === 'usr-subadmin-01' || assignedToMemberId === 'AKGV-SUB-101')) return true;
     return false;
   };
 
+  const isAdminUser = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
   const myPendingTasksCount = tasks.filter(
-    (t) => isMatchUser(t.assigneeId, t.assignedToMemberId) && !t.isCompleted
+    (t) => (isAdminUser || isMatchUser(t.assigneeId, t.assignedToMemberId)) && !t.isCompleted
   ).length;
 
   const myEnquiriesCount = enquiries.filter(

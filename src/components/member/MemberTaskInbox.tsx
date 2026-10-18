@@ -64,21 +64,29 @@ export function MemberTaskInbox() {
 
   if (!currentUser) return null;
 
+  const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
+  const [adminShowAll, setAdminShowAll] = useState(false);
+
   // Filter tasks assigned to current member (by canonical ID, auth UID, or member code)
   const isMatchUser = (assigneeId?: string, assignedToMemberId?: string) => {
     if (!currentUser) return false;
+    if (isAdmin && adminShowAll) return true;
     const uid = currentUser.id;
     const memId = currentUser.memberId;
-    const isPreet =
-      memId === 'AKGV-2117' ||
-      currentUser.fullName?.toLowerCase().includes('preet') ||
-      memId === 'AKGV-HQ-001';
 
     if (assigneeId === uid || assigneeId === memId) return true;
     if (assignedToMemberId === uid || assignedToMemberId === memId) return true;
     if (memId && assignedToMemberId && assignedToMemberId.toLowerCase() === memId.toLowerCase()) return true;
-    if (isPreet && (assignedToMemberId === 'AKGV-2117' || assigneeId === 'AKGV-2117')) return true;
+    if (memId && assigneeId && assigneeId.toLowerCase() === memId.toLowerCase()) return true;
+    const isPreet =
+      memId === 'AKGV-2117' ||
+      memId === 'AKGV-HQ-001' ||
+      currentUser.fullName?.toLowerCase().includes('preet');
+
+    if (isPreet && (assignedToMemberId === 'AKGV-2117' || assigneeId === 'AKGV-2117' || assignedToMemberId === 'AKGV-HQ-001' || assigneeId === 'usr-admin-01')) return true;
     if (currentUser.memberId === 'AKGV-3498' && (assignedToMemberId === 'usr-sponsor-01' || assignedToMemberId === 'AKGV-3498')) return true;
+    if (currentUser.memberId === 'AKGV0042' && (assignedToMemberId === 'usr-member-01' || assignedToMemberId === 'AKGV0042')) return true;
+    if (currentUser.memberId === 'AKGV-SUB-101' && (assignedToMemberId === 'usr-subadmin-01' || assignedToMemberId === 'AKGV-SUB-101')) return true;
     return false;
   };
 
@@ -365,6 +373,18 @@ export function MemberTaskInbox() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {isAdmin && (
+            <button
+              onClick={() => setAdminShowAll((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                adminShowAll
+                  ? 'border-indigo-400 bg-indigo-500/20 text-indigo-300'
+                  : 'border-white/10 bg-[#050A17] text-gray-400 hover:text-white'
+              }`}
+            >
+              <span>{adminShowAll ? 'Showing: All Company Tasks' : 'Showing: My Tasks'}</span>
+            </button>
+          )}
           <button
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#DFC382] px-4 py-2.5 text-xs font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"

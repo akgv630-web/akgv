@@ -1902,6 +1902,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     void saveEnquiryToSupabase(newEnquiry);
+
+    // Automatically generate an action task so the website lead is immediately visible and actionable
+    const enquiryTask: TaskReminder = {
+      id: `task-enq-${newEnquiry.id}`,
+      assigneeId: newEnquiry.assignedProfileId || 'usr-admin-01',
+      assignedToMemberId: newEnquiry.assignedMemberId || 'AKGV-HQ-001',
+      assignedToName: newEnquiry.assignedMemberName || 'Admin Desk',
+      title: `Client Lead Follow-up: ${newEnquiry.clientName}`,
+      description: `Client: ${newEnquiry.clientName} (Phone: ${newEnquiry.clientPhone}). Budget: ₹${newEnquiry.budgetInr ? (newEnquiry.budgetInr / 100000).toFixed(1) + ' Lakh' : 'Flexible'}. Notes: ${newEnquiry.notes || 'Interested customer lead from website.'}`,
+      category: 'client_followup',
+      relatedRecordType: 'enquiry',
+      relatedRecordId: newEnquiry.id,
+      targetRoute: `/member?tab=enquiries&id=${newEnquiry.id}`,
+      dueDate: new Date().toISOString().split('T')[0],
+      dueTime: '12:00 PM',
+      priority: 'urgent',
+      status: 'pending',
+      isCompleted: false,
+      createdBy: 'system',
+      createdByName: 'Website Public Lead',
+      createdAt: new Date().toISOString(),
+    };
+    setTasks((prev) => {
+      const next = [enquiryTask, ...prev];
+      try {
+        localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    void saveTaskToSupabase(enquiryTask);
+
     return newEnquiry;
   };
 

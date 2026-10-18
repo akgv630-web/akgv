@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 import {
   Box,
   Calendar,
+  CheckCircle2,
+  CheckSquare,
   ChevronDown,
   Globe,
   Home,
@@ -28,9 +30,14 @@ import { tLang } from '@/lib/i18n';
 
 export function Navbar() {
   const pathname = usePathname();
-  const { language, setLanguage, t, currentUser, logout } = useApp();
+  const { language, setLanguage, t, currentUser, logout, tasks } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+
+  const isStaff = currentUser && currentUser.role !== 'buyer';
+  const pendingTasksCount = currentUser
+    ? tasks.filter((t) => !t.isCompleted).length
+    : 0;
 
   const navLinks = [
     { href: '/', label: t.nav.home, icon: Home },
@@ -176,6 +183,23 @@ export function Navbar() {
                 <span className="font-semibold text-[#DFC382]">{roleLabels[currentUser.role]}</span>
               </Link>
 
+              {/* Tasks Quick Link for Staff / Members */}
+              {isStaff && (
+                <Link
+                  href={currentUser.role === 'super_admin' || currentUser.role === 'sub_admin' ? '/admin?tab=tasks' : '/member?tab=tasks'}
+                  className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 transition"
+                  title="Daily Tasks / Aaj Ke Kaam"
+                >
+                  <CheckSquare className="h-3.5 w-3.5 text-amber-400" />
+                  <span>{tLang(language, 'Tasks', 'काम', 'Tasks')}</span>
+                  {pendingTasksCount > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black text-[#0B1734]">
+                      {pendingTasksCount}
+                    </span>
+                  )}
+                </Link>
+              )}
+
               {/* Go To Portal Button */}
               <Link
                 href={getDashboardPath(currentUser.role)}
@@ -282,6 +306,23 @@ export function Navbar() {
                   <span>{t.nav.signOut}</span>
                 </button>
               </div>
+              {isStaff && (
+                <Link
+                  href={currentUser.role === 'super_admin' || currentUser.role === 'sub_admin' ? '/admin?tab=tasks' : '/member?tab=tasks'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-between rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="h-4 w-4 text-amber-400" />
+                    <span>{tLang(language, 'Daily Tasks (आज के काम)', 'दैनिक कार्य', 'Daily Tasks')}</span>
+                  </div>
+                  {pendingTasksCount > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black text-[#0B1734]">
+                      {pendingTasksCount}
+                    </span>
+                  )}
+                </Link>
+              )}
               <Link
                 href={getDashboardPath(currentUser.role)}
                 onClick={() => setMobileMenuOpen(false)}

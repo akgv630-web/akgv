@@ -24,7 +24,7 @@ This document establishes the phased engineering roadmap to transition the codeb
 | # | Known Defect / Security Finding | Baseline State | Required Production Remediation |
 |---|----------------------------------|----------------|----------------------------------|
 | 1 | Insecure Authentication | Password bypassed; any identifier logged in. | Implement genuine Supabase Auth (`signInWithPassword`, `signUp`, `resetPasswordForEmail`). Enforce password verification. |
-| 2 | Default Super Admin Profile | `currentUser` initialized to `DEMO_PROFILES[0]` (Super Admin). | Default unauthenticated state to `null`. Protected routes require verified session tokens. |
+| 2 | Default Admin Profile | `currentUser` initialized to `DEMO_PROFILES[0]` (Admin). | Default unauthenticated state to `null`. Protected routes require verified session tokens. |
 | 3 | Insecure Role-Switching Helper | `switchUserRole` allowed arbitrary client-side impersonation. | Disallow role switching for ordinary sessions. Role is strictly sourced from verified database `profiles.role`. |
 | 4 | Overly Permissive RLS Policies | `FOR ALL TO anon, authenticated USING (true)` in previous schema. | Implement granular, least-privilege RLS policies based on `auth.uid()` and verified profile role. |
 | 5 | Demo/Production State Confusion | Hardcoded demo accounts treated as active users. | Partition sandbox/demo data from authoritative Supabase records. Visual banner when running in demo sandbox. |

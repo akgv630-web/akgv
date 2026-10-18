@@ -9,7 +9,7 @@
 
 AKGV Infra City recognizes five hierarchical user roles:
 
-1. **Super Admin (`super_admin`)**: Executive management / Company Director. Full access to plot registration, pricing, financial approvals, CMS, and member administration.
+1. **Admin (`super_admin`)**: Executive management / Company Director. Full access to plot registration, pricing, financial approvals, CMS, and member administration.
 2. **Sub Admin (`sub_admin`)**: Regional / Branch Officer (Rampur, Lahartara, Mirza Murad). Can manage site visits, review field evidence, enter payments, and coordinate regional members.
 3. **Senior Member (`senior_member`)**: Team Leader / Senior Associate (Level 4+). Can view downline team performance, record client enquiries, book site visits, and submit field reports.
 4. **Junior Member (`junior_member`)**: Field Agent / Direct Associate. Can register personal leads, submit field GPS photos, and track individual earnings.
@@ -19,7 +19,7 @@ AKGV Infra City recognizes five hierarchical user roles:
 
 ## 2. Granular Permission Matrix
 
-| Capability / Module | Super Admin | Sub Admin | Senior Member | Junior Member | Buyer |
+| Capability / Module | Admin | Sub Admin | Senior Member | Junior Member | Buyer |
 |---------------------|:-----------:|:---------:|:-------------:|:-------------:|:-----:|
 | **Public Browsing (Plots, Models, About)** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Add / Edit Plot Inventory & Prices** | ✅ | ⚠️ Delegated | ❌ | ❌ | ❌ |
@@ -51,4 +51,4 @@ AKGV Infra City recognizes five hierarchical user roles:
 1. **Downline Boundary**: A Senior Member can only query records where `sponsor_id = senior.id` or members belonging to their recursive downline tree.
 2. **Horizontal Isolation**: A Senior Member can NEVER inspect another Senior Member's private team, sales volume, or client contact details.
 3. **Buyer Privacy**: Buyers are completely isolated. A buyer can only read records where `buyer_id = auth.uid()` or matching verified phone/email.
-4. **Commission Confidentiality**: Member commission ledgers are private to the individual member and the Super Admin. Downline seniors see sales volumes, not personal bank payout receipts of other members.
+4. **Commission Confidentiality**: Member commission ledgers are private to the individual member and the Admin. Downline seniors see sales volumes, not personal bank payout receipts of other members.
