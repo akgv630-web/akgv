@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { tLang } from '@/lib/i18n';
+import { uploadToR2 } from '@/lib/r2Storage';
 
 interface ProfilePhotoStudioModalProps {
   isOpen: boolean;
@@ -98,6 +99,7 @@ function ProfilePhotoStudioModalContent({
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   
   const [activePreset, setActivePreset] = useState<FilterPreset>('normal');
   const [customFilter, setCustomFilter] = useState<FilterSetting>(PRESET_FILTERS.normal.settings);
@@ -218,7 +220,7 @@ function ProfilePhotoStudioModalContent({
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
+    img.onload = async () => {
       const outputSize = 400; // High resolution square canvas for crisp display
       canvas.width = outputSize;
       canvas.height = outputSize;
@@ -264,7 +266,21 @@ function ProfilePhotoStudioModalContent({
       // Export as high quality JPEG Data URL
       try {
         const finalDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        onSave(finalDataUrl);
+        setIsUploading(true);
+        let targetUrl = finalDataUrl;
+        try {
+          const uploadRes = await uploadToR2(finalDataUrl, {
+            folder: 'avatars',
+            fileName: `avatar-${Date.now()}.jpg`,
+          });
+          if (uploadRes.url) {
+            targetUrl = uploadRes.url;
+          }
+        } catch (uploadErr) {
+          console.warn('R2 upload notice, continuing with local avatar data:', uploadErr);
+        }
+        setIsUploading(false);
+        onSave(targetUrl);
         onClose();
       } catch (err) {
         console.error('Canvas export error:', err);
@@ -605,10 +621,20 @@ function ProfilePhotoStudioModalContent({
 
             <button
               onClick={handleSaveCroppedImage}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-2.5 font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition text-xs"
+              disabled={isUploading}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-2.5 font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 disabled:opacity-50 transition text-xs"
             >
-              <Check className="h-4 w-4" />
-              <span>{tLang(language, 'Apply & Save to Profile', 'सहेजें एवं लागू करें', 'Apply & Save Karein')}</span>
+              {isUploading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>{tLang(language, 'Uploading to Cloudflare R2...', 'Cloudflare R2 पर अपलोड हो रहा है...', 'Uploading to R2...')}</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span>{tLang(language, 'Apply & Save to Profile', 'सहेजें एवं लागू करें', 'Apply & Save Karein')}</span>
+                </>
+              )}
             </button>
           </div>
         </div>

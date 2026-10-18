@@ -27,6 +27,7 @@ import { useApp } from '@/context/AppContext';
 import { COMPANY_DETAILS } from '@/data/groundTruth';
 import { ProfilePhotoStudioModal } from '@/components/common/ProfilePhotoStudioModal';
 import { AuthBarrier } from '@/components/auth/AuthBarrier';
+import { uploadToR2 } from '@/lib/r2Storage';
 
 export default function BuyerPortalPage() {
   const {
@@ -46,6 +47,8 @@ export default function BuyerPortalPage() {
   const [paymentAmount, setPaymentAmount] = useState(150000);
   const [txRef, setTxRef] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE'>('UPI_QR');
+  const [proofUrl, setProofUrl] = useState('');
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
 
   if (!currentUser) {
@@ -66,12 +69,13 @@ export default function BuyerPortalPage() {
     }
 
     try {
-      const pay = await submitPaymentProof(selectedBookingId, paymentAmount, txRef, paymentMethod);
+      const pay = await submitPaymentProof(selectedBookingId, paymentAmount, txRef, paymentMethod, proofUrl || undefined);
       setPaymentSuccess(`Payment reference ${pay.transactionRef} submitted successfully! Our supervisory finance staff will verify it shortly.`);
       setTimeout(() => {
         setPaymentModalOpen(false);
         setPaymentSuccess(null);
         setTxRef('');
+        setProofUrl('');
       }, 2500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Payment submission failed.';
@@ -542,6 +546,36 @@ export default function BuyerPortalPage() {
                     onChange={(e) => setTxRef(e.target.value)}
                     className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none font-mono"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-1 font-medium">
+                    Payment Receipt / Screenshot (Optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setIsUploadingProof(true);
+                        const res = await uploadToR2(file, { folder: 'payment-proofs' });
+                        if (res.url) setProofUrl(res.url);
+                        setIsUploadingProof(false);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-white/10 bg-[#050A17] p-2 text-gray-300 text-xs focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-[#C7A35A] file:text-[#0B1734] file:font-bold file:text-xs hover:file:brightness-110"
+                  />
+                  {isUploadingProof && (
+                    <span className="text-[10px] text-amber-300 animate-pulse mt-1 block">
+                      Uploading receipt to Cloudflare R2...
+                    </span>
+                  )}
+                  {proofUrl && (
+                    <span className="text-[10px] text-emerald-400 mt-1 block">
+                      ✓ Receipt attached and stored securely
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">

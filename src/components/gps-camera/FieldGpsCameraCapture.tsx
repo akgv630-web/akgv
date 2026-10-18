@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { INITIAL_PLOTS } from '@/data/groundTruth';
+import { uploadToR2 } from '@/lib/r2Storage';
 
 export function FieldGpsCameraCapture() {
   const { currentUser, submitGpsEvidence, gpsEvidences } = useApp();
@@ -18,6 +19,7 @@ export function FieldGpsCameraCapture() {
   const [coords, setCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [captureMethod, setCaptureMethod] = useState<'live_camera' | 'file_upload' | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -126,6 +128,21 @@ export function FieldGpsCameraCapture() {
       return;
     }
 
+    setIsUploading(true);
+    let finalPhotoUrl = photoPreview;
+
+    try {
+      const uploadRes = await uploadToR2(photoPreview, {
+        folder: 'gps-evidence',
+        fileName: `plot-${selectedPlotNumber}-${Date.now()}.jpg`,
+      });
+      if (uploadRes.url) {
+        finalPhotoUrl = uploadRes.url;
+      }
+    } catch (uploadErr) {
+      console.warn('R2 upload notice:', uploadErr);
+    }
+
     try {
       await submitGpsEvidence({
         plotNumber: selectedPlotNumber,
@@ -134,7 +151,7 @@ export function FieldGpsCameraCapture() {
         longitude: coords.lng,
         accuracyMeters: coords.accuracy,
         captureTimestamp: new Date().toISOString(),
-        photoUrl: photoPreview,
+        photoUrl: finalPhotoUrl,
         capturedByMemberId: currentUser?.memberId || 'GUEST',
         capturedByName: currentUser?.fullName || 'Field Inspector',
         adminNotes: notes,
@@ -142,7 +159,7 @@ export function FieldGpsCameraCapture() {
         captureSource: captureMethod || 'live_camera',
       });
 
-      setSubmittedNotice(`Field GPS evidence for Plot ${selectedPlotNumber} submitted for administrative verification!`);
+      setSubmittedNotice(`Field GPS evidence for Plot ${selectedPlotNumber} submitted and saved successfully!`);
       setTimeout(() => {
         setSubmittedNotice(null);
         setPhotoPreview(null);
@@ -152,6 +169,8 @@ export function FieldGpsCameraCapture() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to submit field evidence.';
       alert(msg);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -361,10 +380,17 @@ export function FieldGpsCameraCapture() {
             ) : (
               <button
                 type="submit"
-                disabled={!photoPreview || !coords}
-                className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-center text-xs font-bold text-[#0B1734] shadow hover:brightness-110 disabled:opacity-50 transition"
+                disabled={!photoPreview || !coords || isUploading}
+                className="w-full rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] py-3 text-center text-xs font-bold text-[#0B1734] shadow hover:brightness-110 disabled:opacity-50 transition flex items-center justify-center gap-2"
               >
-                Submit Evidence for Admin Review
+                {isUploading ? (
+                  <>
+                    <Upload className="h-4 w-4 animate-bounce" />
+                    <span>Uploading Evidence to Cloudflare R2...</span>
+                  </>
+                ) : (
+                  <span>Submit Evidence for Admin Review</span>
+                )}
               </button>
             )}
           </form>

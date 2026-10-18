@@ -132,7 +132,7 @@ interface AppContextType {
   confirmBooking: (bookingId: string) => Promise<void>;
   cancelBooking: (bookingId: string, reason: string) => void;
   payments: PaymentRecord[];
-  submitPaymentProof: (bookingId: string, amount: number, txRef: string, method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE') => Promise<PaymentRecord>;
+  submitPaymentProof: (bookingId: string, amount: number, txRef: string, method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE', proofUrl?: string) => Promise<PaymentRecord>;
   verifyPayment: (paymentId: string, approved: boolean, reason?: string) => Promise<void>;
   kitIssues: JoiningKitIssue[];
   recordKitIssue: (data: Omit<JoiningKitIssue, 'id' | 'receiptNumber'>) => JoiningKitIssue;
@@ -1443,7 +1443,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     bookingId: string,
     amount: number,
     txRef: string,
-    method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE'
+    method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE',
+    proofUrl?: string
   ): Promise<PaymentRecord> => {
     if (!currentUser?.id) {
       throw new Error('Authentication required: You must be logged in to submit payment proof.');
@@ -1473,6 +1474,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       payerPhone: currentUser.phone,
       amountInr: amount,
       paymentMethod: method,
+      proofUrl: proofUrl || undefined,
       status: 'under_review',
       submittedAt: new Date().toISOString(),
     };
