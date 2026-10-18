@@ -387,7 +387,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         // Authoritative Session Check: Authenticate strictly with active Supabase session
         if (authSession && authSession.user) {
-          const profile = await fetchProfileByAuthId(authSession.user.id);
+          const email = authSession.user.email?.toLowerCase().trim();
+          let profile = await fetchProfileByAuthId(authSession.user.id, email);
+          if (!profile && email) {
+            const known =
+              allProfiles.find(
+                (p) =>
+                  p.email.toLowerCase() === email ||
+                  (p.authUserId && p.authUserId === authSession.user.id)
+              ) ||
+              DEMO_PROFILES.find(
+                (p) =>
+                  p.email.toLowerCase() === email ||
+                  p.id === authSession.user.id
+              );
+            if (known) {
+              profile = { ...known, authUserId: authSession.user.id };
+            } else if (
+              email === 'yadavpreetrajesh@gmail.com' ||
+              email === 'admin@akgv.com' ||
+              email === 'admin@akgvinfacity.com'
+            ) {
+              profile = {
+                ...DEMO_PROFILES[0],
+                authUserId: authSession.user.id,
+                email: email,
+                role: 'super_admin',
+              };
+            }
+          }
           if (profile && profile.isActive) {
             setCurrentUser(profile);
             try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile)); } catch {}
@@ -414,7 +442,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCurrentUser(null);
         try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
       } else {
-        const profile = await fetchProfileByAuthId(session.user.id);
+        const email = session.user.email?.toLowerCase().trim();
+        let profile = await fetchProfileByAuthId(session.user.id, email);
+        if (!profile && email) {
+          const known =
+            allProfiles.find(
+              (p) =>
+                p.email.toLowerCase() === email ||
+                (p.authUserId && p.authUserId === session.user.id)
+            ) ||
+            DEMO_PROFILES.find(
+              (p) =>
+                p.email.toLowerCase() === email ||
+                p.id === session.user.id
+            );
+          if (known) {
+            profile = { ...known, authUserId: session.user.id };
+          } else if (
+            email === 'yadavpreetrajesh@gmail.com' ||
+            email === 'admin@akgv.com' ||
+            email === 'admin@akgvinfacity.com'
+          ) {
+            profile = {
+              ...DEMO_PROFILES[0],
+              authUserId: session.user.id,
+              email: email,
+              role: 'super_admin',
+            };
+          }
+        }
         if (profile && profile.isActive) {
           setCurrentUser(profile);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile)); } catch {}
@@ -516,7 +572,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (res?.data?.user) {
           const authUser = res.data.user;
-          let profile = await fetchProfileByAuthId(authUser.id);
+          const userEmail = authUser.email?.toLowerCase().trim();
+          let profile = await fetchProfileByAuthId(authUser.id, userEmail);
+
+          // 1. Authoritative lookup against in-memory profiles and known seed records
+          if (!profile && userEmail) {
+            const known =
+              allProfiles.find(
+                (p) =>
+                  p.email.toLowerCase() === userEmail ||
+                  (p.authUserId && p.authUserId === authUser.id)
+              ) ||
+              DEMO_PROFILES.find(
+                (p) =>
+                  p.email.toLowerCase() === userEmail ||
+                  p.id === authUser.id
+              );
+
+            if (known) {
+              profile = {
+                ...known,
+                authUserId: authUser.id,
+              };
+              saveProfileToSupabase(profile, authUser.id).catch((err) =>
+                console.warn('[Supabase Sync] Background profile link notice:', err)
+              );
+            }
+          }
+
+          // 2. Authoritative fallback for primary pre-registered Admin
+          const isAdminEmail =
+            userEmail === 'yadavpreetrajesh@gmail.com' ||
+            userEmail === 'admin@akgv.com' ||
+            userEmail === 'admin@akgvinfacity.com';
+
+          if (!profile && isAdminEmail) {
+            const adminBase = DEMO_PROFILES[0];
+            profile = {
+              ...adminBase,
+              id: 'usr-admin-01',
+              authUserId: authUser.id,
+              email: authUser.email || 'yadavpreetrajesh@gmail.com',
+              role: 'super_admin',
+              isActive: true,
+            };
+            saveProfileToSupabase(profile, authUser.id).catch((err) =>
+              console.warn('[Supabase Sync] Admin profile link notice:', err)
+            );
+          }
 
           // Self-healing profile reconciliation on login:
           // If an authenticated user exists in Supabase Auth but their database profile row is missing
@@ -557,20 +660,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             };
 
             const saveRes = await saveProfileToSupabase(reconciledProfile, authUser.id);
-            if (saveRes.success) {
+            if (saveRes.success && saveRes.profile) {
+              profile = saveRes.profile;
+            } else {
               profile = reconciledProfile;
-              setAllProfiles((prev) => {
-                const existingIdx = prev.findIndex(
-                  (p) => p.id === reconciledProfile.id || p.email.toLowerCase() === reconciledProfile.email.toLowerCase()
-                );
-                if (existingIdx >= 0) {
-                  const next = [...prev];
-                  next[existingIdx] = reconciledProfile;
-                  return next;
-                }
-                return [...prev, reconciledProfile];
-              });
             }
+          }
+
+          if (profile) {
+            setAllProfiles((prev) => {
+              const existingIdx = prev.findIndex(
+                (p) => p.id === profile!.id || p.email.toLowerCase() === profile!.email.toLowerCase()
+              );
+              if (existingIdx >= 0) {
+                const next = [...prev];
+                next[existingIdx] = profile!;
+                return next;
+              }
+              return [...prev, profile!];
+            });
           }
 
           if (!profile) {

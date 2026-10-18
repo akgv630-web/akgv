@@ -672,6 +672,16 @@ export async function saveProfileToSupabase(
       .upsert(payload, { onConflict: 'id' });
 
     if (error) {
+      if (error.message.includes('profiles_email_key') || error.message.includes('duplicate key')) {
+        // Fall back to updating the existing profile record by email
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(payload)
+          .ilike('email', profile.email);
+        if (!updateError) {
+          return { success: true, profile };
+        }
+      }
       console.warn('[Supabase Sync] Error saving profile:', error.message);
       return { success: false, error: error.message };
     }
@@ -703,20 +713,65 @@ export async function deleteProfileFromSupabase(profileId: string): Promise<bool
   }
 }
 
-export async function fetchProfileByAuthId(authUserId: string): Promise<Profile | null> {
-  if (!isSupabaseConfigured || !supabase || !authUserId) return null;
+export async function fetchProfileByAuthId(
+  authUserId: string,
+  userEmail?: string
+): Promise<Profile | null> {
+  if (!isSupabaseConfigured || !supabase || (!authUserId && !userEmail)) return null;
 
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .or(`auth_user_id.eq.${authUserId},id.eq.${authUserId}`)
-      .limit(1)
-      .maybeSingle();
+    // 1. Authoritative primary lookup by auth_user_id, id, and optionally email
+    let query = supabase.from('profiles').select('*');
+    if (authUserId && userEmail) {
+      query = query.or(`auth_user_id.eq.${authUserId},id.eq.${authUserId},email.ilike.${userEmail.trim()}`);
+    } else if (authUserId) {
+      query = query.or(`auth_user_id.eq.${authUserId},id.eq.${authUserId}`);
+    } else if (userEmail) {
+      query = query.ilike('email', userEmail.trim());
+    }
+
+    let { data, error } = await query.limit(1).maybeSingle();
+
+    // 2. If standard query was blocked or returned empty, attempt link_current_auth_user RPC
+    if (!data && authUserId) {
+      try {
+        const { data: rpcData } = await supabase.rpc('link_current_auth_user');
+        if (rpcData && rpcData.success && rpcData.profile) {
+          data = rpcData.profile;
+        }
+      } catch {
+        // RPC may not exist in earlier schema versions, ignore
+      }
+    }
+
+    // 3. Fallback: Query directly by email if available
+    if (!data && userEmail) {
+      try {
+        const { data: emailData } = await supabase
+          .from('profiles')
+          .select('*')
+          .ilike('email', userEmail.trim())
+          .limit(1)
+          .maybeSingle();
+        if (emailData) {
+          data = emailData;
+        }
+      } catch {}
+    }
 
     if (error || !data) {
       if (error) console.warn('[Supabase Sync] fetchProfileByAuthId notice:', error.message);
       return null;
+    }
+
+    // If profile row in Supabase has not linked auth_user_id, link it asynchronously
+    if (authUserId && (!data.auth_user_id || data.auth_user_id !== authUserId)) {
+      void Promise.resolve(
+        supabase
+          .from('profiles')
+          .update({ auth_user_id: authUserId, updated_at: new Date().toISOString() })
+          .eq('id', data.id)
+      ).catch(() => {});
     }
 
     return {
@@ -725,7 +780,7 @@ export async function fetchProfileByAuthId(authUserId: string): Promise<Profile 
       email: data.email,
       fullName: data.full_name,
       phone: data.phone,
-      role: data.role,
+      role: data.role || 'buyer',
       memberId: data.member_id || undefined,
       sponsorId: data.sponsor_id || undefined,
       kycStatus: data.kyc_status,

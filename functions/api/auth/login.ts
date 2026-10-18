@@ -177,11 +177,50 @@ export async function onRequestPost(context: {
     }
 
     // 4. Fetch User Profile
-    const { data: profile } = await supabaseAdmin
+    let { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .or(`auth_user_id.eq.${authData.user.id},email.eq.${canonicalEmail}`)
       .maybeSingle();
+
+    if (profile) {
+      if (!profile.auth_user_id || profile.auth_user_id !== authData.user.id) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ auth_user_id: authData.user.id, updated_at: new Date().toISOString() })
+          .eq('id', profile.id);
+        profile.auth_user_id = authData.user.id;
+      }
+    } else if (
+      canonicalEmail === 'yadavpreetrajesh@gmail.com' ||
+      canonicalEmail === 'admin@akgv.com' ||
+      canonicalEmail === 'admin@akgvinfacity.com'
+    ) {
+      // Auto-provision primary Admin profile if missing
+      const adminPayload = {
+        id: 'usr-admin-01',
+        auth_user_id: authData.user.id,
+        email: canonicalEmail,
+        full_name: 'Preet Yadav',
+        phone: '6306917991',
+        role: 'super_admin',
+        member_id: 'AKGV-HQ-001',
+        kyc_status: 'verified',
+        is_active: true,
+        city: 'Varanasi',
+        branch_location: 'Rampur Head Office',
+        address: 'Near Ring Road Phase-2, Rampur, Varanasi, Uttar Pradesh - 221008',
+        level: 7,
+        rank_title: 'Director',
+        total_business_volume_inr: 25000000,
+        plots_closed_count: 18,
+        joined_date: '2026-01-01',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await supabaseAdmin.from('profiles').upsert(adminPayload, { onConflict: 'id' });
+      profile = adminPayload;
+    }
 
     return new Response(
       JSON.stringify({
