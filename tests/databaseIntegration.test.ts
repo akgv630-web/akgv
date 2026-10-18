@@ -626,4 +626,73 @@ describe('Real PostgreSQL Database Integration Suite (PGlite 18 Engine)', () => 
       await db.exec(`SET my.session_uid = '';`);
     });
   });
+
+  describe('Login Identifier Resolution RPC (20261018_login_identifier_resolution)', () => {
+    beforeEach(async () => {
+      // Execute 20261018 migration
+      const migrationPath = path.join(__dirname, '../supabase/migrations/20261018_login_identifier_resolution.sql');
+      const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+      await db.exec(migrationSql);
+
+      // Seed profiles
+      await db.exec(`
+        INSERT INTO public.profiles (
+          id, auth_user_id, email, full_name, phone, role, member_id, is_active
+        ) VALUES 
+        ('usr-assoc-1', '11111111-1111-1111-1111-111111111111'::uuid, 'vikram@akgv.com', 'Vikram Singh', '9876543210', 'senior_member', 'AKGV-3498', TRUE),
+        ('usr-assoc-2', '22222222-2222-2222-2222-222222222222'::uuid, 'amit@akgv.com', 'Amit Sharma', '+91 9123456789', 'junior_member', 'AKGV-0042', TRUE);
+      `);
+    });
+
+    it('resolves canonical email from Member ID (case-insensitive)', async () => {
+      const resUpper = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('AKGV-3498');
+      `);
+      expect(resUpper.rows[0].resolve_login_identifier).toBe('vikram@akgv.com');
+
+      const resLower = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('akgv-3498');
+      `);
+      expect(resLower.rows[0].resolve_login_identifier).toBe('vikram@akgv.com');
+    });
+
+    it('resolves canonical email from exact and formatted phone numbers', async () => {
+      const resExact = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('9876543210');
+      `);
+      expect(resExact.rows[0].resolve_login_identifier).toBe('vikram@akgv.com');
+
+      const resFormatted = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('9123456789');
+      `);
+      expect(resFormatted.rows[0].resolve_login_identifier).toBe('amit@akgv.com');
+    });
+
+    it('returns lowercase email directly when identifier is already an email', async () => {
+      const res = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('Vikram@akgv.COM');
+      `);
+      expect(res.rows[0].resolve_login_identifier).toBe('vikram@akgv.com');
+    });
+
+    it('returns NULL for unknown or empty identifiers without errors', async () => {
+      const resUnknown = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('UNKNOWN-9999');
+      `);
+      expect(resUnknown.rows[0].resolve_login_identifier).toBeNull();
+
+      const resEmpty = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('');
+      `);
+      expect(resEmpty.rows[0].resolve_login_identifier).toBeNull();
+    });
+
+    it('executes safely when caller has no authenticated session (anonymous)', async () => {
+      await db.exec(`SET my.session_uid = '';`);
+      const res = await db.query<{ resolve_login_identifier: string }>(`
+        SELECT public.resolve_login_identifier('AKGV-0042');
+      `);
+      expect(res.rows[0].resolve_login_identifier).toBe('amit@akgv.com');
+    });
+  });
 });

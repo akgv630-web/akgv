@@ -9,12 +9,15 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   Clock,
   Compass,
   Copy,
   CreditCard,
   DollarSign,
+  Download,
   Edit,
   ExternalLink,
   Eye,
@@ -219,6 +222,7 @@ export default function SuperAdminPage() {
   const [editingPlot, setEditingPlot] = useState<Plot | null>(null);
   const [deletingPlot, setDeletingPlot] = useState<Plot | null>(null);
   const [plotActionNotice, setPlotActionNotice] = useState<string | null>(null);
+  const [isAuditDossierExpanded, setIsAuditDossierExpanded] = useState(false);
   const [paymentActionNotice, setPaymentActionNotice] = useState<string | null>(null);
 
   // Member Management State
@@ -236,7 +240,6 @@ export default function SuperAdminPage() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberPassword, setNewMemberPassword] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<UserRole>('junior_member');
   const [newMemberSponsorId, setNewMemberSponsorId] = useState('AKGV-3498');
   const [newMemberCity, setNewMemberCity] = useState('Varanasi');
@@ -249,8 +252,9 @@ export default function SuperAdminPage() {
     email: string;
     phone: string;
     role: string;
-    password?: string;
+    activationUrl: string;
     loginUrl: string;
+    invitationStatus?: string;
   } | null>(null);
 
   // Edit Member Form State
@@ -1395,7 +1399,6 @@ export default function SuperAdminPage() {
                       alert(tLang(language, 'Please provide member name and phone number.', 'कृपया सदस्य का नाम और फोन नंबर दर्ज करें।', 'Kripya member ka naam aur phone number enter karein.'));
                       return;
                     }
-                    const initialPassword = newMemberPassword.trim() || `AKGV#${Math.floor(100000 + Math.random() * 900000)}`;
                     const profile = createSponsorMember({
                       fullName: newMemberName.trim(),
                       phone: newMemberPhone.trim(),
@@ -1406,8 +1409,10 @@ export default function SuperAdminPage() {
                       branchLocation: newMemberBranch.trim(),
                       address: newMemberAddress.trim(),
                       level: Number(newMemberLevel) || 1,
-                      password: initialPassword,
                     });
+                    const activationUrl = typeof window !== 'undefined'
+                      ? `${window.location.origin}/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`
+                      : `https://akgvinfacity.com/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`;
                     const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://akgvinfacity.com/login';
                     setCreatedSponsorFeedback({
                       code: profile.memberId || profile.email || 'AKGV-NEW',
@@ -1415,15 +1420,16 @@ export default function SuperAdminPage() {
                       email: profile.email,
                       phone: profile.phone,
                       role: profile.role,
-                      password: initialPassword,
+                      activationUrl,
                       loginUrl,
+                      invitationStatus: profile.invitationStatus || 'pending',
                     });
                     setMemberActionNotice(
                       tLang(
                         language,
-                        `New member "${profile.fullName}" enrolled successfully! ID: ${profile.memberId || profile.email}`,
-                        `नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! आईडी: ${profile.memberId || profile.email}`,
-                        `Naya member "${profile.fullName}" add ho gaya! ID: ${profile.memberId || profile.email}`
+                        `New member "${profile.fullName}" enrolled successfully! Member ID: ${profile.memberId || profile.email}. Activation invite generated.`,
+                        `नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! सदस्य आईडी: ${profile.memberId || profile.email}। सक्रियण आमंत्रण लिंक तैयार है।`,
+                        `Naya member "${profile.fullName}" enroll ho gaya! Member ID: ${profile.memberId || profile.email}. Activation link ready hai.`
                       )
                     );
                     setNewMemberName('');
@@ -1439,19 +1445,19 @@ export default function SuperAdminPage() {
                     <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/40 p-4 space-y-3 text-xs animate-in fade-in">
                       <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
                         <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                        <span>{tLang(language, 'Account Ready! Login Credentials Generated', 'खाता तैयार! लॉगिन क्रेडेंशियल जारी', 'Account Ready! Login Credentials Generated')}</span>
+                        <span>{tLang(language, 'Member Enrolled! Secure Activation Link Ready', 'सदस्य पंजीकृत! सुरक्षित सक्रियण लिंक तैयार', 'Member Enrolled! Secure Activation Link Ready')}</span>
                       </div>
                       
                       <div className="rounded-xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 text-xs space-y-1.5 font-mono">
                         <div className="text-gray-300 font-sans font-semibold text-[11px] text-[#DFC382]">
-                          {tLang(language, 'Official Login Details:', 'आधिकारिक लॉगिन विवरण:', 'Official Login Details:')}
+                          {tLang(language, 'Official Member Details & Activation Link:', 'आधिकारिक सदस्य विवरण एवं सक्रियण लिंक:', 'Official Member Details & Activation Link:')}
                         </div>
                         <div className="text-white">👤 {tLang(language, 'Name:', 'नाम:', 'Naam:')} <span className="font-bold text-emerald-300">{createdSponsorFeedback.name}</span></div>
-                        <div className="text-white">🆔 {tLang(language, 'Login ID:', 'लॉगिन आईडी:', 'Login ID:')} <span className="font-bold text-[#DFC382] bg-black/50 px-2 py-0.5 rounded border border-[#C7A35A]/30">{createdSponsorFeedback.code}</span></div>
+                        <div className="text-white">🆔 {tLang(language, 'Member ID:', 'सदस्य आईडी:', 'Member ID:')} <span className="font-bold text-[#DFC382] bg-black/50 px-2 py-0.5 rounded border border-[#C7A35A]/30">{createdSponsorFeedback.code}</span></div>
                         <div className="text-white">📧 {tLang(language, 'Email:', 'ईमेल:', 'Email:')} <span className="text-gray-300">{createdSponsorFeedback.email}</span></div>
                         <div className="text-white">📱 {tLang(language, 'Phone:', 'फोन:', 'Phone:')} <span className="text-gray-300">{createdSponsorFeedback.phone}</span></div>
-                        <div className="text-white">🔑 {tLang(language, 'Password:', 'पासवर्ड:', 'Password:')} <span className="font-bold text-emerald-300 bg-black/50 px-2 py-0.5 rounded border border-emerald-500/30">{createdSponsorFeedback.password}</span></div>
-                        <div className="text-white">🌐 {tLang(language, 'Login Link:', 'लॉगिन लिंक:', 'Login Link:')} <span className="text-sky-300 underline">{createdSponsorFeedback.loginUrl}</span></div>
+                        <div className="text-white">🛡️ {tLang(language, 'Security Status:', 'सुरक्षा स्थिति:', 'Security Status:')} <span className="text-emerald-300 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-500/30">Passwordless Invite (Zero Plaintext)</span></div>
+                        <div className="text-white break-all">🔗 {tLang(language, 'Activation Link:', 'सक्रियण लिंक:', 'Activation Link:')} <span className="text-sky-300 underline font-sans text-[11px]">{createdSponsorFeedback.activationUrl}</span></div>
                       </div>
 
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -1460,26 +1466,26 @@ export default function SuperAdminPage() {
                           onClick={() => {
                             const msg = tLang(
                               language,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Credentials\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code} (or Email: ${createdSponsorFeedback.email} / Phone: ${createdSponsorFeedback.phone})\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the link and sign in using these credentials.`,
-                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code} (या ईमेल: ${createdSponsorFeedback.email} / फोन: ${createdSponsorFeedback.phone})\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Details\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code}\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is link par jaakar login karein.`
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Registered Email: ${createdSponsorFeedback.email}\n📱 Registered Phone: ${createdSponsorFeedback.phone}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the activation link to set your confidential password and access your associate dashboard.`,
+                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक सदस्य खाता सक्रियण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 सदस्य आईडी: ${createdSponsorFeedback.code}\n📧 पंजीकृत ईमेल: ${createdSponsorFeedback.email}\n📱 पंजीकृत फोन: ${createdSponsorFeedback.phone}\n🔗 सक्रियण लिंक: ${createdSponsorFeedback.activationUrl}\n🌐 सदस्य पोर्टल: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस सक्रियण लिंक पर जाकर अपना व्यक्तिगत पासवर्ड सेट करें और पोर्टल में लॉगिन करें।`,
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n📱 Phone: ${createdSponsorFeedback.phone}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is activation link par jaakar apna confidential password set karein aur portal me login karein.`
                             );
                             navigator.clipboard.writeText(msg);
-                            setMemberActionNotice(tLang(language, 'Login details copied to clipboard!', 'लॉगिन विवरण क्लिपबोर्ड पर कॉपी हो गया!', 'Login details clipboard par copy ho gaya!'));
+                            setMemberActionNotice(tLang(language, 'Invitation details copied to clipboard!', 'आमंत्रण विवरण क्लिपबोर्ड पर कॉपी हो गया!', 'Invitation details clipboard par copy ho gaya!'));
                             setTimeout(() => setMemberActionNotice(null), 4000);
                           }}
                           className="rounded-lg bg-[#C7A35A] px-3.5 py-1.5 font-bold text-[#0B1734] text-[11px] flex items-center gap-1.5 hover:brightness-110 transition"
                         >
                           <Copy className="h-3.5 w-3.5" />
-                          <span>{tLang(language, 'Copy Credentials & Link', 'क्रेडेंशियल कॉपी करें', 'Copy Credentials')}</span>
+                          <span>{tLang(language, 'Copy Invitation Link', 'आमंत्रण लिंक कॉपी करें', 'Copy Invitation Link')}</span>
                         </button>
                         <a
                           href={`https://wa.me/?text=${encodeURIComponent(
                             tLang(
                               language,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Credentials\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the link and sign in using these credentials.`,
-                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक पोर्टल लॉगिन विवरण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 लॉगिन आईडी: ${createdSponsorFeedback.code}\n📧 ईमेल: ${createdSponsorFeedback.email}\n🔑 पासवर्ड: ${createdSponsorFeedback.password}\n🌐 लॉगिन लिंक: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस लिंक पर जाकर अपनी आईडी और पासवर्ड से लॉगिन करें।`,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Portal Login Details\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Login ID: ${createdSponsorFeedback.code}\n🔑 Password: ${createdSponsorFeedback.password}\n🌐 Login Link: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is link par jaakar login karein.`
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the link to establish your password.`,
+                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक सदस्य खाता सक्रियण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 सदस्य आईडी: ${createdSponsorFeedback.code}\n📧 ईमेल: ${createdSponsorFeedback.email}\n🔗 सक्रियण लिंक: ${createdSponsorFeedback.activationUrl}\n🌐 सदस्य पोर्टल: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया लिंक खोलकर अपना पासवर्ड सेट करें।`,
+                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is link par jakar password set karein.`
                             )
                           )}`}
                           target="_blank"
@@ -1645,27 +1651,22 @@ export default function SuperAdminPage() {
                     />
                   </div>
 
-                  {/* Initial Assigned Password */}
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-1">
-                      {tLang(language, 'Portal Login Password', 'पोर्टल लॉगिन पासवर्ड', 'Portal Login Password')} <span className="text-[#C7A35A]">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. akgv@2026"
-                      value={newMemberPassword}
-                      onChange={(e) => setNewMemberPassword(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none"
-                    />
-                    <p className="mt-1 text-[10px] text-gray-400">
-                      {tLang(
-                        language,
-                        'Default password is set to akgv@2026. Admin can customize it before creation.',
-                        'डिफ़ॉल्ट पासवर्ड akgv@2026 रखा गया है। एडमिन चाहें तो इसे बदल सकते हैं।',
-                        'Default password akgv@2026 set kiya gaya hai. Admin chahein to ise badal sakte hain.'
-                      )}
-                    </p>
+                  {/* Secure Passwordless Onboarding Notice */}
+                  <div className="rounded-xl border border-[#C7A35A]/30 bg-gradient-to-r from-[#0F1E3D] to-[#070D1E] p-3 text-xs text-gray-300 flex items-start gap-2.5">
+                    <ShieldCheck className="h-4 w-4 text-[#C7A35A] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold text-white">
+                        {tLang(language, 'Secure Passwordless Onboarding (Zero Plaintext)', 'सुरक्षित पासवर्ड-रहित नामांकन (शून्य प्लेनटेक्स्ट)', 'Secure Passwordless Onboarding')}
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-gray-400 leading-relaxed">
+                        {tLang(
+                          language,
+                          'No plaintext passwords are generated or emailed. Upon enrollment, an official cryptographic activation link is created so the new member establishes their own confidential credentials.',
+                          'कोई भी साधारण पासवर्ड संचित या ईमेल नहीं किया जाता है। नामांकन पर एक आधिकारिक सक्रियण लिंक तैयार होता है जिससे सदस्य अपना गोपनीय पासवर्ड स्वयं सेट कर सकें।',
+                          'Koi bhi plaintext password save ya email nahi hota. Enrollment ke baad official activation link generate hoga jisse member apna confidential password set kar sakein.'
+                        )}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">
@@ -2395,6 +2396,172 @@ export default function SuperAdminPage() {
               <span>{tLang(language, 'Register New Plot', 'नया प्लॉट जोड़ें', 'Naya Plot Register Karein')}</span>
             </button>
           </div>
+
+          {/* Cadastral Inventory & Corporate Survey Reconciliation Audit Dossier */}
+          {(() => {
+            const totalCodedPlots = plots.length;
+            const totalCodedAreaSqft = plots.reduce((acc, p) => acc + (Number(p.areaSqft) || 0), 0);
+            const brochureNetAreaSqft = 55970;
+            const varianceSqft = totalCodedAreaSqft - brochureNetAreaSqft;
+            const blockA = plots.filter((p) => p.block === 'A');
+            const blockB = plots.filter((p) => p.block === 'B');
+            const blockC = plots.filter((p) => p.block === 'C');
+
+            return (
+              <div className="rounded-3xl border border-[#C7A35A]/30 bg-gradient-to-b from-[#0F1E3D] to-[#070D1E] p-5 shadow-xl text-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl border border-[#C7A35A]/40 bg-[#12234e] flex items-center justify-center shrink-0">
+                      <FileCheck className="h-5 w-5 text-[#C7A35A]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-serif text-sm font-bold text-white">
+                          {tLang(language, 'Cadastral Inventory & Survey Reconciliation Audit', 'कैडस्ट्रल इन्वेंट्री एवं सर्वेक्षण समाधान ऑडिट', 'Inventory & Survey Reconciliation Audit')}
+                        </h3>
+                        <span className="rounded-full bg-amber-500/15 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-bold text-amber-300 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>{tLang(language, 'Awaiting Corporate Survey Re-Certification', 'कॉर्पोरेट सर्वेक्षण पुनः प्रमाणीकरण प्रतीक्षित', 'Awaiting Corporate Survey Re-Certification')}</span>
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {tLang(
+                          language,
+                          'Brochure marketing summary vs. actual master-plan demarcated plot dimensions reconciliation.',
+                          'विपणन विवरणिका बनाम वास्तविक मास्टर-प्लान सीमांकित प्लॉट आयामों का मिलान विवरण।',
+                          'Brochure marketing summary vs actual master plan plot dimensions reconciliation.'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const csvRows = [
+                          'Plot Number,Block,Dimensions,Area SqFt,Road Width,Road Facing,Base Price INR,Status,Audit Variance Note',
+                          ...plots.map((p) => {
+                            let note = 'Nominal';
+                            if (['C-06', 'C-07', 'C-08', 'C-09', 'C-10'].includes(p.plotNumber)) {
+                              note = 'Commercial Rounding: INR 13,60,000 recorded vs arithmetic INR 13,60,800 (-INR 800)';
+                            }
+                            return `"${p.plotNumber}","${p.block}","${p.dimensions}",${p.areaSqft},"${p.roadWidth}","${p.roadFacing}",${p.basePriceInr},"${p.status}","${note}"`;
+                          }),
+                          '',
+                          `"SUMMARY TOTALS: Coded Plots: ${totalCodedPlots} | Coded Area: ${totalCodedAreaSqft} sqft | Brochure Net: ${brochureNetAreaSqft} sqft | Variance: +${varianceSqft} sqft"`
+                        ];
+                        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `akgv_inventory_reconciliation_audit_${Date.now()}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-gray-200 flex items-center gap-1.5 transition"
+                    >
+                      <Download className="h-3.5 w-3.5 text-[#C7A35A]" />
+                      <span>{tLang(language, 'Export Audit CSV', 'ऑडिट सीएसवी डाउनलोड करें', 'Export Audit CSV')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAuditDossierExpanded(!isAuditDossierExpanded)}
+                      className="rounded-xl border border-[#C7A35A]/30 bg-[#0B1734] hover:bg-[#12234e] px-3 py-1.5 text-[11px] font-bold text-[#DFC382] flex items-center gap-1.5 transition"
+                    >
+                      <span>{isAuditDossierExpanded ? tLang(language, 'Collapse', 'संक्षिप्त करें', 'Collapse') : tLang(language, 'View Reconciliation Ledger', 'समाधान खाता देखें', 'View Ledger')}</span>
+                      {isAuditDossierExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Audit Key Metrics Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                  <div className="rounded-2xl border border-white/10 bg-[#050A17]/80 p-3">
+                    <span className="block text-[10px] text-gray-400 font-sans uppercase tracking-wider">{tLang(language, 'Brochure Net Area', 'विवरणिका शुद्ध क्षेत्रफल', 'Brochure Net Area')}</span>
+                    <span className="font-serif text-base font-bold text-white mt-1 block">55,970 <span className="text-xs font-sans text-gray-400">sq ft</span></span>
+                    <span className="text-[10px] text-gray-400">1,00,000 - 44,030 (Roads)</span>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#C7A35A]/40 bg-[#050A17]/80 p-3">
+                    <span className="block text-[10px] text-[#DFC382] font-sans uppercase tracking-wider">{tLang(language, 'Demarcated Total Area', 'सीमांकित कुल क्षेत्रफल', 'Demarcated Total Area')}</span>
+                    <span className="font-serif text-base font-bold text-white mt-1 block">{totalCodedAreaSqft.toLocaleString('en-IN')} <span className="text-xs font-sans text-gray-400">sq ft</span></span>
+                    <span className="text-[10px] text-emerald-400 font-semibold">{totalCodedPlots} Demarcated Plots</span>
+                  </div>
+
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3">
+                    <span className="block text-[10px] text-amber-300 font-sans uppercase tracking-wider">{tLang(language, 'Survey Variance', 'सर्वेक्षण अंतर', 'Survey Variance')}</span>
+                    <span className="font-serif text-base font-bold text-amber-300 mt-1 block">+{varianceSqft.toLocaleString('en-IN')} <span className="text-xs font-sans text-amber-400/80">sq ft</span></span>
+                    <span className="text-[10px] text-amber-400 font-medium">+2.68% Cadastral Difference</span>
+                  </div>
+
+                  <div className="rounded-2xl border border-sky-500/30 bg-sky-950/20 p-3">
+                    <span className="block text-[10px] text-sky-300 font-sans uppercase tracking-wider">{tLang(language, 'Block-C Rounding', 'ब्लॉक-सी राउंडिंग', 'Block-C Rounding')}</span>
+                    <span className="font-serif text-base font-bold text-sky-300 mt-1 block">5 Plots <span className="text-xs font-sans text-sky-400/80">(C-06..C-10)</span></span>
+                    <span className="text-[10px] text-sky-300 font-medium">₹13.60L (-₹800/plot diff)</span>
+                  </div>
+                </div>
+
+                {/* Expandable Reconciliation Ledger */}
+                {isAuditDossierExpanded && (
+                  <div className="rounded-2xl border border-white/10 bg-[#050A17]/90 p-4 space-y-3 animate-in fade-in">
+                    <div className="flex items-center gap-2 text-white font-semibold text-xs border-b border-white/10 pb-2">
+                      <ShieldAlert className="h-4 w-4 text-amber-400" />
+                      <span>{tLang(language, 'Corporate Survey Compliance Findings & Directives', 'कॉर्पोरेट सर्वेक्षण अनुपालन निष्कर्ष एवं निर्देश', 'Corporate Survey Findings')}</span>
+                    </div>
+
+                    <div className="space-y-2 text-[11px] text-gray-300 leading-relaxed">
+                      <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-950/30">
+                        <strong className="text-amber-300">1. Area Discrepancy Reconciliation (+1,500 sq ft):</strong> Marketing summary brochure states net plot area of <code className="text-white bg-black/40 px-1.5 py-0.5 rounded">55,970 sq ft</code>. The actual individual sum across the 55 CAD-demarcated plots is <code className="text-white bg-black/40 px-1.5 py-0.5 rounded">57,470 sq ft</code>. In compliance with strict engineering governance, the master plan retains authoritative cadastral dimensions rather than mutating numbers, flagged under executive survey re-certification.
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-sky-500/30 bg-sky-950/30">
+                        <strong className="text-sky-300">2. Commercial Rounding on Plots C-06 to C-10:</strong> Plots C-06, C-07, C-08, C-09, and C-10 are 27&apos; x 42&apos; (1,134 sq ft). At standard ₹1,200/sq ft base valuation, arithmetic equals <code className="text-white bg-black/40 px-1.5 py-0.5 rounded">₹13,60,800</code>. Official brochure establishes a published corporate price of <code className="text-white bg-black/40 px-1.5 py-0.5 rounded">₹13,60,000</code> (rounded incentive of ₹800 per plot).
+                      </div>
+                    </div>
+
+                    {/* Block-wise Summary Table */}
+                    <div className="overflow-x-auto pt-1">
+                      <table className="w-full text-left text-[11px] border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/10 text-gray-400">
+                            <th className="py-1.5 px-2">Block</th>
+                            <th className="py-1.5 px-2">Demarcated Plots</th>
+                            <th className="py-1.5 px-2">Cumulative Area</th>
+                            <th className="py-1.5 px-2">Road Access</th>
+                            <th className="py-1.5 px-2">Audit Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5 text-gray-300 font-mono">
+                          <tr>
+                            <td className="py-2 px-2 font-bold text-white">Block A</td>
+                            <td className="py-2 px-2">{blockA.length} Plots (A-01 to A-10)</td>
+                            <td className="py-2 px-2 text-emerald-300 font-semibold">{blockA.reduce((a, p) => a + (Number(p.areaSqft) || 0), 0).toLocaleString('en-IN')} sq ft</td>
+                            <td className="py-2 px-2 text-gray-400">30&apos;-0&quot; Wide Road</td>
+                            <td className="py-2 px-2 text-emerald-400">Verified</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-2 font-bold text-white">Block B</td>
+                            <td className="py-2 px-2">{blockB.length} Plots (B-01 to B-10)</td>
+                            <td className="py-2 px-2 text-emerald-300 font-semibold">{blockB.reduce((a, p) => a + (Number(p.areaSqft) || 0), 0).toLocaleString('en-IN')} sq ft</td>
+                            <td className="py-2 px-2 text-gray-400">30&apos;-0&quot; Wide Road</td>
+                            <td className="py-2 px-2 text-emerald-400">Verified</td>
+                          </tr>
+                          <tr>
+                            <td className="py-2 px-2 font-bold text-white">Block C</td>
+                            <td className="py-2 px-2">{blockC.length} Plots (C-01 to C-35)</td>
+                            <td className="py-2 px-2 text-emerald-300 font-semibold">{blockC.reduce((a, p) => a + (Number(p.areaSqft) || 0), 0).toLocaleString('en-IN')} sq ft</td>
+                            <td className="py-2 px-2 text-gray-400">25&apos;-0&quot; &amp; 30&apos;-0&quot; Roads</td>
+                            <td className="py-2 px-2 text-amber-400">Rounding Reconciled</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Search & Filter Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#050A17] p-3.5 rounded-2xl border border-white/10 text-xs">

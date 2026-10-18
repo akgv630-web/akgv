@@ -241,10 +241,18 @@ export default function UnifiedLoginPage() {
 
                 {/* Password Input */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-200 mb-1.5">
-                    {language === 'hi' ? 'पासवर्ड' : language === 'hinglish' ? 'Password' : 'Password'}
-                    <span className="text-[#C7A35A] ml-1">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-gray-200">
+                      {language === 'hi' ? 'पासवर्ड' : language === 'hinglish' ? 'Password' : 'Password'}
+                      <span className="text-[#C7A35A] ml-1">*</span>
+                    </label>
+                    <Link
+                      href="/auth/reset"
+                      className="text-[11px] text-[#DFC382] hover:text-[#C7A35A] hover:underline transition"
+                    >
+                      {language === 'hi' ? 'पासवर्ड भूल गए?' : language === 'hinglish' ? 'Password bhool gaye?' : 'Forgot Password?'}
+                    </Link>
+                  </div>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
                     <input
@@ -269,10 +277,10 @@ export default function UnifiedLoginPage() {
                   </div>
                   <p className="mt-1 text-[10px] text-gray-400">
                     {language === 'hi'
-                      ? 'एडमिन द्वारा दिया गया अधिकृत पासवर्ड दर्ज करें।'
+                      ? 'अपना पंजीकृत खाता पासवर्ड अथवा आमंत्रण लिंक द्वारा सेट किया पासवर्ड दर्ज करें।'
                       : language === 'hinglish'
-                      ? 'Admin dwara diya gaya authorized password enter karein.'
-                      : 'Enter the authorized password issued by the company administrator.'}
+                      ? 'Apna registered password ya invite link dwara set kiya gaya password enter karein.'
+                      : 'Enter your account password or the password set via invitation link.'}
                   </p>
                 </div>
 

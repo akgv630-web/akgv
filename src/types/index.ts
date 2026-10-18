@@ -25,6 +25,11 @@ export interface Profile {
   password?: string;
   createdAt: string;
 
+  // Invitation Lifecycle Tracking
+  invitationStatus?: 'pending' | 'sent' | 'delivered' | 'accepted' | 'failed';
+  invitationSentAt?: string;
+  invitedBy?: string;
+
   // CRM, Geographic & Performance Dossier
   city?: string; // e.g. "Varanasi", "Chandauli", "Mirzapur", "Prayagraj"
   branchLocation?: string; // e.g. "Rampur Head Office", "Lahartara Branch", "Mirza Murad Branch"

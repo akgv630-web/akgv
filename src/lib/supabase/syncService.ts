@@ -556,6 +556,9 @@ export async function fetchProfilesFromSupabase(): Promise<Profile[] | null> {
       plotsClosedCount: row.plots_closed_count ? Number(row.plots_closed_count) : undefined,
       joinedDate: row.joined_date || undefined,
       permissions: row.permissions || undefined,
+      invitationStatus: row.invitation_status || undefined,
+      invitationSentAt: row.invitation_sent_at || undefined,
+      invitedBy: row.invited_by || undefined,
       createdAt: row.created_at
     }));
   } catch (err) {
@@ -612,6 +615,15 @@ export async function saveProfileToSupabase(
     }
     if (profile.permissions) {
       payload.permissions = profile.permissions;
+    }
+    if (profile.invitationStatus) {
+      payload.invitation_status = profile.invitationStatus;
+    }
+    if (profile.invitationSentAt) {
+      payload.invitation_sent_at = profile.invitationSentAt;
+    }
+    if (profile.invitedBy) {
+      payload.invited_by = profile.invitedBy;
     }
 
     const { error } = await supabase
@@ -687,6 +699,9 @@ export async function fetchProfileByAuthId(authUserId: string): Promise<Profile 
       plotsClosedCount: data.plots_closed_count ? Number(data.plots_closed_count) : undefined,
       joinedDate: data.joined_date || undefined,
       permissions: data.permissions || undefined,
+      invitationStatus: data.invitation_status || undefined,
+      invitationSentAt: data.invitation_sent_at || undefined,
+      invitedBy: data.invited_by || undefined,
       createdAt: data.created_at,
     };
   } catch (err) {
@@ -706,17 +721,26 @@ export async function supabaseSignIn(identifier: string, password: string) {
 
   try {
     let emailToUse = identifier.trim();
-    // If identifier is not an email, find matching profile email
+    // If identifier is not an email (e.g. Member ID or Phone), resolve via secure RPC
     if (!emailToUse.includes('@')) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email')
-        .or(`phone.eq.${emailToUse},member_id.ilike.${emailToUse}`)
-        .limit(1)
-        .maybeSingle();
+      const { data: resolvedEmail, error: rpcErr } = await supabase.rpc('resolve_login_identifier', {
+        p_identifier: emailToUse,
+      });
 
-      if (profile && profile.email) {
-        emailToUse = profile.email;
+      if (!rpcErr && typeof resolvedEmail === 'string' && resolvedEmail.length > 0) {
+        emailToUse = resolvedEmail;
+      } else {
+        // Fallback for development/offline environments where RPC migration hasn't been executed
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .or(`phone.eq.${emailToUse},member_id.ilike.${emailToUse}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (profile && profile.email) {
+          emailToUse = profile.email;
+        }
       }
     }
 
@@ -780,6 +804,21 @@ export async function supabaseResetPassword(email: string) {
     return await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/reset` : undefined,
     });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { data: null, error: { message } };
+  }
+}
+
+export async function supabaseUpdatePassword(newPassword: string) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { data: null, error: new Error('Supabase is not configured') };
+  }
+  try {
+    const res = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    return res;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return { data: null, error: { message } };

@@ -60,6 +60,7 @@ import {
   supabaseSignUp,
   supabaseSignOut,
   supabaseResetPassword,
+  supabaseUpdatePassword,
   supabaseGetSession,
   supabaseOnAuthStateChange,
   callCreatePlotBookingAtomic,
@@ -115,6 +116,7 @@ interface AppContextType {
   }>;
   logout: () => Promise<void>;
   resetPasswordRequest: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   switchUserRole: (role: UserRole) => void;
   allProfiles: Profile[];
   plots: Plot[];
@@ -750,6 +752,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { success: true };
   };
 
+  const updatePassword = async (newPassword: string) => {
+    const res = await supabaseUpdatePassword(newPassword);
+    if (res && res.error) {
+      return { success: false, error: res.error.message };
+    }
+    return { success: true };
+  };
+
   const loginUser = (identifier: string): Profile | null => {
     if (process.env.NODE_ENV === 'production' || isSupabaseConfigured) {
       console.warn('[Security] Quick-login bypass is disabled when authentication provider is active or in production builds.');
@@ -869,10 +879,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ? 'Verified Client'
         : 'Sales Assistant');
 
-    const generatedInitialPassword = data.password && data.password.trim()
-      ? data.password.trim()
-      : `AKGV#${Math.floor(100000 + Math.random() * 900000)}`;
-
     const newProfile: Profile = {
       id: `usr-${Date.now()}`,
       email: data.email,
@@ -892,7 +898,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       kycStatus: 'verified',
       isActive: true,
       createdAt: nowIso,
-      password: generatedInitialPassword,
+      invitationStatus: 'pending',
+      invitationSentAt: nowIso,
+      invitedBy: currentUser?.id,
     };
     setAllProfiles((prev) => {
       const next = [...prev, newProfile];
@@ -2182,6 +2190,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         registerWithCredentials,
         logout,
         resetPasswordRequest,
+        updatePassword,
         switchUserRole,
         allProfiles,
         plots,
