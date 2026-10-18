@@ -1828,6 +1828,7 @@ export async function serverInviteMember(
     email: string;
     fullName: string;
     phone: string;
+    password?: string;
     role?: string;
     sponsorId?: string;
     city?: string;
@@ -1841,6 +1842,8 @@ export async function serverInviteMember(
   user?: any;
   profile?: any;
   actionLink?: string | null;
+  oneClickLoginUrl?: string | null;
+  initialPassword?: string | null;
   invitationStatus?: string;
   emailDelivered?: boolean;
   note?: string;

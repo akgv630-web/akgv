@@ -33,6 +33,63 @@ export default function UnifiedLoginPage() {
   const [success, setSuccess] = useState(false);
   const [successUser, setSuccessUser] = useState<string | null>(null);
 
+  // Auto-fill and 1-Click Auto-Login from WhatsApp / Email welcome link
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const urlId = params.get('identifier') || params.get('email') || params.get('id') || params.get('phone');
+    const urlPwd = params.get('password') || params.get('pwd') || params.get('pass');
+    const auto = params.get('auto') === '1' || params.get('autologin') === 'true';
+
+    if (urlId) {
+      setIdentifier(decodeURIComponent(urlId));
+    }
+    if (urlPwd) {
+      setPassword(decodeURIComponent(urlPwd));
+    }
+
+    if (urlId && urlPwd && auto) {
+      const cleanId = decodeURIComponent(urlId).trim();
+      const cleanPwd = decodeURIComponent(urlPwd).trim();
+      setLoading(true);
+      loginWithCredentials(cleanId, cleanPwd)
+        .then((res) => {
+          if (res.success && res.profile) {
+            setSuccess(true);
+            setSuccessUser(res.profile.fullName || res.profile.email);
+            setTimeout(() => {
+              const returnUrl = params.get('returnUrl') || params.get('redirect');
+              if (returnUrl) {
+                const safe = safeRedirectUrl(returnUrl, '');
+                if (safe) {
+                  router.push(safe);
+                  return;
+                }
+              }
+              const role = res.profile?.role;
+              if (role === 'super_admin' || role === 'sub_admin') {
+                router.push('/admin');
+              } else if (role === 'senior_member' || role === 'junior_member') {
+                router.push('/member');
+              } else if (role === 'buyer') {
+                router.push('/buyer');
+              } else {
+                router.push('/');
+              }
+            }, 600);
+          } else {
+            setError(res.error || 'Auto-login failed. Please verify credentials.');
+          }
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : 'Auto-login service error.');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');

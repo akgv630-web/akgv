@@ -559,7 +559,7 @@ export function MemberPortalPage() {
                 </button>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(
-                    `Namaste! Join my team at AKGV Infra City Private Limited. Use my Sponsor ID: ${currentUser.memberId || 'AKGV-3498'} when registering.`
+                    `🏢 *AKGV INFRA CITY PRIVATE LIMITED*\nनमस्ते! AKGV Infra City में मेरे साथ एसोसिएट या ग्राहक के रूप में जुड़ें।\n\n🆔 मेरा स्पॉन्सर कोड: *${currentUser.memberId || 'AKGV-3498'}*\n👤 स्पॉन्सर नाम: *${currentUser.fullName}*\n\n👉 *सीधे रजिस्टर करने का लिंक:* https://akgv.pages.dev/login?tab=register&sponsor=${encodeURIComponent(currentUser.memberId || 'AKGV-3498')}\n\n🏢 पता: रामपुर (निकट कैंट), वाराणसी\n📞 हेल्पलाइन: +91 94152 02627`
                   )}`}
                   target="_blank"
                   rel="noreferrer"

@@ -22,10 +22,12 @@ import {
   Edit,
   ExternalLink,
   Eye,
+  EyeOff,
   FileCheck,
   Filter,
   HelpCircle,
   Home,
+  Key,
   Layers,
   Mail,
   MapPin,
@@ -36,6 +38,7 @@ import {
   Power,
   Receipt,
   Search,
+  Send,
   ShieldAlert,
   ShieldCheck,
   Star,
@@ -308,12 +311,16 @@ export default function AdminPage() {
   const [newMemberBranch, setNewMemberBranch] = useState('Rampur Head Office');
   const [newMemberAddress, setNewMemberAddress] = useState('');
   const [newMemberLevel, setNewMemberLevel] = useState<number>(1);
+  const [newMemberPassword, setNewMemberPassword] = useState('Akgv@2026');
+  const [showNewMemberPassword, setShowNewMemberPassword] = useState(false);
   const [createdSponsorFeedback, setCreatedSponsorFeedback] = useState<{
     code: string;
     name: string;
     email: string;
     phone: string;
     role: string;
+    password?: string;
+    oneClickLoginUrl?: string;
     activationUrl: string;
     loginUrl: string;
     invitationStatus?: string;
@@ -1519,6 +1526,20 @@ export default function AdminPage() {
                             <span>Edit</span>
                           </button>
 
+                          {/* WhatsApp Share Button */}
+                          <a
+                            href={`https://wa.me/91${(profile.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                              `🏢 *AKGV INFRA CITY PRIVATE LIMITED*\nनमस्ते *${profile.fullName}* जी,\n\n📋 *आपके खाते की जानकारी:*\n🆔 ID: ${profile.memberId || profile.phone}\n👤 नाम: ${profile.fullName}\n📧 ईमेल: ${profile.email}\n📱 फोन: ${profile.phone}\n🌐 पोर्टल लॉगिन: ${typeof window !== 'undefined' ? window.location.origin : 'https://akgv.pages.dev'}/login?identifier=${encodeURIComponent(profile.email || profile.memberId || profile.phone)}\n\n📞 सहायता: +91 94152 02627`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 rounded-lg bg-[#25D366]/20 hover:bg-[#25D366]/30 text-[#25D366] px-2 py-1.5 text-[11px] font-semibold transition"
+                            title="Share Details via WhatsApp"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            <span>WhatsApp</span>
+                          </a>
+
                           {/* Toggle Active / Suspended Button */}
                           <button
                             onClick={() => handleToggleStatus(profile)}
@@ -1595,11 +1616,13 @@ export default function AdminPage() {
                       return;
                     }
                     const targetEmail = newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`;
+                    const assignedPassword = newMemberPassword.trim() || 'Akgv@2026';
 
                     const profile = createSponsorMember({
                       fullName: newMemberName.trim(),
                       phone: newMemberPhone.trim(),
                       email: targetEmail,
+                      password: assignedPassword,
                       role: newMemberRole,
                       sponsorId: newMemberSponsorId,
                       city: newMemberCity.trim(),
@@ -1612,6 +1635,7 @@ export default function AdminPage() {
                     let realActionLink: string | null = null;
                     let emailDelivered = false;
                     let dispatchNote = '';
+                    let serverOneClickUrl: string | null = null;
 
                     try {
                       const session = await supabaseGetSession();
@@ -1620,6 +1644,7 @@ export default function AdminPage() {
                           email: targetEmail,
                           fullName: newMemberName.trim(),
                           phone: newMemberPhone.trim(),
+                          password: assignedPassword,
                           role: newMemberRole,
                           sponsorId: newMemberSponsorId,
                           city: newMemberCity.trim(),
@@ -1631,16 +1656,17 @@ export default function AdminPage() {
                           realActionLink = inviteRes.actionLink || null;
                           emailDelivered = Boolean(inviteRes.emailDelivered);
                           dispatchNote = inviteRes.note || '';
+                          serverOneClickUrl = inviteRes.oneClickLoginUrl || null;
                         }
                       }
                     } catch (err) {
                       console.warn('Server invitation notice:', err);
                     }
 
-                    const activationUrl = realActionLink || (typeof window !== 'undefined'
-                      ? `${window.location.origin}/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`
-                      : `https://akgvinfacity.com/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`);
-                    const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://akgvinfacity.com/login';
+                    const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://akgv.pages.dev';
+                    const oneClickLoginUrl = serverOneClickUrl || `${appOrigin}/login?identifier=${encodeURIComponent(targetEmail)}&password=${encodeURIComponent(assignedPassword)}&auto=1`;
+                    const activationUrl = realActionLink || `${appOrigin}/auth/reset?type=invite&email=${encodeURIComponent(profile.email)}`;
+                    const loginUrl = `${appOrigin}/login`;
 
                     setCreatedSponsorFeedback({
                       code: profile.memberId || profile.email || 'AKGV-NEW',
@@ -1648,6 +1674,8 @@ export default function AdminPage() {
                       email: profile.email,
                       phone: profile.phone,
                       role: profile.role,
+                      password: assignedPassword,
+                      oneClickLoginUrl,
                       activationUrl,
                       loginUrl,
                       invitationStatus: emailDelivered ? 'delivered' : (profile.invitationStatus || 'pending'),
@@ -1657,9 +1685,9 @@ export default function AdminPage() {
                     setMemberActionNotice(
                       tLang(
                         language,
-                        `New member "${profile.fullName}" enrolled successfully! Member ID: ${profile.memberId || profile.email}.${emailDelivered ? ' Invitation email dispatched.' : ' Activation invite generated.'}`,
-                        `नया सदस्य "${profile.fullName}" सफलतापूर्वक जोड़ा गया! सदस्य आईडी: ${profile.memberId || profile.email}। ${emailDelivered ? 'आमंत्रण ईमेल भेज दिया गया है।' : 'सक्रियण आमंत्रण लिंक तैयार है।'}`,
-                        `Naya member "${profile.fullName}" enroll ho gaya! Member ID: ${profile.memberId || profile.email}.${emailDelivered ? ' Invite email bhej diya gaya hai.' : ' Activation link ready hai.'}`
+                        `New account "${profile.fullName}" created successfully! ID: ${profile.memberId || profile.email}.${emailDelivered ? ' Welcome email sent.' : ' Ready to share via WhatsApp/Gmail.'}`,
+                        `नया खाता "${profile.fullName}" सफलतापूर्वक बनाया गया! आईडी: ${profile.memberId || profile.email}। ${emailDelivered ? 'ईमेल भेज दिया गया है।' : 'व्हाट्सएप/जीमेल पर भेजने हेतु तैयार।'}`,
+                        `Naya account "${profile.fullName}" create ho gaya! ID: ${profile.memberId || profile.email}.${emailDelivered ? ' Email bhej diya gaya hai.' : ' WhatsApp/Gmail par bhejne ke liye ready hai.'}`
                       )
                     );
                     setNewMemberName('');
@@ -1671,72 +1699,186 @@ export default function AdminPage() {
                   className="p-5 space-y-4 text-xs"
                 >
                   {/* Feedback Banner on Generation */}
-                  {createdSponsorFeedback && (
-                    <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/40 p-4 space-y-3 text-xs animate-in fade-in">
-                      <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                        <span>{tLang(language, 'Member Enrolled! Secure Activation Link Ready', 'सदस्य पंजीकृत! सुरक्षित सक्रियण लिंक तैयार', 'Member Enrolled! Secure Activation Link Ready')}</span>
-                      </div>
-                      
-                      <div className="rounded-xl border border-[#C7A35A]/30 bg-[#070D1E] p-3 text-xs space-y-1.5 font-mono">
-                        <div className="text-gray-300 font-sans font-semibold text-[11px] text-[#DFC382]">
-                          {tLang(language, 'Official Member Details & Activation Link:', 'आधिकारिक सदस्य विवरण एवं सक्रियण लिंक:', 'Official Member Details & Activation Link:')}
-                        </div>
-                        <div className="text-white">👤 {tLang(language, 'Name:', 'नाम:', 'Naam:')} <span className="font-bold text-emerald-300">{createdSponsorFeedback.name}</span></div>
-                        <div className="text-white">🆔 {tLang(language, 'Member ID:', 'सदस्य आईडी:', 'Member ID:')} <span className="font-bold text-[#DFC382] bg-black/50 px-2 py-0.5 rounded border border-[#C7A35A]/30">{createdSponsorFeedback.code}</span></div>
-                        <div className="text-white">📧 {tLang(language, 'Email:', 'ईमेल:', 'Email:')} <span className="text-gray-300">{createdSponsorFeedback.email}</span></div>
-                        <div className="text-white">📱 {tLang(language, 'Phone:', 'फोन:', 'Phone:')} <span className="text-gray-300">{createdSponsorFeedback.phone}</span></div>
-                        <div className="text-white">🛡️ {tLang(language, 'Security Status:', 'सुरक्षा स्थिति:', 'Security Status:')} <span className="text-emerald-300 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-500/30">Passwordless Invite (Zero Plaintext)</span></div>
-                        {createdSponsorFeedback.emailDelivered ? (
-                          <div className="text-emerald-300 font-sans font-semibold text-[11px]">
-                            ✉️ {tLang(language, 'Email Status: Invitation email dispatched directly to recipient inbox via Supabase Mailer!', 'ईमेल स्थिति: आमंत्रण ईमेल सीधे प्राप्तकर्ता के इनबॉक्स में भेजा गया!', 'Email Status: Invite email seedha recipient ke inbox me bhej diya gaya!')}
-                          </div>
-                        ) : (
-                          <div className="text-amber-300/90 font-sans text-[11px]">
-                            ✉️ {tLang(language, 'Email Status: Direct activation link ready for copy/WhatsApp dispatch.', 'ईमेल स्थिति: सक्रियण लिंक कॉपी/WhatsApp पर भेजने के लिए तैयार है।', 'Email Status: Direct activation link copy/WhatsApp par bhejne ke liye ready hai.')}
-                          </div>
-                        )}
-                        <div className="text-white break-all">🔗 {tLang(language, 'Activation Link:', 'सक्रियण लिंक:', 'Activation Link:')} <span className="text-sky-300 underline font-sans text-[11px]">{createdSponsorFeedback.activationUrl}</span></div>
-                      </div>
+                  {createdSponsorFeedback && (() => {
+                    const cleanPhone = (createdSponsorFeedback.phone || '').replace(/[^0-9]/g, '');
+                    const roleBadge = getRoleBadge(createdSponsorFeedback.role as UserRole);
+                    const dossierText = `🏢 *AKGV INFRA CITY PRIVATE LIMITED*
+*आधिकारिक स्वागत एवं खाता लॉगिन विवरण (Account Dossier)*
 
-                      <div className="flex flex-wrap gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const msg = tLang(
-                              language,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Registered Email: ${createdSponsorFeedback.email}\n📱 Registered Phone: ${createdSponsorFeedback.phone}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the activation link to set your confidential password and access your associate dashboard.`,
-                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक सदस्य खाता सक्रियण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 सदस्य आईडी: ${createdSponsorFeedback.code}\n📧 पंजीकृत ईमेल: ${createdSponsorFeedback.email}\n📱 पंजीकृत फोन: ${createdSponsorFeedback.phone}\n🔗 सक्रियण लिंक: ${createdSponsorFeedback.activationUrl}\n🌐 सदस्य पोर्टल: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया इस सक्रियण लिंक पर जाकर अपना व्यक्तिगत पासवर्ड सेट करें और पोर्टल में लॉगिन करें।`,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n📱 Phone: ${createdSponsorFeedback.phone}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is activation link par jaakar apna confidential password set karein aur portal me login karein.`
-                            );
-                            navigator.clipboard.writeText(msg);
-                            setMemberActionNotice(tLang(language, 'Invitation details copied to clipboard!', 'आमंत्रण विवरण क्लिपबोर्ड पर कॉपी हो गया!', 'Invitation details clipboard par copy ho gaya!'));
-                            setTimeout(() => setMemberActionNotice(null), 4000);
-                          }}
-                          className="rounded-lg bg-[#C7A35A] px-3.5 py-1.5 font-bold text-[#0B1734] text-[11px] flex items-center gap-1.5 hover:brightness-110 transition"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          <span>{tLang(language, 'Copy Invitation Link', 'आमंत्रण लिंक कॉपी करें', 'Copy Invitation Link')}</span>
-                        </button>
-                        <a
-                          href={`https://wa.me/?text=${encodeURIComponent(
-                            tLang(
-                              language,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Name: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Please visit the link to establish your password.`,
-                              `🏢 एकेजीवी इन्फ्रा सिटी प्राइवेट लिमिटेड\n🔐 आधिकारिक सदस्य खाता सक्रियण\n\n👤 नाम: ${createdSponsorFeedback.name}\n🆔 सदस्य आईडी: ${createdSponsorFeedback.code}\n📧 ईमेल: ${createdSponsorFeedback.email}\n🔗 सक्रियण लिंक: ${createdSponsorFeedback.activationUrl}\n🌐 सदस्य पोर्टल: ${createdSponsorFeedback.loginUrl}\n\nसूचना: कृपया लिंक खोलकर अपना पासवर्ड सेट करें।`,
-                              `🏢 AKGV INFRA CITY PRIVATE LIMITED\n🔐 Official Member Account Activation\n\n👤 Naam: ${createdSponsorFeedback.name}\n🆔 Member ID: ${createdSponsorFeedback.code}\n📧 Email: ${createdSponsorFeedback.email}\n🔗 Activation Link: ${createdSponsorFeedback.activationUrl}\n🌐 Member Portal: ${createdSponsorFeedback.loginUrl}\n\nNotice: Kripya is link par jakar password set karein.`
-                            )
-                          )}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-lg bg-[#25D366] px-3.5 py-1.5 font-bold text-white text-[11px] flex items-center gap-1.5 hover:brightness-110 transition"
-                        >
-                          <Phone className="h-3.5 w-3.5" />
-                          <span>{tLang(language, 'Share on WhatsApp', 'व्हाट्सएप पर भेजें', 'WhatsApp Par Share Karein')}</span>
-                        </a>
+नमस्ते *${createdSponsorFeedback.name}* जी,
+AKGV Infra City में आपका हार्दिक स्वागत है! आपका अधिकृत खाता सफलतापूर्वक सक्रिय कर दिया गया है।
+
+📋 *आपकी लॉगिन क्रेडेंशियल्स (Login Credentials):*
+👤 नाम: *${createdSponsorFeedback.name}*
+🆔 सदस्य/ग्राहक ID: *${createdSponsorFeedback.code}*
+🏷️ पद / रोल: *${roleBadge.label}*
+📧 पंजीकृत ईमेल: *${createdSponsorFeedback.email}*
+📱 पंजीकृत मोबाइल: *${createdSponsorFeedback.phone}*
+🔑 लॉगिन पासवर्ड: *${createdSponsorFeedback.password || 'Akgv@2026'}*
+
+⚡ *1-क्लिक डायरेक्ट लॉगिन लिंक (तुरंत डैशबोर्ड खोलें):*
+👉 ${createdSponsorFeedback.oneClickLoginUrl}
+*(इस लिंक पर क्लिक करते ही आप सीधे अपने डैशबोर्ड में ऑटो-लॉगिन हो जाएंगे)*
+
+🌐 मुख्य पोर्टल: ${createdSponsorFeedback.loginUrl}
+🏢 कार्यालय: रामपुर (निकट कैंट), वाराणसी - 221002 (उ.प्र.)
+📞 हेल्पलाइन: +91 94152 02627 / 0542-2500123
+🌐 वेबसाइट: https://akgv.pages.dev
+
+_नोट: सुरक्षा हेतु लॉगिन के बाद आप अपना पासवर्ड अपनी प्रोफाइल से बदल सकते हैं।_`;
+
+                    return (
+                      <div className="rounded-2xl border border-emerald-500/50 bg-gradient-to-b from-emerald-950/60 to-[#070D1E] p-4 space-y-3 text-xs animate-in fade-in shadow-xl">
+                        <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+                          <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                            <span>{tLang(language, 'Profile Created & Welcome Dossier Ready!', 'प्रोफ़ाइल बन गई! लॉगिन विवरण तैयार है', 'Profile Created & Welcome Dossier Ready!')}</span>
+                          </div>
+                          <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                            100% Ready
+                          </span>
+                        </div>
+
+                        {/* Dossier Card */}
+                        <div className="rounded-xl border border-[#C7A35A]/40 bg-[#050A17] p-3.5 space-y-2 text-xs font-mono">
+                          <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                            <span className="text-[#DFC382] font-sans font-bold text-[11px]">
+                              {tLang(language, 'Official Account Dossier', 'आधिकारिक खाता विवरण', 'Official Account Dossier')}
+                            </span>
+                            <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${roleBadge.bg} border`}>
+                              {roleBadge.label}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                            <div className="text-white">
+                              👤 <span className="text-gray-400">Name:</span> <strong className="text-emerald-300">{createdSponsorFeedback.name}</strong>
+                            </div>
+                            <div className="text-white">
+                              🆔 <span className="text-gray-400">ID:</span> <strong className="text-[#DFC382] bg-black/60 px-2 py-0.5 rounded border border-[#C7A35A]/30">{createdSponsorFeedback.code}</strong>
+                            </div>
+                            <div className="text-white">
+                              📧 <span className="text-gray-400">Email:</span> <span className="text-gray-200">{createdSponsorFeedback.email}</span>
+                            </div>
+                            <div className="text-white">
+                              📱 <span className="text-gray-400">Phone:</span> <span className="text-gray-200">{createdSponsorFeedback.phone}</span>
+                            </div>
+                            <div className="text-white col-span-1 sm:col-span-2 flex items-center justify-between bg-black/40 px-2.5 py-1.5 rounded-lg border border-white/5">
+                              <div>
+                                🔑 <span className="text-gray-400">Login Password:</span> <strong className="text-amber-300 ml-1.5">{createdSponsorFeedback.password || 'Akgv@2026'}</strong>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(createdSponsorFeedback.password || 'Akgv@2026');
+                                  setMemberActionNotice('Password copied to clipboard!');
+                                  setTimeout(() => setMemberActionNotice(null), 3000);
+                                }}
+                                className="text-xs text-gray-400 hover:text-white flex items-center gap-1 font-sans"
+                                title="Copy Password"
+                              >
+                                <Copy className="h-3.5 w-3.5 text-[#C7A35A]" />
+                                <span>Copy</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 1-Click Login URL Preview */}
+                          <div className="border-t border-white/10 pt-2 space-y-1">
+                            <span className="text-[10px] text-gray-400 font-sans block">
+                              ⚡ {tLang(language, '1-Click Auto-Login Link (Opens Dashboard Directly):', '1-क्लिक ऑटो-लॉगिन लिंक (सीधे डैशबोर्ड खुलेगा):', '1-Click Auto-Login Link:')}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                readOnly
+                                value={createdSponsorFeedback.oneClickLoginUrl}
+                                className="w-full rounded-lg bg-black/50 border border-white/10 px-2.5 py-1 text-[10px] text-sky-300 truncate focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (createdSponsorFeedback.oneClickLoginUrl) {
+                                    navigator.clipboard.writeText(createdSponsorFeedback.oneClickLoginUrl);
+                                    setMemberActionNotice('1-Click Login URL copied to clipboard!');
+                                    setTimeout(() => setMemberActionNotice(null), 3000);
+                                  }
+                                }}
+                                className="shrink-0 rounded-lg bg-white/10 hover:bg-white/20 p-1.5 text-gray-200 transition"
+                                title="Copy 1-Click URL"
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Email Status Indicator */}
+                          {createdSponsorFeedback.emailDelivered ? (
+                            <div className="text-emerald-300 font-sans font-semibold text-[11px] pt-1 flex items-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                              <span>{tLang(language, 'Invitation email dispatched directly to recipient inbox!', 'आमंत्रण ईमेल सीधे प्राप्तकर्ता के इनबॉक्स में भेजा गया!', 'Invite email recipient ke inbox me bhej diya gaya!')}</span>
+                            </div>
+                          ) : (
+                            <div className="text-amber-300/90 font-sans text-[11px] pt-1 flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5 text-amber-400" />
+                              <span>{tLang(language, 'Direct email queued. You can also dispatch instantly via WhatsApp or Gmail below:', 'ईमेल कतारबद्ध है। आप नीचे दिए गए बटनों से व्हाट्सएप या जीमेल द्वारा तुरंत भेज सकते हैं:', 'Email queued hai. Aap turant WhatsApp ya Gmail se bhej sakte hain:')}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Dispatch Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {/* WhatsApp Share Button */}
+                          <a
+                            href={`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(dossierText)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-xl bg-[#25D366] hover:bg-emerald-600 px-4 py-2 font-bold text-white text-[11px] flex items-center gap-1.5 shadow-md transition"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            <span>{tLang(language, 'Share on WhatsApp', 'व्हाट्सएप पर भेजें', 'WhatsApp Par Bhejein')}</span>
+                          </a>
+
+                          {/* Gmail Compose Button */}
+                          <a
+                            href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(createdSponsorFeedback.email)}&su=${encodeURIComponent(`AKGV Infra City — स्वागत एवं लॉगिन क्रेडेंशियल्स (${createdSponsorFeedback.code})`)}&body=${encodeURIComponent(dossierText)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-xl bg-red-600 hover:bg-red-500 px-4 py-2 font-bold text-white text-[11px] flex items-center gap-1.5 shadow-md transition"
+                          >
+                            <Mail className="h-3.5 w-3.5" />
+                            <span>{tLang(language, 'Send via Gmail', 'Gmail से भेजें', 'Gmail Se Bhejein')}</span>
+                          </a>
+
+                          {/* Copy Full Credentials */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(dossierText);
+                              setMemberActionNotice(tLang(language, 'Complete credentials copied to clipboard!', 'पूरा क्रेडेंशियल्स विवरण क्लिपबोर्ड पर कॉपी हो गया!', 'Complete credentials clipboard par copy ho gaya!'));
+                              setTimeout(() => setMemberActionNotice(null), 4000);
+                            }}
+                            className="rounded-xl bg-[#C7A35A] hover:bg-[#DFC382] px-4 py-2 font-bold text-[#0B1734] text-[11px] flex items-center gap-1.5 shadow-md transition"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>{tLang(language, 'Copy All Credentials', 'सभी क्रेडेंशियल्स कॉपी करें', 'Copy All Credentials')}</span>
+                          </button>
+
+                          {/* Test 1-Click Login Link */}
+                          {createdSponsorFeedback.oneClickLoginUrl && (
+                            <a
+                              href={createdSponsorFeedback.oneClickLoginUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-xl border border-sky-500/40 bg-sky-500/20 hover:bg-sky-500/30 px-3.5 py-2 font-bold text-sky-300 text-[11px] flex items-center gap-1.5 transition ml-auto"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              <span>{tLang(language, 'Test 1-Click Login', '1-क्लिक लॉगिन टेस्ट', 'Test 1-Click Login')}</span>
+                            </a>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   <div>
                     <label className="block text-gray-300 font-semibold mb-1">
@@ -1787,6 +1929,49 @@ export default function AdminPage() {
                         )}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Login Password Input Field */}
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">
+                      {tLang(language, 'Login Password', 'लॉगिन पासवर्ड', 'Login Password')} <span className="text-[#C7A35A]">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewMemberPassword ? 'text' : 'password'}
+                        required
+                        value={newMemberPassword}
+                        onChange={(e) => setNewMemberPassword(e.target.value)}
+                        placeholder="e.g. Akgv@2026"
+                        className="w-full rounded-xl border border-white/10 bg-[#050A17] px-3.5 py-2.5 pr-28 text-white placeholder-gray-500 focus:border-[#C7A35A] focus:outline-none font-mono text-xs"
+                      />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowNewMemberPassword(!showNewMemberPassword)}
+                          className="text-gray-400 hover:text-white p-1 text-[10px]"
+                          title={showNewMemberPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showNewMemberPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewMemberPassword(`Akgv@${Math.floor(1000 + Math.random() * 9000)}`)}
+                          className="rounded bg-[#C7A35A]/20 text-[#DFC382] hover:bg-[#C7A35A]/30 px-2 py-0.5 text-[10px] font-bold"
+                          title="Auto Generate Password"
+                        >
+                          Auto Generate
+                        </button>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-[10px] text-gray-400">
+                      {tLang(
+                        language,
+                        'Default: Akgv@2026. This password will be included in the dossier sent via WhatsApp and Email, and auto-fills on 1-click login.',
+                        'डिफ़ॉल्ट: Akgv@2026। यह पासवर्ड व्हाट्सएप और ईमेल द्वारा भेजे जाने वाले विवरण में शामिल होगा और 1-क्लिक लॉगिन में स्वतः भर जाएगा।',
+                        'Default: Akgv@2026. Yeh password WhatsApp/Email me bheja jayega aur 1-click login par auto-fill hoga.'
+                      )}
+                    </p>
                   </div>
 
                   {/* Location & Assigned Branch */}
@@ -1898,19 +2083,19 @@ export default function AdminPage() {
                     />
                   </div>
 
-                  {/* Secure Passwordless Onboarding Notice */}
+                  {/* Secure Account Onboarding Notice */}
                   <div className="rounded-xl border border-[#C7A35A]/30 bg-gradient-to-r from-[#0F1E3D] to-[#070D1E] p-3 text-xs text-gray-300 flex items-start gap-2.5">
                     <ShieldCheck className="h-4 w-4 text-[#C7A35A] shrink-0 mt-0.5" />
                     <div>
                       <div className="font-semibold text-white">
-                        {tLang(language, 'Secure Passwordless Onboarding (Zero Plaintext)', 'सुरक्षित पासवर्ड-रहित नामांकन (शून्य प्लेनटेक्स्ट)', 'Secure Passwordless Onboarding')}
+                        {tLang(language, 'Multi-Channel Onboarding & 1-Click Login Ready', 'मल्टी-चैनल नामांकन एवं 1-क्लिक लॉगिन तैयार', 'Multi-Channel Onboarding & 1-Click Login Ready')}
                       </div>
                       <p className="mt-0.5 text-[11px] text-gray-400 leading-relaxed">
                         {tLang(
                           language,
-                          'No plaintext passwords are generated or emailed. Upon enrollment, an official cryptographic activation link is created so the new member establishes their own confidential credentials.',
-                          'कोई भी साधारण पासवर्ड संचित या ईमेल नहीं किया जाता है। नामांकन पर एक आधिकारिक सक्रियण लिंक तैयार होता है जिससे सदस्य अपना गोपनीय पासवर्ड स्वयं सेट कर सकें।',
-                          'Koi bhi plaintext password save ya email nahi hota. Enrollment ke baad official activation link generate hoga jisse member apna confidential password set kar sakein.'
+                          'Upon enrollment, an official login dossier with initial password and a 1-click auto-login link is generated. You can dispatch it immediately via WhatsApp or Gmail with one tap.',
+                          'नामांकन पर, प्रारंभिक पासवर्ड और 1-क्लिक ऑटो-लॉगिन लिंक के साथ आधिकारिक विवरण तैयार होता है जिसे आप सीधे व्हाट्सएप या जीमेल से भेज सकते हैं।',
+                          'Enrollment par initial password aur 1-click direct auto login link generate hoga jise aap turant WhatsApp ya Gmail se bhej sakte hain.'
                         )}
                       </p>
                     </div>

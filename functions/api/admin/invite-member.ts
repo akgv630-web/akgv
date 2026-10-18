@@ -97,7 +97,13 @@ export async function onRequestPost(context: {
       address,
       level = 1,
       rankTitle = 'Associate Partner',
+      password,
     } = body as Record<string, any>;
+
+    const initialPassword =
+      typeof password === 'string' && password.trim().length >= 6
+        ? password.trim()
+        : 'Akgv@2026';
 
     if (!email || !email.includes('@')) {
       return new Response(
@@ -144,88 +150,130 @@ export async function onRequestPost(context: {
       'https://akgv.pages.dev';
 
     const redirectTo = `${appOrigin}/auth/reset?type=invite`;
-
     const cleanEmail = email.trim().toLowerCase();
 
-    // 4. Send Real Supabase Auth Invitation Email directly to recipient's Gmail
     let createdAuthUser: any = null;
     let emailDelivered = false;
     let actionLink: string | null = null;
 
-    // A. Dispatch official Supabase invite email directly to user's Gmail inbox
-    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      cleanEmail,
-      {
-        redirectTo,
-        data: {
-          full_name: fullName.trim(),
-          role: role,
-        },
-      }
-    );
-
-    if (!inviteError && inviteData?.user) {
-      createdAuthUser = inviteData.user;
-      emailDelivered = true;
-    }
-
-    // B. Also generate cryptographic link so Admin has direct copy/WhatsApp dispatch
-    const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'invite',
+    // A. Create or update user directly in Supabase Auth with initial password
+    const { data: createdUsr, error: createErr } = await supabaseAdmin.auth.admin.createUser({
       email: cleanEmail,
-      options: {
-        redirectTo,
-        data: {
-          full_name: fullName.trim(),
-          role: role,
-        },
+      email_confirm: true,
+      password: initialPassword,
+      user_metadata: {
+        full_name: fullName.trim(),
+        role: role,
+        phone: phone.trim(),
       },
     });
 
-    if (linkData?.user && !createdAuthUser) {
-      createdAuthUser = linkData.user;
-    }
-    if (linkData?.properties?.action_link) {
-      actionLink = linkData.properties.action_link;
+    if (createdUsr?.user) {
+      createdAuthUser = createdUsr.user;
+    } else {
+      // If user already exists in auth.users, update their password so initialPassword is valid
+      const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+      const existing = listData?.users?.find((u) => u.email?.toLowerCase() === cleanEmail);
+      if (existing) {
+        createdAuthUser = existing;
+        await supabaseAdmin.auth.admin.updateUserById(existing.id, {
+          password: initialPassword,
+          user_metadata: {
+            full_name: fullName.trim(),
+            role: role,
+            phone: phone.trim(),
+          },
+        });
+      }
     }
 
-    // C. Fallback: If user was not created by invite, create user and generate activation link
-    if (!createdAuthUser) {
-      const { data: createdUsr, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+    // B. Generate 1-Click Auto-Login URL
+    const oneClickLoginUrl = `${appOrigin}/login?identifier=${encodeURIComponent(cleanEmail)}&password=${encodeURIComponent(initialPassword)}&auto=1`;
+
+    // C. Generate cryptographic link as backup
+    try {
+      const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'invite',
         email: cleanEmail,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName.trim(),
-          role: role,
+        options: {
+          redirectTo,
+          data: {
+            full_name: fullName.trim(),
+            role: role,
+          },
         },
       });
-
-      if (createdUsr?.user) {
-        createdAuthUser = createdUsr.user;
-        const { data: recData } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'recovery',
-          email: cleanEmail,
-          options: { redirectTo },
-        });
-        actionLink = recData?.properties?.action_link || actionLink;
-      } else {
-        const { data: recData } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'recovery',
-          email: cleanEmail,
-          options: { redirectTo },
-        });
-        if (recData?.user) {
-          createdAuthUser = recData.user;
-          actionLink = recData.properties?.action_link || actionLink;
-        } else {
-          return new Response(
-            JSON.stringify({
-              error: `Failed to create Supabase Auth account: ${inviteError?.message || createErr?.message}`,
-            }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-          );
-        }
+      if (linkData?.properties?.action_link) {
+        actionLink = linkData.properties.action_link;
       }
+    } catch {}
+
+    // D. Dispatch official email via Resend API if configured
+    const resendApiKey = context.env.RESEND_API_KEY || process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      try {
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; background-color: #050A17; color: #ffffff; padding: 32px; border-radius: 16px; max-width: 600px; margin: auto; border: 1px solid #C7A35A;">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <h1 style="color: #C7A35A; margin: 0; font-size: 26px; letter-spacing: 2px;">AKGV INFRA CITY</h1>
+              <p style="color: #DFC382; margin: 6px 0 0 0; font-size: 12px; text-transform: uppercase; font-weight: bold;">Official Account Credentials & Welcome Dossier</p>
+            </div>
+            <p style="font-size: 15px; color: #e2e8f0;">Dear <strong>${fullName.trim()}</strong>,</p>
+            <p style="font-size: 14px; color: #cbd5e1; line-height: 1.6;">
+              Welcome to <strong>AKGV Infra City Private Limited</strong>. Your official account has been successfully provisioned. Here are your verified login credentials:
+            </p>
+            <div style="background-color: #0B1734; border: 1px solid rgba(199, 163, 90, 0.4); border-radius: 12px; padding: 20px; margin: 24px 0;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #ffffff;">
+                <tr><td style="padding: 8px 0; color: #94a3b8;">👤 Name:</td><td style="font-weight: bold; color: #38bdf8;">${fullName.trim()}</td></tr>
+                <tr><td style="padding: 8px 0; color: #94a3b8;">🏷️ Role:</td><td style="font-weight: bold; color: #fbbf24;">${role}</td></tr>
+                <tr><td style="padding: 8px 0; color: #94a3b8;">📧 Login Email:</td><td style="font-weight: bold; color: #ffffff;">${cleanEmail}</td></tr>
+                <tr><td style="padding: 8px 0; color: #94a3b8;">📱 Mobile:</td><td style="font-weight: bold; color: #e2e8f0;">${phone.trim()}</td></tr>
+                <tr><td style="padding: 8px 0; color: #94a3b8;">🔑 Password:</td><td style="font-weight: bold; color: #4ade80; font-family: monospace; font-size: 16px;">${initialPassword}</td></tr>
+              </table>
+            </div>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${oneClickLoginUrl}" style="background: linear-gradient(135deg, #C7A35A, #9E7E36); color: #0B1734; font-weight: bold; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-size: 15px; display: inline-block; box-shadow: 0 4px 15px rgba(199, 163, 90, 0.3);">
+                ⚡ 1-Click Instant Login to Dashboard
+              </a>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+              Tapping the button above automatically fills your credentials and signs you straight into your dashboard.
+            </p>
+            <hr style="border: none; border-top: 1px solid #1e293b; margin: 24px 0;" />
+            <p style="font-size: 11px; color: #64748b; text-align: center; line-height: 1.5;">
+              AKGV Infra City Private Limited • Head Office: Near Ring Road Phase-2, Rampur, Varanasi, UP - 221008<br/>
+              Support Helpline: +91 6306917991 • Website: https://akgv.pages.dev
+            </p>
+          </div>
+        `;
+        const resendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${resendApiKey}`,
+          },
+          body: JSON.stringify({
+            from: 'AKGV Infra City <welcome@akgvinfacity.com>',
+            to: [cleanEmail],
+            subject: `AKGV Infra City - Official Login Credentials (${fullName.trim()})`,
+            html: emailHtml,
+          }),
+        });
+        if (resendRes.ok) emailDelivered = true;
+      } catch (err) {
+        console.warn('[Resend Mailer Error]', err);
+      }
+    }
+
+    // E. Fallback: dispatch Supabase Auth invite if Resend not active
+    if (!emailDelivered) {
+      try {
+        const { error: invErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(cleanEmail, {
+          redirectTo,
+          data: { full_name: fullName.trim(), role },
+        });
+        if (!invErr) emailDelivered = true;
+      } catch {}
     }
 
     // 5. Create or Update Linked Profile with Database Sequence Member ID
@@ -235,7 +283,7 @@ export async function onRequestPost(context: {
     const profilePayload = {
       id: profileId,
       auth_user_id: createdAuthUser?.id || null,
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       full_name: fullName.trim(),
       phone: phone.trim(),
       role: role,
@@ -264,6 +312,8 @@ export async function onRequestPost(context: {
           error: `Auth account created but profile sync failed: ${profileErr.message}`,
           authUser: createdAuthUser,
           actionLink,
+          initialPassword,
+          oneClickLoginUrl,
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
@@ -275,11 +325,13 @@ export async function onRequestPost(context: {
         user: createdAuthUser,
         profile: insertedProfile,
         actionLink,
-        invitationStatus: 'sent',
+        initialPassword,
+        oneClickLoginUrl,
+        invitationStatus: emailDelivered ? 'delivered' : 'pending',
         emailDelivered: emailDelivered,
         note: emailDelivered
-          ? 'Official Supabase Auth invitation email dispatched directly to recipient Gmail inbox. Direct cryptographic activation link also provided.'
-          : 'Cryptographic activation link generated for onboarding.',
+          ? 'Official credentials email dispatched directly to recipient Gmail inbox.'
+          : 'Credentials created. Direct WhatsApp & 1-click auto-login ready.',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );

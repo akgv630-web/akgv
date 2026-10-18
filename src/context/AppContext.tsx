@@ -1076,6 +1076,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fullName: data.fullName,
       phone: data.phone,
       role: assignedRole,
+      password: data.password || 'Akgv@2026',
       memberId: newMemberId,
       sponsorId: effectiveSponsorId,
       city: data.city || 'Varanasi',
