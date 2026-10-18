@@ -537,6 +537,8 @@ export function MemberTaskInbox() {
                 return (
                   <div
                     key={task.id}
+                    id={task.id}
+                    data-record-id={task.id}
                     className={`rounded-2xl border p-4 sm:p-5 transition space-y-3 ${
                       task.isCompleted
                         ? 'border-emerald-500/30 bg-[#0B1734]/60 opacity-80'

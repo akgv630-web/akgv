@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
@@ -169,6 +169,47 @@ export default function SuperAdminPage() {
     | 'support'
     | 'reviews'
   >('overview');
+
+  // Deep-link query parameter synchronization (?tab=... and ?id=...)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam) {
+        const normalized = tabParam.toLowerCase();
+        if (normalized === 'overview') setActiveTab('overview');
+        else if (normalized === 'tasks' || normalized === 'inbox') setActiveTab('tasks');
+        else if (normalized === 'enquiries' || normalized === 'leads') setActiveTab('enquiries');
+        else if (normalized === 'site_visits' || normalized === 'visits') setActiveTab('site_visits');
+        else if (normalized === 'targets') setActiveTab('targets');
+        else if (normalized === 'field_gps' || normalized === 'gps') setActiveTab('field_gps');
+        else if (normalized === 'broadcast') setActiveTab('broadcast');
+        else if (normalized === 'cms') setActiveTab('cms');
+        else if (normalized === 'members' || normalized === 'associates') setActiveTab('members');
+        else if (normalized === 'plots' || normalized === 'inventory') setActiveTab('plots');
+        else if (normalized === 'payments' || normalized === 'transactions') setActiveTab('payments');
+        else if (normalized === 'bookings' || normalized === 'orders') setActiveTab('bookings');
+        else if (normalized === 'kits' || normalized === 'joining_kits') setActiveTab('kits');
+        else if (normalized === 'support' || normalized === 'tickets') setActiveTab('support');
+        else if (normalized === 'reviews') setActiveTab('reviews');
+      }
+
+      const recordId = params.get('id') || params.get('recordId') || params.get('payment') || params.get('booking') || params.get('task');
+      if (recordId) {
+        setTimeout(() => {
+          const el = document.getElementById(recordId) || document.querySelector(`[data-record-id="${recordId}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-2', 'ring-[#C7A35A]', 'animate-pulse');
+            setTimeout(() => {
+              el.classList.remove('animate-pulse');
+            }, 3000);
+          }
+        }, 500);
+      }
+    }
+  }, []);
+
   const [reviewFilterStatus, setReviewFilterStatus] = useState<'ALL' | 'approved' | 'pending' | 'rejected'>('ALL');
   const [reviewReplyInputs, setReviewReplyInputs] = useState<Record<string, string>>({});
   const [plotFilterBlock, setPlotFilterBlock] = useState<'ALL' | 'A' | 'B' | 'C' | 'D'>('ALL');
@@ -195,7 +236,7 @@ export default function SuperAdminPage() {
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberPhone, setNewMemberPhone] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [newMemberPassword, setNewMemberPassword] = useState('akgv@2026');
+  const [newMemberPassword, setNewMemberPassword] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<UserRole>('junior_member');
   const [newMemberSponsorId, setNewMemberSponsorId] = useState('AKGV-3498');
   const [newMemberCity, setNewMemberCity] = useState('Varanasi');
@@ -1354,6 +1395,7 @@ export default function SuperAdminPage() {
                       alert(tLang(language, 'Please provide member name and phone number.', 'कृपया सदस्य का नाम और फोन नंबर दर्ज करें।', 'Kripya member ka naam aur phone number enter karein.'));
                       return;
                     }
+                    const initialPassword = newMemberPassword.trim() || `AKGV#${Math.floor(100000 + Math.random() * 900000)}`;
                     const profile = createSponsorMember({
                       fullName: newMemberName.trim(),
                       phone: newMemberPhone.trim(),
@@ -1364,7 +1406,7 @@ export default function SuperAdminPage() {
                       branchLocation: newMemberBranch.trim(),
                       address: newMemberAddress.trim(),
                       level: Number(newMemberLevel) || 1,
-                      password: newMemberPassword.trim() || 'akgv@2026',
+                      password: initialPassword,
                     });
                     const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://akgvinfacity.com/login';
                     setCreatedSponsorFeedback({
@@ -1373,7 +1415,7 @@ export default function SuperAdminPage() {
                       email: profile.email,
                       phone: profile.phone,
                       role: profile.role,
-                      password: newMemberPassword.trim() || 'akgv@2026',
+                      password: initialPassword,
                       loginUrl,
                     });
                     setMemberActionNotice(
@@ -2658,7 +2700,7 @@ export default function SuperAdminPage() {
               </thead>
               <tbody className="divide-y divide-white/5 text-gray-200">
                 {payments.map((p) => (
-                  <tr key={p.id} className="hover:bg-white/5">
+                  <tr key={p.id} id={p.id} data-record-id={p.id} className="hover:bg-white/5 transition">
                     <td className="px-4 py-3">
                       <div className="font-mono font-bold text-white">{p.transactionRef}</div>
                       <span className="text-[10px] text-gray-400">{p.paymentMethod}</span>
@@ -2754,7 +2796,7 @@ export default function SuperAdminPage() {
               </thead>
               <tbody className="divide-y divide-white/5 text-gray-200">
                 {bookings.map((b) => (
-                  <tr key={b.id} className="hover:bg-white/5">
+                  <tr key={b.id} id={b.id} data-record-id={b.id} className="hover:bg-white/5 transition">
                     <td className="px-4 py-3 font-mono font-bold text-white">{b.bookingNumber}</td>
                     <td className="px-4 py-3 font-bold text-[#DFC382]">{b.plotNumber}</td>
                     <td className="px-4 py-3">

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useApp } from '@/context/AppContext';
+import { useApp, safeRedirectUrl } from '@/context/AppContext';
 import { tLang } from '@/lib/i18n';
 import {
   Lock,
@@ -69,6 +69,18 @@ export default function UnifiedLoginPage() {
         setSuccessUser(res.profile.fullName || res.profile.email);
 
         setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const returnUrl = params.get('returnUrl') || params.get('redirect');
+            if (returnUrl) {
+              const safe = safeRedirectUrl(returnUrl, '');
+              if (safe) {
+                router.push(safe);
+                return;
+              }
+            }
+          }
+
           const role = res.profile?.role;
           if (role === 'super_admin' || role === 'sub_admin') {
             router.push('/admin');

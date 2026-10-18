@@ -17,6 +17,13 @@ interface AuthBarrierProps {
 
 export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
   const { language } = useApp();
+  const [loginUrl, setLoginUrl] = useState('/login');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname) {
+      setLoginUrl(`/login?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
+  }, []);
 
   const roleText =
     requiredRole === 'admin'
@@ -50,7 +57,7 @@ export function AuthBarrier({ requiredRole = 'admin' }: AuthBarrierProps) {
 
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
           <Link
-            href="/login"
+            href={loginUrl}
             className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-3 text-xs sm:text-sm font-bold text-[#0B1734] shadow-lg hover:brightness-110 active:scale-95 transition"
           >
             <KeyRound className="h-4 w-4" />

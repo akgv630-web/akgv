@@ -308,6 +308,8 @@ export function AdminTaskCenter() {
             {filteredTasks.map((task) => (
               <div
                 key={task.id}
+                id={task.id}
+                data-record-id={task.id}
                 className={`p-4 sm:p-5 transition flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] ${
                   task.isCompleted ? 'opacity-70 bg-black/20' : ''
                 }`}

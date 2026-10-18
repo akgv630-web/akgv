@@ -213,6 +213,52 @@ function getInitialStorage<T>(key: string, fallback: T): T {
   return fallback;
 }
 
+export function safeRedirectUrl(target: string | null | undefined, fallback: string = '/'): string {
+  if (!target || typeof target !== 'string') return fallback;
+  const trimmed = target.trim();
+  // Reject absolute protocols, protocol-relative '//', or backslash injection
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//') || trimmed.startsWith('/\\')) {
+    return fallback;
+  }
+  // Reject protocol prefix inside path before query
+  const pathPart = trimmed.split('?')[0].split('#')[0];
+  if (pathPart.includes(':')) {
+    return fallback;
+  }
+  return trimmed;
+}
+
+export function generateUniqueMemberId(existingProfiles: Profile[]): string {
+  const existingCodes = new Set(
+    existingProfiles
+      .map((p) => p.memberId?.trim().toUpperCase())
+      .filter((id): id is string => Boolean(id))
+  );
+
+  let maxSeq = 1000;
+  for (const code of existingCodes) {
+    const match = code.match(/^AKGV-(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > maxSeq && num < 9999) {
+        maxSeq = num;
+      }
+    }
+  }
+
+  let candidateNum = maxSeq + 1;
+  let candidateCode = `AKGV-${candidateNum}`;
+  while (existingCodes.has(candidateCode)) {
+    candidateNum++;
+    candidateCode = `AKGV-${candidateNum}`;
+    if (candidateNum > 9999) {
+      candidateCode = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
+      if (!existingCodes.has(candidateCode)) break;
+    }
+  }
+  return candidateCode;
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
@@ -227,18 +273,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     return 'en';
   });
-  const [currentUser, setCurrentUser] = useState<Profile | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}auth_user`);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && parsed.isActive) return parsed;
-        }
-      } catch {}
-    }
-    return null;
-  });
+  // Authoritative Security: Identity MUST NOT originate from editable localStorage.
+  // currentUser initializes to null and resolves exclusively from a valid database/provider session.
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isSandboxMode, setIsSandboxMode] = useState<boolean>(false);
   const [allProfiles, setAllProfiles] = useState<Profile[]>(() => getInitialStorage('profiles', DEMO_PROFILES));
   const [plots, setPlots] = useState<Plot[]>(() => getInitialStorage('plots', INITIAL_PLOTS));
@@ -345,42 +382,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             try { localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile)); } catch {}
           } else {
             console.warn('[Supabase Auth] Profile not found or account deactivated.');
-            // Only clear if not an active pre-configured admin session
-            try {
-              const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}auth_user`);
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed && (parsed.role === 'super_admin' || parsed.role === 'sub_admin') && parsed.isActive) {
-                  setCurrentUser(parsed);
-                } else {
-                  setCurrentUser(null);
-                  localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`);
-                }
-              } else {
-                setCurrentUser(null);
-              }
-            } catch {
-              setCurrentUser(null);
-            }
+            setCurrentUser(null);
+            try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
           }
         } else {
-          // If no active auth session exists, check if an authorized corporate administrative session was saved
-          try {
-            const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}auth_user`);
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              if (parsed && (parsed.role === 'super_admin' || parsed.role === 'sub_admin') && parsed.isActive) {
-                setCurrentUser(parsed);
-              } else {
-                setCurrentUser(null);
-                localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`);
-              }
-            } else {
-              setCurrentUser(null);
-            }
-          } catch {
-            setCurrentUser(null);
-          }
+          // If no active auth session exists, client state is unauthenticated
+          setCurrentUser(null);
+          try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
         }
       } catch (err) {
         console.warn('[Supabase Sync] Remote hydration notice:', err);
@@ -391,16 +399,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const unsubscribeAuth = supabaseOnAuthStateChange(async (session) => {
       if (!session || !session.user) {
-        // Do not kick out an authorized pre-configured corporate administrator who logged in via credentials
-        try {
-          const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}auth_user`);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed && (parsed.role === 'super_admin' || parsed.role === 'sub_admin') && parsed.isActive) {
-              return; // Keep admin logged in
-            }
-          }
-        } catch {}
+        // Session ended or logged out: wipe client authenticated identity immediately
         setCurrentUser(null);
         try { localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`); } catch {}
       } else {
@@ -441,88 +440,103 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // 1. Authenticate with Supabase Auth Provider
-    try {
-      const res = await supabaseSignIn(trimmedId, password);
-      if (res && res.data && res.data.user) {
-        const authUser = res.data.user;
-        let profile = await fetchProfileByAuthId(authUser.id);
+    // 1. Authenticate with Supabase Auth Provider if configured
+    if (isSupabaseConfigured) {
+      try {
+        const res = await supabaseSignIn(trimmedId, password);
+        if (res?.error) {
+          return {
+            success: false,
+            error: res.error.message || 'Invalid login credentials. Please verify your ID and password.'
+          };
+        }
+        if (res?.data?.user) {
+          const authUser = res.data.user;
+          let profile = await fetchProfileByAuthId(authUser.id);
 
-        // Self-healing profile reconciliation on login:
-        // If an authenticated user exists in Supabase Auth but their database profile row is missing
-        // (e.g. from an asynchronous registration flow or delayed email verification), reconstruct and persist it.
-        if (!profile) {
-          const userMeta = authUser.user_metadata || {};
-          const fallbackName =
-            (userMeta.full_name as string) ||
-            (userMeta.name as string) ||
-            authUser.email?.split('@')[0] ||
-            'Registered User';
-          const fallbackPhone = (userMeta.phone as string) || '';
+          // Self-healing profile reconciliation on login:
+          // If an authenticated user exists in Supabase Auth but their database profile row is missing
+          // (e.g. from an asynchronous registration flow or delayed email verification), reconstruct and persist it.
+          if (!profile) {
+            const userMeta = authUser.user_metadata || {};
+            const fallbackName =
+              (userMeta.full_name as string) ||
+              (userMeta.name as string) ||
+              authUser.email?.split('@')[0] ||
+              'Registered User';
+            const fallbackPhone = (userMeta.phone as string) || '';
 
-          // Authoritative sponsor validation: Never trust user_metadata sponsor_id without verification
-          let verifiedSponsorId: string | undefined = undefined;
-          const candidateSponsor = typeof userMeta.sponsor_id === 'string' ? userMeta.sponsor_id.trim() : undefined;
-          if (candidateSponsor) {
-            const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id, authUser.id);
-            if (sponsorCheck.valid) {
-              verifiedSponsorId = sponsorCheck.canonicalSponsorId;
-            } else {
-              console.warn('[Security Audit] Untrusted sponsor_id in user_metadata rejected during profile reconciliation:', candidateSponsor, sponsorCheck.error);
+            // Authoritative sponsor validation: Never trust user_metadata sponsor_id without verification
+            let verifiedSponsorId: string | undefined = undefined;
+            const candidateSponsor = typeof userMeta.sponsor_id === 'string' ? userMeta.sponsor_id.trim() : undefined;
+            if (candidateSponsor) {
+              const sponsorCheck = await resolveAndValidateSponsor(candidateSponsor, authUser.id, authUser.id);
+              if (sponsorCheck.valid) {
+                verifiedSponsorId = sponsorCheck.canonicalSponsorId;
+              } else {
+                console.warn('[Security Audit] Untrusted sponsor_id in user_metadata rejected during profile reconciliation:', candidateSponsor, sponsorCheck.error);
+              }
+            }
+
+            const reconciledProfile: Profile = {
+              id: authUser.id,
+              authUserId: authUser.id,
+              email: authUser.email || '',
+              fullName: fallbackName,
+              phone: fallbackPhone,
+              role: 'buyer', // Reconciled public users are strictly assigned buyer role
+              sponsorId: verifiedSponsorId,
+              kycStatus: 'pending',
+              isActive: true,
+              permissions: undefined, // Client metadata cannot grant permissions
+              createdAt: authUser.created_at || new Date().toISOString(),
+            };
+
+            const saveRes = await saveProfileToSupabase(reconciledProfile, authUser.id);
+            if (saveRes.success) {
+              profile = reconciledProfile;
+              setAllProfiles((prev) => {
+                const existingIdx = prev.findIndex(
+                  (p) => p.id === reconciledProfile.id || p.email.toLowerCase() === reconciledProfile.email.toLowerCase()
+                );
+                if (existingIdx >= 0) {
+                  const next = [...prev];
+                  next[existingIdx] = reconciledProfile;
+                  return next;
+                }
+                return [...prev, reconciledProfile];
+              });
             }
           }
 
-          const reconciledProfile: Profile = {
-            id: authUser.id,
-            authUserId: authUser.id,
-            email: authUser.email || '',
-            fullName: fallbackName,
-            phone: fallbackPhone,
-            role: 'buyer', // Reconciled public users are strictly assigned buyer role
-            sponsorId: verifiedSponsorId,
-            kycStatus: 'pending',
-            isActive: true,
-            permissions: undefined, // Client metadata cannot grant permissions
-            createdAt: authUser.created_at || new Date().toISOString(),
-          };
-
-          const saveRes = await saveProfileToSupabase(reconciledProfile, authUser.id);
-          if (saveRes.success) {
-            profile = reconciledProfile;
-            setAllProfiles((prev) => {
-              const existingIdx = prev.findIndex(
-                (p) => p.id === reconciledProfile.id || p.email.toLowerCase() === reconciledProfile.email.toLowerCase()
-              );
-              if (existingIdx >= 0) {
-                const next = [...prev];
-                next[existingIdx] = reconciledProfile;
-                return next;
-              }
-              return [...prev, reconciledProfile];
-            });
+          if (!profile) {
+            return { success: false, error: 'Database profile not found for this authenticated user. Access denied.' };
           }
-        }
 
-        if (!profile) {
-          return { success: false, error: 'Database profile not found for this authenticated user. Access denied.' };
-        }
+          if (!profile.isActive) {
+            return { success: false, error: 'Your account has been deactivated or suspended. Please contact company management.' };
+          }
 
-        if (!profile.isActive) {
-          return { success: false, error: 'Your account has been deactivated or suspended. Please contact company management.' };
+          setCurrentUser(profile);
+          try {
+            localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile));
+          } catch {}
+          return { success: true, profile };
         }
-
-        setCurrentUser(profile);
-        try {
-          localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile));
-        } catch {}
-        return { success: true, profile };
+      } catch (err: unknown) {
+        console.warn('[Supabase Auth Notice]', err);
+        const errMsg = err instanceof Error ? err.message : 'Authentication service error.';
+        return { success: false, error: errMsg };
       }
-    } catch (err: unknown) {
-      console.warn('[Supabase Auth Notice]', err);
+      return { success: false, error: 'Authentication failed. Please verify your credentials.' };
     }
 
-    // 2. Pre-seeded corporate / sandbox profile verification
-    // Allows designated company profiles (Admin, Sub Admin, Associates) to authenticate with authorized company key
+    // In production, fallback logins without active provider are strictly prohibited
+    if (isProduction) {
+      return { success: false, error: 'Authentication provider is offline or not configured in production.' };
+    }
+
+    // 2. Offline / local test sandbox environment: strictly verify password without hardcoded bypass
     const found =
       allProfiles.find(
         (p) =>
@@ -541,11 +555,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!found.isActive) {
         return { success: false, error: 'Your account has been deactivated or suspended. Please contact company management.' };
       }
-      const isAuthorizedPass =
-        password === 'akgv@2026' ||
-        password === 'Admin@2026' ||
-        password === 'password123' ||
-        (found.password && found.password === password);
+      // Require genuine matching password in offline sandbox - never master backdoor
+      const isAuthorizedPass = Boolean(found.password && found.password === password);
 
       if (isAuthorizedPass) {
         setCurrentUser(found);
@@ -556,11 +567,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         return { success: false, error: 'Incorrect password.' };
       }
-    }
-
-    // In production, fail if not authenticated by the provider and not an authorized pre-seeded account
-    if (isProduction) {
-      return { success: false, error: 'Invalid login credentials or authentication provider offline.' };
     }
 
     return { success: false, error: 'No account registered with this email, phone, or member ID.' };
@@ -745,8 +751,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginUser = (identifier: string): Profile | null => {
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('[Security] Quick-login bypass is disabled in production builds.');
+    if (process.env.NODE_ENV === 'production' || isSupabaseConfigured) {
+      console.warn('[Security] Quick-login bypass is disabled when authentication provider is active or in production builds.');
       return null;
     }
     const trimmed = identifier.trim().toLowerCase();
@@ -767,8 +773,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const switchUserRole = (role: UserRole) => {
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('[Security] Role switching is strictly disabled in production builds.');
+    if (process.env.NODE_ENV === 'production' || isSupabaseConfigured) {
+      console.warn('[Security] Role switching is strictly disabled when authentication provider is active or in production builds.');
       return;
     }
     const found = allProfiles.find((p) => p.role === role) || DEMO_PROFILES.find((p) => p.role === role);
@@ -789,7 +795,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }): Profile => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     const assignedRole: UserRole = isAdmin ? (data.role || 'junior_member') : 'buyer';
-    const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newMemberId = generateUniqueMemberId(allProfiles);
     const newProfile: Profile = {
       id: `usr-${Date.now()}`,
       email: data.email,
@@ -846,7 +852,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       effectiveSponsorId = currentUser.memberId;
     }
 
-    const newMemberId = `AKGV-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newMemberId = generateUniqueMemberId(allProfiles);
     const nowIso = new Date().toISOString();
     const todayDate = nowIso.slice(0, 10);
 
@@ -862,6 +868,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         : assignedRole === 'buyer'
         ? 'Verified Client'
         : 'Sales Assistant');
+
+    const generatedInitialPassword = data.password && data.password.trim()
+      ? data.password.trim()
+      : `AKGV#${Math.floor(100000 + Math.random() * 900000)}`;
 
     const newProfile: Profile = {
       id: `usr-${Date.now()}`,
@@ -882,7 +892,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       kycStatus: 'verified',
       isActive: true,
       createdAt: nowIso,
-      password: data.password || 'akgv@2026',
+      password: generatedInitialPassword,
     };
     setAllProfiles((prev) => {
       const next = [...prev, newProfile];

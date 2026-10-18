@@ -53,21 +53,36 @@ export function MemberPortalPage() {
   >('tasks');
   const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
 
-  // Deep-link support from tasks or notifications: ?tab=tasks, ?tab=visits, etc.
+  // Deep-link support from tasks or notifications: ?tab=tasks, ?tab=visits, ?tab=inbox, ?id=...
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
       if (tabParam) {
-        if (tabParam === 'tasks') setActiveTab('tasks');
-        else if (tabParam === 'enquiries') setActiveTab('enquiries');
-        else if (tabParam === 'visits' || tabParam === 'site_visits') setActiveTab('site_visits');
-        else if (tabParam === 'targets') setActiveTab('targets');
-        else if (tabParam === 'id_card') setActiveTab('id_card');
-        else if (tabParam === 'hierarchy') setActiveTab('hierarchy');
-        else if (tabParam === 'commission') setActiveTab('commission');
-        else if (tabParam === 'rewards') setActiveTab('rewards');
-        else if (tabParam === 'field_gps') setActiveTab('field_gps');
+        const normalized = tabParam.toLowerCase();
+        if (normalized === 'tasks' || normalized === 'inbox') setActiveTab('tasks');
+        else if (normalized === 'enquiries' || normalized === 'leads') setActiveTab('enquiries');
+        else if (normalized === 'visits' || normalized === 'site_visits') setActiveTab('site_visits');
+        else if (normalized === 'targets') setActiveTab('targets');
+        else if (normalized === 'id_card') setActiveTab('id_card');
+        else if (normalized === 'hierarchy' || normalized === 'team') setActiveTab('hierarchy');
+        else if (normalized === 'commission') setActiveTab('commission');
+        else if (normalized === 'rewards') setActiveTab('rewards');
+        else if (normalized === 'field_gps' || normalized === 'gps') setActiveTab('field_gps');
+      }
+
+      const recordId = params.get('id') || params.get('task') || params.get('visit') || params.get('enquiry');
+      if (recordId) {
+        setTimeout(() => {
+          const el = document.getElementById(recordId) || document.querySelector(`[data-record-id="${recordId}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-2', 'ring-[#C7A35A]', 'animate-pulse');
+            setTimeout(() => {
+              el.classList.remove('animate-pulse');
+            }, 3000);
+          }
+        }, 500);
       }
     }
   }, []);
