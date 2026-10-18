@@ -687,12 +687,240 @@ describe('Real PostgreSQL Database Integration Suite (PGlite 18 Engine)', () => 
       expect(resEmpty.rows[0].resolve_login_identifier).toBeNull();
     });
 
-    it('executes safely when caller has no authenticated session (anonymous)', async () => {
+    it('executes safely when called by backend service_role without authenticated user session', async () => {
       await db.exec(`SET my.session_uid = '';`);
       const res = await db.query<{ resolve_login_identifier: string }>(`
         SELECT public.resolve_login_identifier('AKGV-0042');
       `);
       expect(res.rows[0].resolve_login_identifier).toBe('amit@akgv.com');
+    });
+
+    it('prohibits anonymous role from executing resolve_login_identifier to eliminate public email enumeration', async () => {
+      await db.exec(`SET ROLE anon;`);
+      let errorThrown = false;
+      try {
+        await db.query(`SELECT public.resolve_login_identifier('AKGV-0042');`);
+      } catch (err: unknown) {
+        errorThrown = true;
+        expect((err as Error).message.toLowerCase()).toContain('permission denied');
+      } finally {
+        await db.exec(`RESET ROLE;`);
+      }
+      expect(errorThrown).toBe(true);
+    });
+
+    it('permits service_role to execute resolve_login_identifier for trusted backend login flow', async () => {
+      await db.exec(`SET ROLE service_role;`);
+      try {
+        const res = await db.query<{ resolve_login_identifier: string }>(`
+          SELECT public.resolve_login_identifier('AKGV-0042');
+        `);
+        expect(res.rows[0].resolve_login_identifier).toBe('amit@akgv.com');
+      } finally {
+        await db.exec(`RESET ROLE;`);
+      }
+    });
+  });
+
+  describe('Database-Enforced Member ID Sequence & Hardened Booking Integrity (20261018_database_member_id_and_booking_hardening)', () => {
+    beforeEach(async () => {
+      // 1. Establish tables, audit log helper, and sponsor validator
+      await db.exec(`
+        CREATE TABLE IF NOT EXISTS public.plots (
+          id TEXT PRIMARY KEY,
+          plot_number TEXT UNIQUE NOT NULL,
+          block TEXT NOT NULL,
+          area_sqft NUMERIC NOT NULL,
+          dimensions TEXT,
+          road_width TEXT,
+          road_facing TEXT,
+          status TEXT NOT NULL DEFAULT 'available_green',
+          base_price_inr NUMERIC,
+          suitable_house_model_ids JSONB DEFAULT '[]'::jsonb,
+          is_corner_plot BOOLEAN DEFAULT FALSE,
+          notes TEXT,
+          created_at TIMESTAMPTZ DEFAULT now(),
+          updated_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.bookings (
+          id TEXT PRIMARY KEY,
+          booking_number TEXT UNIQUE NOT NULL,
+          plot_id TEXT NOT NULL REFERENCES public.plots(id),
+          plot_number TEXT NOT NULL,
+          buyer_id TEXT NOT NULL,
+          buyer_name TEXT NOT NULL,
+          buyer_phone TEXT NOT NULL,
+          sponsor_id TEXT,
+          status TEXT NOT NULL DEFAULT 'pending',
+          house_model_id TEXT,
+          total_amount_inr NUMERIC NOT NULL,
+          paid_amount_inr NUMERIC DEFAULT 0,
+          hold_expires_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ DEFAULT now(),
+          confirmed_at TIMESTAMPTZ
+        );
+
+        CREATE OR REPLACE FUNCTION public.record_audit_log(p_action TEXT, p_entity TEXT, p_id TEXT, p_meta JSONB)
+        RETURNS VOID LANGUAGE plpgsql AS $$
+        BEGIN
+          -- Stub for integration test audit trail
+        END;
+        $$;
+      `);
+
+      // 2. Load sponsor validation and final security integrity migration
+      const sponsorMigrationPath = path.join(__dirname, '../supabase/migrations/20261016_zzzz_security_integrity_final_hardening.sql');
+      const sponsorMigrationSql = fs.readFileSync(sponsorMigrationPath, 'utf8');
+      await db.exec(sponsorMigrationSql);
+
+      // 3. Execute 20261018_database_member_id_and_booking_hardening migration
+      const migrationPath = path.join(__dirname, '../supabase/migrations/20261018_database_member_id_and_booking_hardening.sql');
+      const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+      await db.exec(migrationSql);
+    });
+
+    it('auto-assigns sequential AKGV-xxxx Member IDs via database trigger when not provided', async () => {
+      await db.exec(`SET my.is_admin = 'true';`);
+      const res1 = await db.query<{ id: string; member_id: string }>(`
+        INSERT INTO public.profiles (
+          id, email, full_name, phone, role
+        ) VALUES (
+          'usr-new-01', 'newmember1@akgv.com', 'New Member One', '9000000001', 'junior_member'
+        ) RETURNING id, member_id;
+      `);
+
+      expect(res1.rows[0].member_id).toMatch(/^AKGV-\d{4}$/);
+      const firstId = res1.rows[0].member_id;
+
+      const res2 = await db.query<{ id: string; member_id: string }>(`
+        INSERT INTO public.profiles (
+          id, email, full_name, phone, role
+        ) VALUES (
+          'usr-new-02', 'newmember2@akgv.com', 'New Member Two', '9000000002', 'junior_member'
+        ) RETURNING id, member_id;
+      `);
+
+      expect(res2.rows[0].member_id).toMatch(/^AKGV-\d{4}$/);
+      expect(res2.rows[0].member_id).not.toBe(firstId);
+    });
+
+    it('preserves explicitly supplied valid member_id without overwriting', async () => {
+      await db.exec(`SET my.is_admin = 'true';`);
+      const res = await db.query<{ id: string; member_id: string }>(`
+        INSERT INTO public.profiles (
+          id, email, full_name, phone, role, member_id
+        ) VALUES (
+          'usr-manual-01', 'manual@akgv.com', 'Manual Associate', '9000000003', 'senior_member', 'AKGV-9999'
+        ) RETURNING id, member_id;
+      `);
+
+      expect(res.rows[0].member_id).toBe('AKGV-9999');
+    });
+
+    it('enforces authoritative plot price and rejects underpriced booking requests', async () => {
+      // Seed a plot with approved base price of 1,800,000 INR
+      await db.exec(`
+        INSERT INTO public.plots (
+          id, plot_number, block, area_sqft, status, base_price_inr
+        ) VALUES (
+          'plot-premium-01', 'A-01', 'A', 1500, 'available_green', 1800000
+        ) ON CONFLICT (id) DO UPDATE SET status = 'available_green', base_price_inr = 1800000;
+      `);
+
+      // Mock caller authentication as buyer
+      await db.exec(`
+        SET my.is_admin = 'true';
+        INSERT INTO public.profiles (
+          id, auth_user_id, email, full_name, phone, role, is_active
+        ) VALUES (
+          'buyer-test-01', '33333333-3333-3333-3333-333333333333'::uuid, 'buyer@test.com', 'Rajesh Buyer', '9888888888', 'buyer', TRUE
+        ) ON CONFLICT (id) DO NOTHING;
+
+        SET my.is_admin = 'false';
+        SET my.session_uid = '33333333-3333-3333-3333-333333333333';
+      `);
+
+      // Attempt to book with caller-tampered amount of 100,000 INR (less than 1,800,000 base price)
+      const tamperedRes = await db.query<{ create_plot_booking_atomic: any }>(`
+        SELECT public.create_plot_booking_atomic(
+          'plot-premium-01',
+          'buyer-test-01',
+          'Rajesh Buyer',
+          '9888888888',
+          100000
+        );
+      `);
+
+      expect(tamperedRes.rows[0].create_plot_booking_atomic.success).toBe(false);
+      expect(tamperedRes.rows[0].create_plot_booking_atomic.error).toContain('cannot be less than the approved plot base price');
+
+      // Valid booking with compliant amount
+      const validRes = await db.query<{ create_plot_booking_atomic: any }>(`
+        SELECT public.create_plot_booking_atomic(
+          'plot-premium-01',
+          'buyer-test-01',
+          'Rajesh Buyer',
+          '9888888888',
+          1800000
+        );
+      `);
+
+      expect(validRes.rows[0].create_plot_booking_atomic.success).toBe(true);
+      expect(validRes.rows[0].create_plot_booking_atomic.total_amount_inr).toBe(1800000);
+
+      // Verify plot status transitioned to hold_pending
+      const plotCheck = await db.query<{ status: string }>(`
+        SELECT status FROM public.plots WHERE id = 'plot-premium-01';
+      `);
+      expect(plotCheck.rows[0].status).toBe('hold_pending');
+
+      // Attempt concurrent/double booking: should be rejected
+      const doubleBookingRes = await db.query<{ create_plot_booking_atomic: any }>(`
+        SELECT public.create_plot_booking_atomic(
+          'plot-premium-01',
+          'buyer-test-01',
+          'Rajesh Buyer',
+          '9888888888',
+          1800000
+        );
+      `);
+      expect(doubleBookingRes.rows[0].create_plot_booking_atomic.success).toBe(false);
+      expect(doubleBookingRes.rows[0].create_plot_booking_atomic.error).toContain('Plot is not available for booking');
+    });
+
+    it('validates sponsor attribution server-side and rejects invalid sponsor codes', async () => {
+      await db.exec(`
+        INSERT INTO public.plots (
+          id, plot_number, block, area_sqft, status, base_price_inr
+        ) VALUES (
+          'plot-sponsor-test', 'B-12', 'B', 1200, 'available_green', 1500000
+        ) ON CONFLICT (id) DO UPDATE SET status = 'available_green';
+
+        SET my.is_admin = 'true';
+        INSERT INTO public.profiles (
+          id, auth_user_id, email, full_name, phone, role, is_active
+        ) VALUES (
+          'buyer-test-01', '33333333-3333-3333-3333-333333333333'::uuid, 'buyer@test.com', 'Rajesh Buyer', '9888888888', 'buyer', TRUE
+        ) ON CONFLICT (id) DO NOTHING;
+
+        SET my.is_admin = 'false';
+        SET my.session_uid = '33333333-3333-3333-3333-333333333333';
+      `);
+
+      const invalidSponsorRes = await db.query<{ create_plot_booking_atomic: any }>(`
+        SELECT public.create_plot_booking_atomic(
+          'plot-sponsor-test',
+          'buyer-test-01',
+          'Rajesh Buyer',
+          '9888888888',
+          1500000,
+          'FAKE-SPONSOR-999'
+        );
+      `);
+
+      expect(invalidSponsorRes.rows[0].create_plot_booking_atomic.success).toBe(false);
+      expect(invalidSponsorRes.rows[0].create_plot_booking_atomic.error).toContain('Invalid sponsor attribution');
     });
   });
 });

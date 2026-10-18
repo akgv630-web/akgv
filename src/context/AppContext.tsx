@@ -86,7 +86,10 @@ import {
   fetchCmsContentFromSupabase,
   saveCmsContentToSupabase,
   fetchOffersFromSupabase,
-  resolveAndValidateSponsor
+  resolveAndValidateSponsor,
+  fetchPaymentsFromSupabase,
+  serverInviteMember,
+  serverAuthLogin
 } from '@/lib/supabase/syncService';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 
@@ -126,7 +129,7 @@ interface AppContextType {
   deletePlot: (plotId: string) => void;
   bookings: Booking[];
   createBookingRequest: (plotId: string, buyerName: string, buyerPhone: string, houseModelId?: string) => Promise<Booking>;
-  confirmBooking: (bookingId: string) => void;
+  confirmBooking: (bookingId: string) => Promise<void>;
   cancelBooking: (bookingId: string, reason: string) => void;
   payments: PaymentRecord[];
   submitPaymentProof: (bookingId: string, amount: number, txRef: string, method: 'UPI_QR' | 'NEFT_RTGS' | 'CASH_OFFLINE' | 'CHEQUE') => Promise<PaymentRecord>;
@@ -304,6 +307,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           remotePlots,
           remoteReviews,
           remoteBookings,
+          remotePayments,
           remoteProfiles,
           remoteGps,
           remoteEnquiries,
@@ -318,6 +322,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           fetchPlotsFromSupabase(),
           fetchReviewsFromSupabase(),
           fetchBookingsFromSupabase(),
+          fetchPaymentsFromSupabase(),
           fetchProfilesFromSupabase(),
           fetchGpsEvidenceFromSupabase(),
           fetchEnquiriesFromSupabase(),
@@ -330,49 +335,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           supabaseGetSession()
         ]);
 
-        if (remotePlots && remotePlots.length > 0) {
+        if (remotePlots !== null && remotePlots.length > 0) {
           setPlots(remotePlots);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}plots`, JSON.stringify(remotePlots)); } catch {}
         }
-        if (remoteReviews && remoteReviews.length > 0) {
+        if (remoteReviews !== null) {
           setReviews(remoteReviews);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}reviews`, JSON.stringify(remoteReviews)); } catch {}
         }
-        if (remoteBookings && remoteBookings.length > 0) {
+        if (remoteBookings !== null) {
           setBookings(remoteBookings);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}bookings`, JSON.stringify(remoteBookings)); } catch {}
         }
-        if (remoteProfiles && remoteProfiles.length > 0) {
+        if (remotePayments !== null) {
+          setPayments(remotePayments);
+          try { localStorage.setItem(`${STORAGE_KEY_PREFIX}payments`, JSON.stringify(remotePayments)); } catch {}
+        }
+        if (remoteProfiles !== null && remoteProfiles.length > 0) {
           setAllProfiles(remoteProfiles);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}profiles`, JSON.stringify(remoteProfiles)); } catch {}
         }
-        if (remoteGps && remoteGps.length > 0) {
+        if (remoteGps !== null) {
           setGpsEvidences(remoteGps);
         }
-        if (remoteEnquiries && remoteEnquiries.length > 0) {
+        if (remoteEnquiries !== null) {
           setEnquiries(remoteEnquiries);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}enquiries`, JSON.stringify(remoteEnquiries)); } catch {}
         }
-        if (remoteTargets && remoteTargets.length > 0) {
+        if (remoteTargets !== null) {
           setTargets(remoteTargets);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}targets`, JSON.stringify(remoteTargets)); } catch {}
         }
-        if (remoteTasks && remoteTasks.length > 0) {
+        if (remoteTasks !== null) {
           setTasks(remoteTasks);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}tasks`, JSON.stringify(remoteTasks)); } catch {}
         }
-        if (remoteVisits && remoteVisits.length > 0) {
+        if (remoteVisits !== null) {
           setSiteVisits(remoteVisits);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}site_visits`, JSON.stringify(remoteVisits)); } catch {}
         }
-        if (remoteMessages && remoteMessages.length > 0) {
+        if (remoteMessages !== null) {
           setMessages(remoteMessages);
           try { localStorage.setItem(`${STORAGE_KEY_PREFIX}messages`, JSON.stringify(remoteMessages)); } catch {}
         }
         if (remoteCms && remoteCms.heroHeadlineEn) {
           setCmsContent(remoteCms);
         }
-        if (remoteOffers && remoteOffers.length > 0) {
+        if (remoteOffers !== null && remoteOffers.length > 0) {
           setOffers(remoteOffers);
         }
 
@@ -445,6 +454,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // 1. Authenticate with Supabase Auth Provider if configured
     if (isSupabaseConfigured) {
       try {
+        if (!trimmedId.includes('@')) {
+          // Trusted backend resolution for Member ID / Phone to avoid client-side email enumeration
+          const serverRes = await serverAuthLogin(trimmedId, password);
+          if (serverRes.success && serverRes.profile) {
+            const profile = serverRes.profile;
+            if (!profile.isActive) {
+              return {
+                success: false,
+                error: 'Your account has been deactivated or suspended. Please contact company management.',
+              };
+            }
+            setCurrentUser(profile);
+            try {
+              localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile));
+            } catch {}
+            return { success: true, profile };
+          }
+          if (
+            serverRes.error &&
+            !serverRes.error.includes('Failed to fetch') &&
+            !serverRes.error.includes('404')
+          ) {
+            return { success: false, error: serverRes.error };
+          }
+        }
+
         const res = await supabaseSignIn(trimmedId, password);
         if (res?.error) {
           return {
@@ -741,6 +776,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.removeItem(`${STORAGE_KEY_PREFIX}auth_user`);
       localStorage.removeItem(`${STORAGE_KEY_PREFIX}role`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}bookings`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}payments`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}site_visits`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}enquiries`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}tasks`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}targets`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}messages`);
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}profiles`);
     } catch {}
   };
 
@@ -1168,30 +1211,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return newBooking;
   };
 
-  const confirmBooking = (bookingId: string) => {
+  const confirmBooking = async (bookingId: string): Promise<void> => {
     const isAdmin = currentUser?.role === 'super_admin' || currentUser?.role === 'sub_admin';
     if (!isAdmin) {
       throw new Error('Access denied: Only administrators can confirm bookings.');
     }
-    let targetBooking: Booking | null = null;
+    const targetBooking = bookings.find((b) => b.id === bookingId);
+    if (!targetBooking) {
+      throw new Error('Booking record not found.');
+    }
+
+    // Strict Financial Policy: Booking cannot turn confirmed / plot yellow without a verified payment record
+    const hasVerifiedPayment = payments.some(
+      (p) => p.bookingId === bookingId && p.status === 'verified'
+    );
+    if (!hasVerifiedPayment) {
+      throw new Error(
+        'Cannot confirm booking: No verified payment found for this reservation. Customer payment proof must be verified by finance before a plot can transition to booked status.'
+      );
+    }
+
+    const updatedBooking: Booking = {
+      ...targetBooking,
+      status: 'confirmed',
+      confirmedAt: new Date().toISOString(),
+    };
+
     setBookings((prev) => {
-      const next = prev.map((b) => {
-        if (b.id === bookingId) {
-          targetBooking = { ...b, status: 'confirmed' as const, confirmedAt: new Date().toISOString() };
-          return targetBooking;
-        }
-        return b;
-      });
+      const next = prev.map((b) => (b.id === bookingId ? updatedBooking : b));
       try {
         localStorage.setItem(`${STORAGE_KEY_PREFIX}bookings`, JSON.stringify(next));
       } catch {}
       return next;
     });
 
-    if (targetBooking) {
-      void saveBookingToSupabase(targetBooking);
-      setPlotStatusInternal((targetBooking as Booking).plotId, 'booked_yellow', 'Booking confirmed by administrator');
+    if (isSupabaseConfigured) {
+      const saved = await saveBookingToSupabase(updatedBooking);
+      if (!saved) {
+        // Rollback optimistic state
+        setBookings((prev) => prev.map((b) => (b.id === bookingId ? targetBooking : b)));
+        throw new Error('Failed to update booking status on server. Please check your connection.');
+      }
     }
+
+    setPlotStatusInternal(targetBooking.plotId, 'booked_yellow', 'Booking confirmed by administrator');
   };
 
   const cancelBooking = (bookingId: string, reason?: string) => {
@@ -1272,7 +1335,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch {}
       return next;
     });
-    await savePaymentToSupabase(newPayment);
+
+    if (isSupabaseConfigured) {
+      const saved = await savePaymentToSupabase(newPayment);
+      if (!saved) {
+        // Rollback optimistic addition
+        setPayments((prev) => prev.filter((p) => p.id !== newPayment.id));
+        try {
+          const current = payments.filter((p) => p.id !== newPayment.id);
+          localStorage.setItem(`${STORAGE_KEY_PREFIX}payments`, JSON.stringify(current));
+        } catch {}
+        throw new Error('Failed to record payment proof to database. Please check connection and try again.');
+      }
+    }
+
     return newPayment;
   };
 

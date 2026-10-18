@@ -173,7 +173,10 @@ export default function SuperAdminPage() {
     | 'reviews'
   >('overview');
 
-  // Deep-link query parameter synchronization (?tab=... and ?id=...)
+  const [deepLinkTargetId, setDeepLinkTargetId] = useState<string | null>(null);
+  const [deepLinkNotFoundNotice, setDeepLinkNotFoundNotice] = useState<string | null>(null);
+
+  // Deep-link query parameter synchronization (?tab=... and specific record params)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -197,21 +200,77 @@ export default function SuperAdminPage() {
         else if (normalized === 'reviews') setActiveTab('reviews');
       }
 
-      const recordId = params.get('id') || params.get('recordId') || params.get('payment') || params.get('booking') || params.get('task');
-      if (recordId) {
-        setTimeout(() => {
-          const el = document.getElementById(recordId) || document.querySelector(`[data-record-id="${recordId}"]`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.classList.add('ring-2', 'ring-[#C7A35A]', 'animate-pulse');
-            setTimeout(() => {
-              el.classList.remove('animate-pulse');
-            }, 3000);
-          }
-        }, 500);
+      // Check specific entity deep link parameters
+      const paymentParam = params.get('payment');
+      const bookingParam = params.get('booking');
+      const taskParam = params.get('task');
+      const visitParam = params.get('visit') || params.get('site_visit');
+      const enquiryParam = params.get('enquiry');
+      const plotParam = params.get('plot') || params.get('plotNumber');
+      const memberParam = params.get('member') || params.get('memberId');
+      const genericParam = params.get('id') || params.get('recordId');
+
+      if (paymentParam) {
+        setActiveTab('payments');
+        setDeepLinkTargetId(paymentParam);
+      } else if (bookingParam) {
+        setActiveTab('bookings');
+        setDeepLinkTargetId(bookingParam);
+      } else if (taskParam) {
+        setActiveTab('tasks');
+        setDeepLinkTargetId(taskParam);
+      } else if (visitParam) {
+        setActiveTab('site_visits');
+        setDeepLinkTargetId(visitParam);
+      } else if (enquiryParam) {
+        setActiveTab('enquiries');
+        setDeepLinkTargetId(enquiryParam);
+      } else if (plotParam) {
+        setActiveTab('plots');
+        setDeepLinkTargetId(plotParam);
+      } else if (memberParam) {
+        setActiveTab('members');
+        setDeepLinkTargetId(memberParam);
+      } else if (genericParam) {
+        setDeepLinkTargetId(genericParam);
       }
     }
   }, []);
+
+  // Reactive DOM element locator & highlighter with missing-record handling
+  useEffect(() => {
+    if (!deepLinkTargetId) return;
+
+    let attempts = 0;
+    const maxAttempts = 10;
+    const checkInterval = 150;
+
+    const intervalId = setInterval(() => {
+      attempts += 1;
+      const el =
+        document.getElementById(deepLinkTargetId) ||
+        document.querySelector(`[data-record-id="${deepLinkTargetId}"]`) ||
+        document.querySelector(`[data-plot-number="${deepLinkTargetId}"]`) ||
+        document.querySelector(`[data-member-id="${deepLinkTargetId}"]`);
+
+      if (el) {
+        clearInterval(intervalId);
+        setDeepLinkNotFoundNotice(null);
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-4', 'ring-[#C7A35A]', 'animate-pulse');
+        setTimeout(() => {
+          el.classList.remove('animate-pulse');
+        }, 3500);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(intervalId);
+        setDeepLinkNotFoundNotice(
+          `Record "${deepLinkTargetId}" could not be located in current dataset or may require different filter settings.`
+        );
+      }
+    }, checkInterval);
+
+    return () => clearInterval(intervalId);
+  }, [deepLinkTargetId, activeTab, payments, bookings, tasks, siteVisits, enquiries, plots, allProfiles]);
 
   const [reviewFilterStatus, setReviewFilterStatus] = useState<'ALL' | 'approved' | 'pending' | 'rejected'>('ALL');
   const [reviewReplyInputs, setReviewReplyInputs] = useState<Record<string, string>>({});
@@ -649,6 +708,21 @@ export default function SuperAdminPage() {
           <span>Website CMS</span>
         </button>
       </div>
+
+      {deepLinkNotFoundNotice && (
+        <div className="flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+            <span>{deepLinkNotFoundNotice}</span>
+          </div>
+          <button
+            onClick={() => setDeepLinkNotFoundNotice(null)}
+            className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 hover:underline ml-4 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Tab 1: Database-Derived Metrics Overview */}
       {activeTab === 'overview' && (
@@ -1109,6 +1183,9 @@ export default function SuperAdminPage() {
                   return (
                     <div
                       key={profile.id}
+                      id={profile.id}
+                      data-record-id={profile.id}
+                      data-member-id={profile.memberId}
                       className={`relative flex flex-col justify-between rounded-2xl border p-5 text-xs shadow-md transition hover:border-[#C7A35A]/50 ${
                         profile.isActive
                           ? 'border-white/10 bg-[#0B1734]'
@@ -2649,7 +2726,7 @@ export default function SuperAdminPage() {
                     </tr>
                   ) : (
                     filteredPlots.map((plot) => (
-                      <tr key={plot.id} className="hover:bg-white/5 transition">
+                      <tr key={plot.id} id={plot.id} data-record-id={plot.id} data-plot-number={plot.plotNumber} className="hover:bg-white/5 transition">
                         {/* Plot Number & Corner badge */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
@@ -2988,7 +3065,13 @@ export default function SuperAdminPage() {
                       {b.status !== 'confirmed' ? (
                         <div className="flex justify-end gap-2">
                           <button
-                            onClick={() => confirmBooking(b.id)}
+                            onClick={async () => {
+                              try {
+                                await confirmBooking(b.id);
+                              } catch (err: unknown) {
+                                alert(err instanceof Error ? err.message : 'Failed to confirm booking.');
+                              }
+                            }}
                             className="rounded bg-emerald-600 px-2.5 py-1 text-white font-bold hover:bg-emerald-500"
                           >
                             Confirm Booking

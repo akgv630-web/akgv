@@ -36,7 +36,7 @@ export async function fetchPlotsFromSupabase(): Promise<Plot[] | null> {
       return null;
     }
 
-    if (!data || data.length === 0) return null;
+    if (!data) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -141,7 +141,7 @@ export async function fetchReviewsFromSupabase(): Promise<ReviewRecord[] | null>
       return null;
     }
 
-    if (!data || data.length === 0) return null;
+    if (!data) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -273,7 +273,7 @@ export async function fetchBookingsFromSupabase(): Promise<Booking[] | null> {
       return null;
     }
 
-    if (!data || data.length === 0) return null;
+    if (!data) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -339,6 +339,47 @@ export async function saveBookingToSupabase(booking: Booking): Promise<boolean> 
 // 4. PAYMENTS SYNC
 // ==============================================================================
 
+export async function fetchPaymentsFromSupabase(): Promise<PaymentRecord[] | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  try {
+    const { data, error } = await supabase
+      .from('payment_records')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      console.warn('[Supabase Sync] fetchPayments notice:', error.message);
+      return null;
+    }
+
+    if (!data) return [];
+
+    return data.map((row) => ({
+      id: row.id,
+      transactionRef: row.transaction_ref,
+      bookingId: row.booking_id,
+      plotNumber: row.plot_number,
+      payerId: row.payer_id || undefined,
+      payerName: row.payer_name,
+      payerPhone: row.payer_phone,
+      amountInr: Number(row.amount_inr),
+      paymentMethod: row.payment_method,
+      status: row.status,
+      receiptNumber: row.receipt_number || undefined,
+      proofUrl: row.proof_url || undefined,
+      notes: row.notes || undefined,
+      submittedAt: row.submitted_at,
+      verifiedAt: row.verified_at || undefined,
+      verifiedBy: row.verified_by || undefined,
+      rejectionReason: row.rejection_reason || undefined,
+    }));
+  } catch (err) {
+    console.warn('[Supabase Sync] Exception fetching payments:', err);
+    return null;
+  }
+}
+
 export async function savePaymentToSupabase(payment: PaymentRecord): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
 
@@ -395,7 +436,7 @@ export async function fetchSiteVisitsFromSupabase(): Promise<SiteVisit[] | null>
       return null;
     }
 
-    if (!data || data.length === 0) return null;
+    if (!data) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -1392,7 +1433,11 @@ export async function fetchOffersFromSupabase(): Promise<OfferIncentive[] | null
       .select('*')
       .order('start_date', { ascending: false });
 
-    if (error || !data || data.length === 0) return null;
+    if (error) {
+      console.warn('[Supabase Sync] fetchOffers notice:', error.message);
+      return null;
+    }
+    if (!data) return [];
 
     return data.map((row) => ({
       id: row.id,
@@ -1714,4 +1759,108 @@ export async function resolveAndValidateSponsor(
   };
 }
 
+// ==============================================================================
+// 12. TRUSTED SERVERLESS ENDPOINT HELPERS (CLOUDFLARE PAGES FUNCTIONS)
+// ==============================================================================
 
+/**
+ * Triggers genuine server-side member invitation and Auth account creation.
+ * Calls /api/admin/invite-member backed by SUPABASE_SERVICE_ROLE_KEY.
+ */
+export async function serverInviteMember(
+  adminJwtToken: string,
+  memberData: {
+    email: string;
+    fullName: string;
+    phone: string;
+    role?: string;
+    sponsorId?: string;
+    city?: string;
+    branchLocation?: string;
+    address?: string;
+    level?: number;
+    rankTitle?: string;
+  }
+): Promise<{
+  success: boolean;
+  user?: any;
+  profile?: any;
+  actionLink?: string | null;
+  invitationStatus?: string;
+  emailDelivered?: boolean;
+  note?: string;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/admin/invite-member', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminJwtToken}`,
+      },
+      body: JSON.stringify(memberData),
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      return {
+        success: false,
+        error: json?.error || `Server responded with status ${res.status}`,
+      };
+    }
+    return json;
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Network failure communicating with invitation endpoint.',
+    };
+  }
+}
+
+/**
+ * Executes secure identifier resolution and login via trusted Cloudflare Pages backend.
+ * Protects against public email enumeration by resolving Member ID/Phone server-side.
+ */
+export async function serverAuthLogin(
+  identifier: string,
+  password: string
+): Promise<{
+  success: boolean;
+  session?: Session | null;
+  user?: any;
+  profile?: any;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password }),
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      return {
+        success: false,
+        error: json?.error || 'Authentication failed. Please verify credentials.',
+      };
+    }
+    return {
+      success: true,
+      session: json.session,
+      user: json.user,
+      profile: json.profile,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Network failure communicating with login service.',
+    };
+  }
+}

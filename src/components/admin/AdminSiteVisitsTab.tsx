@@ -293,6 +293,8 @@ export function AdminSiteVisitsTab() {
           filteredVisits.map((visit) => (
             <div
               key={visit.id}
+              id={visit.id}
+              data-record-id={visit.id}
               className="rounded-2xl border border-white/10 bg-[#0B1734] p-4 sm:p-5 transition hover:border-[#C7A35A]/40"
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

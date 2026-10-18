@@ -250,7 +250,7 @@ export function AdminEnquiriesTab() {
           </div>
         ) : (
           filteredEnquiries.map((enq) => (
-            <div key={enq.id} className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition">
+            <div key={enq.id} id={enq.id} data-record-id={enq.id} className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-white/[0.02] transition">
               <div className="space-y-2 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-bold text-white">{enq.clientName}</h3>

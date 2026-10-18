@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
+  AlertTriangle,
   Award,
   Camera,
   CheckCircle2,
@@ -53,6 +54,9 @@ export function MemberPortalPage() {
   >('tasks');
   const [isPhotoStudioOpen, setIsPhotoStudioOpen] = useState(false);
 
+  const [deepLinkTargetId, setDeepLinkTargetId] = useState<string | null>(null);
+  const [deepLinkNotFoundNotice, setDeepLinkNotFoundNotice] = useState<string | null>(null);
+
   // Deep-link support from tasks or notifications: ?tab=tasks, ?tab=visits, ?tab=inbox, ?id=...
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -71,21 +75,58 @@ export function MemberPortalPage() {
         else if (normalized === 'field_gps' || normalized === 'gps') setActiveTab('field_gps');
       }
 
-      const recordId = params.get('id') || params.get('task') || params.get('visit') || params.get('enquiry');
-      if (recordId) {
-        setTimeout(() => {
-          const el = document.getElementById(recordId) || document.querySelector(`[data-record-id="${recordId}"]`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.classList.add('ring-2', 'ring-[#C7A35A]', 'animate-pulse');
-            setTimeout(() => {
-              el.classList.remove('animate-pulse');
-            }, 3000);
-          }
-        }, 500);
+      const taskParam = params.get('task');
+      const visitParam = params.get('visit') || params.get('site_visit');
+      const enquiryParam = params.get('enquiry');
+      const genericParam = params.get('id') || params.get('recordId');
+
+      if (taskParam) {
+        setActiveTab('tasks');
+        setDeepLinkTargetId(taskParam);
+      } else if (visitParam) {
+        setActiveTab('site_visits');
+        setDeepLinkTargetId(visitParam);
+      } else if (enquiryParam) {
+        setActiveTab('enquiries');
+        setDeepLinkTargetId(enquiryParam);
+      } else if (genericParam) {
+        setDeepLinkTargetId(genericParam);
       }
     }
   }, []);
+
+  // Reactive DOM element locator & highlighter with missing-record handling
+  useEffect(() => {
+    if (!deepLinkTargetId) return;
+
+    let attempts = 0;
+    const maxAttempts = 10;
+    const checkInterval = 150;
+
+    const intervalId = setInterval(() => {
+      attempts += 1;
+      const el =
+        document.getElementById(deepLinkTargetId) ||
+        document.querySelector(`[data-record-id="${deepLinkTargetId}"]`);
+
+      if (el) {
+        clearInterval(intervalId);
+        setDeepLinkNotFoundNotice(null);
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-4', 'ring-[#C7A35A]', 'animate-pulse');
+        setTimeout(() => {
+          el.classList.remove('animate-pulse');
+        }, 3500);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(intervalId);
+        setDeepLinkNotFoundNotice(
+          `Record "${deepLinkTargetId}" could not be located in your assigned queue or requires a different filter setting.`
+        );
+      }
+    }, checkInterval);
+
+    return () => clearInterval(intervalId);
+  }, [deepLinkTargetId, activeTab]);
 
   if (!currentUser) {
     return <AuthBarrier requiredRole="member" />;
@@ -387,6 +428,21 @@ export function MemberPortalPage() {
           <span>Plot GPS Capture</span>
         </button>
       </div>
+
+      {deepLinkNotFoundNotice && (
+        <div className="flex items-center justify-between rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+            <span>{deepLinkNotFoundNotice}</span>
+          </div>
+          <button
+            onClick={() => setDeepLinkNotFoundNotice(null)}
+            className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 hover:underline ml-4 cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Tab: Aaj Ke Kaam (Daily Task Inbox) */}
       {activeTab === 'tasks' && <MemberTaskInbox />}

@@ -73,8 +73,9 @@ BEGIN
 END;
 $$;
 
--- 4. Grant Execution Permissions
-GRANT EXECUTE ON FUNCTION public.resolve_login_identifier(TEXT) TO anon, authenticated, service_role;
+-- 4. Grant Execution Permissions (Revoke from anon to block public email enumeration)
+REVOKE EXECUTE ON FUNCTION public.resolve_login_identifier(TEXT) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.resolve_login_identifier(TEXT) TO authenticated, service_role;
 
 COMMENT ON FUNCTION public.resolve_login_identifier(TEXT) IS
-'Resolves a login identifier (Member ID, Phone, or Email) to its canonical email address. Defined as SECURITY DEFINER to allow unauthenticated logins to map credentials safely under strict RLS.';
+'Resolves a login identifier (Member ID, Phone, or Email) to its canonical email address. Restricted to trusted service role and authenticated sessions to eliminate public email enumeration.';

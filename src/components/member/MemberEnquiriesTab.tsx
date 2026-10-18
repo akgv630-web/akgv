@@ -204,6 +204,8 @@ export function MemberEnquiriesTab() {
           myEnquiries.map((enq) => (
             <div
               key={enq.id}
+              id={enq.id}
+              data-record-id={enq.id}
               className="rounded-2xl border border-white/10 bg-[#0B1734] p-5 space-y-3 transition hover:border-[#C7A35A]/40"
             >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
