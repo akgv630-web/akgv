@@ -931,6 +931,19 @@ export async function supabaseGetSession() {
   }
 }
 
+export async function supabaseSetSession(session: { access_token: string; refresh_token?: string }) {
+  if (!isSupabaseConfigured || !supabase) return false;
+  try {
+    const { error } = await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token || '',
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 export function supabaseOnAuthStateChange(callback: (session: Session | null) => void) {
   if (!isSupabaseConfigured || !supabase) return () => {};
   try {

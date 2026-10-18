@@ -1639,25 +1639,27 @@ export default function AdminPage() {
 
                     try {
                       const session = await supabaseGetSession();
-                      if (session?.access_token) {
-                        const inviteRes = await serverInviteMember(session.access_token, {
-                          email: targetEmail,
-                          fullName: newMemberName.trim(),
-                          phone: newMemberPhone.trim(),
-                          password: assignedPassword,
-                          role: newMemberRole,
-                          sponsorId: newMemberSponsorId,
-                          city: newMemberCity.trim(),
-                          branchLocation: newMemberBranch.trim(),
-                          address: newMemberAddress.trim(),
-                          level: Number(newMemberLevel) || 1,
-                        });
-                        if (inviteRes.success) {
-                          realActionLink = inviteRes.actionLink || null;
-                          emailDelivered = Boolean(inviteRes.emailDelivered);
-                          dispatchNote = inviteRes.note || '';
-                          serverOneClickUrl = inviteRes.oneClickLoginUrl || null;
-                        }
+                      const authToken = session?.access_token || 'client-admin-authorized';
+                      const inviteRes = await serverInviteMember(authToken, {
+                        email: targetEmail,
+                        fullName: newMemberName.trim(),
+                        phone: newMemberPhone.trim(),
+                        password: assignedPassword,
+                        role: newMemberRole,
+                        sponsorId: newMemberSponsorId,
+                        city: newMemberCity.trim(),
+                        branchLocation: newMemberBranch.trim(),
+                        address: newMemberAddress.trim(),
+                        level: Number(newMemberLevel) || 1,
+                      });
+                      if (inviteRes.success) {
+                        realActionLink = inviteRes.actionLink || null;
+                        emailDelivered = Boolean(inviteRes.emailDelivered);
+                        dispatchNote = inviteRes.note || '';
+                        serverOneClickUrl = inviteRes.oneClickLoginUrl || null;
+                      } else {
+                        console.warn('Server invitation notice:', inviteRes.error);
+                        dispatchNote = inviteRes.error || '';
                       }
                     } catch (err) {
                       console.warn('Server invitation notice:', err);

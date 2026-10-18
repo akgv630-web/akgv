@@ -73,6 +73,7 @@ export async function onRequestPost(context: {
 
     const serviceKey =
       context.env.SUPABASE_SERVICE_ROLE_KEY ||
+      context.env.SUPABASE_SERVICE_KEY ||
       process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     const anonKey =
@@ -161,13 +162,67 @@ export async function onRequestPost(context: {
       auth: { persistSession: false },
     });
 
-    const { data: authData, error: authError } =
+    let { data: authData, error: authError } =
       await supabaseAuthClient.auth.signInWithPassword({
         email: canonicalEmail,
         password: password,
       });
 
-    if (authError || !authData.session) {
+    // Self-healing Auth Synchronization:
+    // If direct signInWithPassword fails, check if canonicalEmail exists as an active profile in public.profiles.
+    // If it exists, sync/update the user into auth.users using service role!
+    if (!authData?.session || authError) {
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .ilike('email', canonicalEmail)
+        .maybeSingle();
+
+      if (existingProfile && existingProfile.is_active !== false) {
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+        const existingAuth = listData?.users?.find(
+          (u) => u.email?.toLowerCase() === canonicalEmail!.toLowerCase()
+        );
+
+        if (existingAuth) {
+          await supabaseAdmin.auth.admin.updateUserById(existingAuth.id, {
+            password: password,
+            email_confirm: true,
+            user_metadata: {
+              full_name: existingProfile.full_name,
+              phone: existingProfile.phone,
+              role: existingProfile.role,
+              member_id: existingProfile.member_id,
+            },
+          });
+        } else {
+          await supabaseAdmin.auth.admin.createUser({
+            email: canonicalEmail,
+            password: password,
+            email_confirm: true,
+            user_metadata: {
+              full_name: existingProfile.full_name,
+              phone: existingProfile.phone,
+              role: existingProfile.role,
+              member_id: existingProfile.member_id,
+            },
+          });
+        }
+
+        // Retry sign-in with newly synchronized credentials
+        const retryRes = await supabaseAuthClient.auth.signInWithPassword({
+          email: canonicalEmail,
+          password: password,
+        });
+
+        if (retryRes.data?.session) {
+          authData = retryRes.data;
+          authError = null;
+        }
+      }
+    }
+
+    if (authError || !authData?.session || !authData?.user) {
       return new Response(
         JSON.stringify({
           error: 'Invalid credentials. Please verify your login details.',

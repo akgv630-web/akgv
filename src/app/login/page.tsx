@@ -79,10 +79,20 @@ export default function UnifiedLoginPage() {
             }, 600);
           } else {
             setError(res.error || 'Auto-login failed. Please verify credentials.');
+            if (typeof window !== 'undefined') {
+              try {
+                window.history.replaceState({}, document.title, window.location.pathname);
+              } catch {}
+            }
           }
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : 'Auto-login service error.');
+          if (typeof window !== 'undefined') {
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch {}
+          }
         })
         .finally(() => {
           setLoading(false);

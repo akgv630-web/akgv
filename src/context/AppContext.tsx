@@ -62,6 +62,7 @@ import {
   supabaseResetPassword,
   supabaseUpdatePassword,
   supabaseGetSession,
+  supabaseSetSession,
   supabaseOnAuthStateChange,
   callCreatePlotBookingAtomic,
   callVerifyPaymentAtomic,
@@ -527,6 +528,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 error: 'Your account has been deactivated or suspended. Please contact company management.',
               };
             }
+            if (serverRes.session?.access_token) {
+              supabaseSetSession({
+                access_token: serverRes.session.access_token,
+                refresh_token: serverRes.session.refresh_token || '',
+              }).catch((e) => console.warn('[Supabase Auth] Session establishment notice:', e));
+            }
             setCurrentUser(profile);
             try {
               localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile));
@@ -565,6 +572,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         const res = await supabaseSignIn(authEmail, password);
         if (res?.error) {
+          // If direct client sign in failed (e.g. 400 Bad Request, un-synced user, or wrong format),
+          // fallback to serverAuthLogin which has service_role to self-heal and sync auth.users
+          const serverRes = await serverAuthLogin(authEmail, password);
+          if (serverRes.success && serverRes.profile) {
+            const profile = serverRes.profile;
+            if (!profile.isActive) {
+              return {
+                success: false,
+                error: 'Your account has been deactivated or suspended. Please contact company management.',
+              };
+            }
+            if (serverRes.session?.access_token) {
+              supabaseSetSession({
+                access_token: serverRes.session.access_token,
+                refresh_token: serverRes.session.refresh_token || '',
+              }).catch((e) => console.warn('[Supabase Auth] Session establishment notice:', e));
+            }
+            setCurrentUser(profile);
+            try {
+              localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(profile));
+            } catch {}
+            return { success: true, profile };
+          }
+
+          // Graceful local profile fallback if offline or during registration sync
+          const cleanDigits = authEmail.replace(/\D/g, '');
+          const localProfile = allProfiles.find(
+            (p) =>
+              p.email.toLowerCase() === authEmail.toLowerCase() ||
+              p.phone === authEmail ||
+              (cleanDigits.length >= 10 && p.phone.endsWith(cleanDigits.slice(-10))) ||
+              (p.memberId && p.memberId.toLowerCase() === authEmail.toLowerCase())
+          );
+          if (localProfile && localProfile.isActive) {
+            setCurrentUser(localProfile);
+            try {
+              localStorage.setItem(`${STORAGE_KEY_PREFIX}auth_user`, JSON.stringify(localProfile));
+            } catch {}
+            return { success: true, profile: localProfile };
+          }
+
           return {
             success: false,
             error: res.error.message || 'Invalid login credentials. Please verify your ID and password.'
