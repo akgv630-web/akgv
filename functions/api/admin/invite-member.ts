@@ -169,7 +169,7 @@ export async function onRequestPost(context: {
     let actionLink: string | null = null;
 
     // A. Check existing and create/invite user directly in Supabase Auth
-    const { data: listData } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
     const existing = listData?.users?.find((u) => u.email?.toLowerCase() === cleanEmail);
 
     if (existing) {
@@ -190,28 +190,9 @@ export async function onRequestPost(context: {
         if (!resetErr) emailDelivered = true;
       } catch {}
     } else {
-      // Attempt official invite email dispatch via Supabase Auth
+      // 1. Create confirmed user account directly so password & auto-login ALWAYS work immediately!
       try {
-        const { data: invData } = await supabaseAdmin.auth.admin.inviteUserByEmail(cleanEmail, {
-          redirectTo,
-          data: {
-            full_name: fullName.trim(),
-            role: role,
-            phone: phone.trim(),
-          },
-        });
-        if (invData?.user) {
-          createdAuthUser = invData.user;
-          emailDelivered = true;
-          await supabaseAdmin.auth.admin.updateUserById(invData.user.id, {
-            password: initialPassword,
-            email_confirm: true,
-          });
-        }
-      } catch {}
-
-      if (!createdAuthUser) {
-        const { data: createdUsr } = await supabaseAdmin.auth.admin.createUser({
+        const { data: createdUsr, error: createErr } = await supabaseAdmin.auth.admin.createUser({
           email: cleanEmail,
           email_confirm: true,
           password: initialPassword,
@@ -223,7 +204,31 @@ export async function onRequestPost(context: {
         });
         if (createdUsr?.user) {
           createdAuthUser = createdUsr.user;
+        } else if (createErr?.message?.includes('already been registered') || createErr?.message?.includes('exists')) {
+          const { data: retryList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+          const found = retryList?.users?.find((u) => u.email?.toLowerCase() === cleanEmail);
+          if (found) {
+            createdAuthUser = found;
+            await supabaseAdmin.auth.admin.updateUserById(found.id, {
+              password: initialPassword,
+              email_confirm: true,
+            });
+          }
         }
+      } catch (err) {
+        console.warn('[Admin createUser Notice]', err);
+      }
+
+      // 2. Dispatch welcome reset / activation email to user's Gmail
+      try {
+        const { error: mailErr } = await supabaseAdmin.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo,
+        });
+        if (!mailErr) {
+          emailDelivered = true;
+        }
+      } catch (err) {
+        console.warn('[Admin resetPasswordForEmail Notice]', err);
       }
     }
 
@@ -339,6 +344,19 @@ export async function onRequestPost(context: {
       created_at: nowIso,
       updated_at: nowIso,
     };
+
+    const { data: existingProf } = await supabaseAdmin
+      .from('profiles')
+      .select('id, member_id')
+      .ilike('email', cleanEmail)
+      .maybeSingle();
+
+    if (existingProf) {
+      profilePayload.id = existingProf.id;
+      if (existingProf.member_id) {
+        (profilePayload as any).member_id = existingProf.member_id;
+      }
+    }
 
     const { data: insertedProfile, error: profileErr } = await supabaseAdmin
       .from('profiles')

@@ -327,6 +327,7 @@ export default function AdminPage() {
     emailDelivered?: boolean;
     dispatchNote?: string;
   } | null>(null);
+  const [isEnrollingMember, setIsEnrollingMember] = useState(false);
 
   // Edit Member Form State
   const [editFullName, setEditFullName] = useState('');
@@ -1618,7 +1619,9 @@ export default function AdminPage() {
                     const targetEmail = newMemberEmail.trim() || `${newMemberPhone.trim()}@akgvinfacity.com`;
                     const assignedPassword = newMemberPassword.trim() || 'Akgv@2026';
 
-                    const profile = createSponsorMember({
+                    setIsEnrollingMember(true);
+                    try {
+                      const profile = createSponsorMember({
                       fullName: newMemberName.trim(),
                       phone: newMemberPhone.trim(),
                       email: targetEmail,
@@ -1697,11 +1700,14 @@ export default function AdminPage() {
                     setNewMemberEmail('');
                     setNewMemberAddress('');
                     setTimeout(() => setMemberActionNotice(null), 6000);
-                  }}
-                  className="p-5 space-y-4 text-xs"
+                  } finally {
+                    setIsEnrollingMember(false);
+                  }
+                }}
+                className="p-5 space-y-4 text-xs"
                 >
-                  {/* Feedback Banner on Generation */}
-                  {createdSponsorFeedback && (() => {
+                  {/* Feedback Banner on Generation: If set, show ONLY the dossier */}
+                  {createdSponsorFeedback ? (() => {
                     const cleanPhone = (createdSponsorFeedback.phone || '').replace(/[^0-9]/g, '');
                     const roleBadge = getRoleBadge(createdSponsorFeedback.role as UserRole);
                     const dossierText = `🏢 *AKGV INFRA CITY PRIVATE LIMITED*
@@ -1878,12 +1884,36 @@ _नोट: सुरक्षा हेतु लॉगिन के बाद 
                             </a>
                           )}
                         </div>
+
+                        {/* Modal Bottom Controls: Enroll Another Member + Done/Close */}
+                        <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-2 font-sans">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCreatedSponsorFeedback(null);
+                            }}
+                            className="rounded-xl border border-[#C7A35A]/50 bg-[#C7A35A]/15 hover:bg-[#C7A35A]/25 px-4 py-2.5 text-[#DFC382] font-semibold text-xs flex items-center gap-1.5 transition"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                            <span>{tLang(language, 'Enroll Another Member', 'दूसरा सदस्य जोड़ें', 'Enroll Another Member')}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddMemberModalOpen(false);
+                              setCreatedSponsorFeedback(null);
+                            }}
+                            className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-5 py-2.5 font-bold text-[#0B1734] text-xs hover:brightness-110 transition shadow-md"
+                          >
+                            {tLang(language, 'Done / Close', 'हो गया / बंद करें', 'Done / Close')}
+                          </button>
+                        </div>
                       </div>
                     );
-                  })()}
-
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-1">
+                  })() : (
+                    <>
+                      <div>
+                        <label className="block text-gray-300 font-semibold mb-1">
                       {tLang(language, 'Full Name', 'पूरा नाम', 'Poora Naam')} <span className="text-[#C7A35A]">*</span>
                     </label>
                     <input
@@ -2106,19 +2136,30 @@ _नोट: सुरक्षा हेतु लॉगिन के बाद 
                   <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-4">
                     <button
                       type="button"
+                      disabled={isEnrollingMember}
                       onClick={() => setIsAddMemberModalOpen(false)}
-                      className="rounded-xl px-4 py-2.5 text-gray-400 hover:text-white"
+                      className="rounded-xl px-4 py-2.5 text-gray-400 hover:text-white disabled:opacity-50"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-2.5 font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition"
+                      disabled={isEnrollingMember}
+                      className="rounded-xl bg-gradient-to-r from-[#C7A35A] to-[#9E7E36] px-6 py-2.5 font-bold text-[#0B1734] shadow-md hover:brightness-110 active:scale-95 transition disabled:opacity-50 flex items-center gap-2"
                     >
-                      Save & Issue Member Code
+                      {isEnrollingMember ? (
+                        <>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#0B1734] border-t-transparent" />
+                          <span>{tLang(language, 'Provisioning Account...', 'खाता बनाया जा रहा है...', 'Account banaya ja raha hai...')}</span>
+                        </>
+                      ) : (
+                        <span>{tLang(language, 'Save & Issue Member Code', 'सुरक्षित करें एवं आईडी जारी करें', 'Save & Issue Member Code')}</span>
+                      )}
                     </button>
                   </div>
-                </form>
+                </>
+              )}
+            </form>
               </div>
             </div>
           )}
