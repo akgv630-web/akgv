@@ -570,6 +570,42 @@ export async function fetchProfilesFromSupabase(): Promise<Profile[] | null> {
       .order('created_at', { ascending: true });
 
     if (error) {
+      if (error.message.includes('recursion') || error.code === '42P17') {
+        try {
+          const apiRes = await fetch('/api/data/profiles');
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json.profiles && json.profiles.length > 0) {
+              return json.profiles.map((row: any) => ({
+                id: row.id,
+                authUserId: row.auth_user_id || undefined,
+                email: row.email,
+                fullName: row.full_name,
+                phone: row.phone,
+                role: row.role,
+                memberId: row.member_id || undefined,
+                sponsorId: row.sponsor_id || undefined,
+                kycStatus: row.kyc_status,
+                isActive: Boolean(row.is_active),
+                avatarUrl: row.avatar_url || undefined,
+                city: row.city || undefined,
+                branchLocation: row.branch_location || undefined,
+                address: row.address || undefined,
+                level: row.level ? Number(row.level) : undefined,
+                rankTitle: row.rank_title || undefined,
+                totalBusinessVolumeInr: row.total_business_volume_inr ? Number(row.total_business_volume_inr) : undefined,
+                plotsClosedCount: row.plots_closed_count ? Number(row.plots_closed_count) : undefined,
+                joinedDate: row.joined_date || undefined,
+                permissions: row.permissions || undefined,
+                invitationStatus: row.invitation_status || undefined,
+                invitationSentAt: row.invitation_sent_at || undefined,
+                invitedBy: row.invited_by || undefined,
+                createdAt: row.created_at,
+              }));
+            }
+          }
+        } catch {}
+      }
       console.warn('[Supabase Sync] fetchProfiles notice:', error.message);
       return null;
     }
@@ -720,34 +756,42 @@ export async function fetchProfileByAuthId(
   if (!isSupabaseConfigured || !supabase || (!authUserId && !userEmail)) return null;
 
   try {
-    // 1. Authoritative primary lookup by auth_user_id, id, and optionally email
-    let query = supabase.from('profiles').select('*');
-    if (authUserId && userEmail) {
-      query = query.or(`auth_user_id.eq.${authUserId},id.eq.${authUserId},email.ilike.${userEmail.trim()}`);
-    } else if (authUserId) {
-      query = query.or(`auth_user_id.eq.${authUserId},id.eq.${authUserId}`);
-    } else if (userEmail) {
-      query = query.ilike('email', userEmail.trim());
-    }
+    let data: any = null;
+    let error: any = null;
 
-    let { data, error } = await query.limit(1).maybeSingle();
-
-    // 2. If standard query was blocked or returned empty, attempt link_current_auth_user RPC
-    if (!data && authUserId) {
+    // 1. Authoritative primary lookup: link_current_auth_user SECURITY DEFINER RPC (immune to RLS recursion!)
+    if (authUserId) {
       try {
         const { data: rpcData } = await supabase.rpc('link_current_auth_user');
         if (rpcData && rpcData.success && rpcData.profile) {
           data = rpcData.profile;
         }
-      } catch {
-        // RPC may not exist in earlier schema versions, ignore
+      } catch {}
+    }
+
+    // 2. If RPC was not available, attempt direct query
+    if (!data) {
+      let query = supabase.from('profiles').select('*');
+      if (authUserId && userEmail) {
+        query = query.or(`auth_user_id.eq.${authUserId},id.eq.${authUserId},email.ilike.${userEmail.trim()}`);
+      } else if (authUserId) {
+        query = query.or(`auth_user_id.eq.${authUserId},id.eq.${authUserId}`);
+      } else if (userEmail) {
+        query = query.ilike('email', userEmail.trim());
+      }
+
+      const res = await query.limit(1).maybeSingle();
+      if (res.data) {
+        data = res.data;
+      } else if (res.error && !res.error.message.includes('recursion') && res.error.code !== '42P17') {
+        error = res.error;
       }
     }
 
     // 3. Fallback: Query directly by email if available
     if (!data && userEmail) {
       try {
-        const { data: emailData } = await supabase
+        const { data: emailData, error: emailErr } = await supabase
           .from('profiles')
           .select('*')
           .ilike('email', userEmail.trim())
@@ -755,11 +799,12 @@ export async function fetchProfileByAuthId(
           .maybeSingle();
         if (emailData) {
           data = emailData;
+          error = null;
         }
       } catch {}
     }
 
-    if (error || !data) {
+    if (!data) {
       if (error) console.warn('[Supabase Sync] fetchProfileByAuthId notice:', error.message);
       return null;
     }
