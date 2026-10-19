@@ -76,6 +76,7 @@ export async function onRequestPost(context: {
           callerProfile?.role === 'super_admin' ||
           callerProfile?.role === 'sub_admin' ||
           callerEmail === 'yadavpreetrajesh@gmail.com' ||
+          callerEmail === 'akgv630@gmail.com' ||
           callerEmail === 'admin@akgv.com' ||
           callerEmail === 'admin@akgvinfacity.com';
       }

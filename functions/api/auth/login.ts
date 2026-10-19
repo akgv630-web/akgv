@@ -254,6 +254,7 @@ export async function onRequestPost(context: {
       }
     } else if (
       canonicalEmail === 'yadavpreetrajesh@gmail.com' ||
+      canonicalEmail === 'akgv630@gmail.com' ||
       canonicalEmail === 'admin@akgv.com' ||
       canonicalEmail === 'admin@akgvinfacity.com'
     ) {

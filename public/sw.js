@@ -1,4 +1,4 @@
-const CACHE_NAME = 'akgv-infra-v1';
+const CACHE_NAME = 'akgv-infra-v2';
 const STATIC_ASSETS = [
   '/',
   '/offline.html',
@@ -19,7 +19,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key.startsWith('akgv-infra-') && key !== CACHE_NAME) {
+          if (key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
@@ -32,10 +32,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Never cache API routes, auth endpoints, private dashboards, or remote Supabase calls
+  // Never cache API routes, auth endpoints, login, private dashboards, or remote Supabase calls
   if (
     url.pathname.startsWith('/api') ||
     url.pathname.startsWith('/auth') ||
+    url.pathname.startsWith('/login') ||
     url.pathname.startsWith('/admin') ||
     url.pathname.startsWith('/member') ||
     url.pathname.startsWith('/buyer') ||

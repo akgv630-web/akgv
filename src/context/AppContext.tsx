@@ -406,6 +406,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               profile = { ...known, authUserId: authSession.user.id };
             } else if (
               email === 'yadavpreetrajesh@gmail.com' ||
+              email === 'akgv630@gmail.com' ||
               email === 'admin@akgv.com' ||
               email === 'admin@akgvinfacity.com'
             ) {
@@ -461,6 +462,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             profile = { ...known, authUserId: session.user.id };
           } else if (
             email === 'yadavpreetrajesh@gmail.com' ||
+            email === 'akgv630@gmail.com' ||
             email === 'admin@akgv.com' ||
             email === 'admin@akgvinfacity.com'
           ) {
@@ -651,6 +653,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           // 2. Authoritative fallback for primary pre-registered Admin
           const isAdminEmail =
             userEmail === 'yadavpreetrajesh@gmail.com' ||
+            userEmail === 'akgv630@gmail.com' ||
             userEmail === 'admin@akgv.com' ||
             userEmail === 'admin@akgvinfacity.com';
 
